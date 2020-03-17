@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 
 import Grid from "@material-ui/core/Grid";
 import Container from "@material-ui/core/Container";
@@ -6,9 +6,10 @@ import Paper from "@material-ui/core/Paper";
 import { makeStyles } from "@material-ui/core/styles";
 import Button from "@material-ui/core/Button";
 import ButtonGroup from "@material-ui/core/ButtonGroup";
-import * as R from "ramda";
+import axios from "axios";
 
 import KeybindingInput from "./components/KeybindingInput";
+import play from "./play";
 
 const useStyles = makeStyles({
   container: {
@@ -27,34 +28,20 @@ const useStyles = makeStyles({
 
 export default function InstantList() {
   const classes = useStyles();
+  const [playing, setPlaying] = useState(false);
+
   const instants = [
     {
-      id: "faustao-errou1.mp3",
+      id: "faustao-errou.mp3",
       path: "/home/pinheirolucas/instants/faustao-errou.mp3"
     },
     {
-      id: "faustao-errou2.mp3",
-      path: "/home/pinheirolucas/instants/faustao-errou.mp3"
+      id: "otario.mp3",
+      path: "/home/pinheirolucas/instants/otario.mp3"
     },
     {
-      id: "faustao-errou3.mp3",
-      path: "/home/pinheirolucas/instants/faustao-errou.mp3"
-    },
-    {
-      id: "faustao-errou4.mp3",
-      path: "/home/pinheirolucas/instants/faustao-errou.mp3"
-    },
-    {
-      id: "faustao-errou5.mp3",
-      path: "/home/pinheirolucas/instants/faustao-errou.mp3"
-    },
-    {
-      id: "faustao-errou6.mp3",
-      path: "/home/pinheirolucas/instants/faustao-errou.mp3"
-    },
-    {
-      id: "faustao-errou7.mp3",
-      path: "/home/pinheirolucas/instants/faustao-errou.mp3"
+      id: "bill.mp3",
+      path: "/home/pinheirolucas/instants/bill.mp3"
     }
   ];
 
@@ -68,6 +55,33 @@ export default function InstantList() {
         })
       );
     };
+  }
+
+  async function handlePlay(instant) {
+    if (playing) {
+      return;
+    }
+
+    try {
+      setPlaying(true);
+      const url = await window.backend.GetPlayableInstant(instant.path);
+      await play(url);
+    } finally {
+      setPlaying(false);
+    }
+  }
+
+  async function handlePlayOnDiscord(instant) {
+    if (playing) {
+      return;
+    }
+
+    try {
+      setPlaying(true);
+      await axios.post(`http://localhost:9001/bot/play?path=${instant.path}`);
+    } finally {
+      setPlaying(false);
+    }
   }
 
   return (
@@ -87,8 +101,18 @@ export default function InstantList() {
                       color="primary"
                       aria-label="contained primary button group"
                     >
-                      <Button>Tocar</Button>
-                      <Button>Discord</Button>
+                      <Button
+                        disabled={playing}
+                        onClick={() => handlePlay(instant)}
+                      >
+                        Tocar
+                      </Button>
+                      <Button
+                        disabled={playing}
+                        onClick={() => handlePlayOnDiscord(instant)}
+                      >
+                        Discord
+                      </Button>
                     </ButtonGroup>
                   </Grid>
                 </Grid>
