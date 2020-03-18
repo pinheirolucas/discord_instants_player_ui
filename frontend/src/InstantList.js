@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useContext, useState } from "react";
 
 import Grid from "@material-ui/core/Grid";
 import Container from "@material-ui/core/Container";
@@ -10,6 +10,7 @@ import axios from "axios";
 
 import KeybindingInput from "./components/KeybindingInput";
 import play from "./play";
+import SnackbarContext from "./SnackbarContext";
 
 const useStyles = makeStyles({
   container: {
@@ -29,19 +30,21 @@ const useStyles = makeStyles({
 export default function InstantList() {
   const classes = useStyles();
   const [playing, setPlaying] = useState(false);
+  const { openSnackbar, closeSnackbar } = useContext(SnackbarContext);
 
   const instants = [
     {
-      id: "faustao-errou.mp3",
-      path: "/home/pinheirolucas/instants/faustao-errou.mp3"
+      name: "Errou (Faustão)",
+      url: "https://www.myinstants.com/media/sounds/faustao-errou.mp3"
     },
     {
-      id: "otario.mp3",
-      path: "/home/pinheirolucas/instants/otario.mp3"
+      name: "Chupa Meu Pinto Então O Vagabu",
+      url: "https://www.myinstants.com/media/sounds/aud-20180228-wa0076.mp3"
     },
     {
-      id: "bill.mp3",
-      path: "/home/pinheirolucas/instants/bill.mp3"
+      name: "Desliga o PC Agora!",
+      url:
+        "https://www.myinstants.com/media/sounds/desliga-o-computador-agora.mp3"
     }
   ];
 
@@ -50,11 +53,31 @@ export default function InstantList() {
       localStorage.setItem(
         keyCode,
         JSON.stringify({
-          path: instant.path,
+          url: instant.url,
           key
         })
       );
     };
+  }
+
+  function handleSnackbarRemoveAction(instant) {
+    console.log(instant);
+    closeSnackbar();
+  }
+
+  function showInstantNotFoundError(instant) {
+    openSnackbar({
+      message: "Parece que o instant não existe mais",
+      action: (
+        <Button
+          color="secondary"
+          size="small"
+          onClick={() => handleSnackbarRemoveAction(instant)}
+        >
+          REMOVER
+        </Button>
+      )
+    });
   }
 
   async function handlePlay(instant) {
@@ -64,8 +87,13 @@ export default function InstantList() {
 
     try {
       setPlaying(true);
-      const url = await window.backend.GetPlayableInstant(instant.path);
-      await play(url);
+      const info = await window.backend.GetPlayableInstant(instant.url);
+      if (!info.Exists) {
+        showInstantNotFoundError(instant);
+        return;
+      }
+
+      await play(info.Content);
     } finally {
       setPlaying(false);
     }
@@ -78,7 +106,11 @@ export default function InstantList() {
 
     try {
       setPlaying(true);
-      await axios.post(`http://localhost:9001/bot/play?path=${instant.path}`);
+      const exists = await window.backend.Player.Play(instant.url);
+      if (!exists) {
+        showInstantNotFoundError(instant);
+        return;
+      }
     } finally {
       setPlaying(false);
     }
@@ -88,11 +120,11 @@ export default function InstantList() {
     <Container>
       <Grid container spacing={4} className={classes.container}>
         {instants.map(instant => (
-          <Grid key={instant.id} item xs={3}>
+          <Grid key={instant.url} item xs={3}>
             <Paper className={classes.paper}>
               <Grid container>
                 <Grid container>
-                  <h3 className={classes.title}>{instant.id}</h3>
+                  <h3 className={classes.title}>{instant.name}</h3>
                 </Grid>
                 <Grid container>
                   <Grid item xs={12}>

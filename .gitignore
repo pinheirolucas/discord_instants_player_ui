@@ -17,3 +17,5 @@
 discord-instants-player
 frontend/build
 frontend/node_modules
+*.mp3
+.discord_instants_player*

@@ -1,4 +1,4 @@
-package dispatcher
+package keyboard
 
 import (
 	"fmt"
@@ -7,13 +7,16 @@ import (
 
 	"github.com/pkg/errors"
 	hook "github.com/robotn/gohook"
-
-	"discord-instants-player/keyboard"
 )
 
+var initialized bool
 var clearFuncs sync.Map
 
 func InitKeybindings(data map[string]interface{}) error {
+	if initialized {
+		return errors.New("bindings already initialized")
+	}
+
 	for k, v := range data {
 		keyCode, err := strconv.Atoi(k)
 		if err != nil {
@@ -25,15 +28,22 @@ func InitKeybindings(data map[string]interface{}) error {
 			return errors.Errorf("invalid value %v", v)
 		}
 
-		clear := keyboard.SetEventListener(keyCode, buildPathHandler(path))
+		clear := SetEventListener(keyCode, buildPathHandler(path))
 		clearFuncs.Store(keyCode, clear)
 	}
 
+	initialized = true
 	return nil
 }
 
 func SetKeybinding(keyCode int, path string) {
-	keyboard.SetEventListener(keyCode, buildPathHandler(path))
+	if f, ok := clearFuncs.Load(keyCode); ok {
+		clearLast := f.(func())
+		clearLast()
+	}
+
+	clear := SetEventListener(keyCode, buildPathHandler(path))
+	clearFuncs.Store(keyCode, clear)
 }
 
 func Unbind(keyCode int) {
@@ -44,6 +54,7 @@ func Unbind(keyCode int) {
 
 	clear := f.(func())
 	clear()
+	clearFuncs.Delete(keyCode)
 }
 
 func buildPathHandler(path string) func(e hook.Event) {
