@@ -4,14 +4,11 @@ import AppBar from "@material-ui/core/AppBar";
 import Toolbar from "@material-ui/core/Toolbar";
 import Typography from "@material-ui/core/Typography";
 import CssBaseline from "@material-ui/core/CssBaseline";
-import Fab from "@material-ui/core/Fab";
-import KeyboardArrowUpIcon from "@material-ui/icons/KeyboardArrowUp";
 import Snackbar from "@material-ui/core/Snackbar";
 import IconButton from "@material-ui/core/IconButton";
 import CloseIcon from "@material-ui/icons/Close";
 
 import InstantsList from "./InstantList";
-import ScrollTop from "./ScrollTop";
 import SnackbarContext from "./SnackbarContext";
 
 import "./App.css";
@@ -58,15 +55,10 @@ function App() {
           <Typography variant="h6">Discord Instants Player</Typography>
         </Toolbar>
       </AppBar>
-      <Toolbar id="back-to-top-anchor" />
+      <Toolbar />
       <SnackbarContext.Provider value={{ openSnackbar, closeSnackbar }}>
         <InstantsList />
       </SnackbarContext.Provider>
-      <ScrollTop>
-        <Fab color="secondary" size="small" aria-label="scroll back to top">
-          <KeyboardArrowUpIcon />
-        </Fab>
-      </ScrollTop>
       <Snackbar
         anchorOrigin={{
           vertical: "bottom",

@@ -40,7 +40,7 @@ func Bind() {
 			continue
 		}
 
-		v, ok := listeners.Load(int(e.Keychar))
+		v, ok := listeners.Load(e.Keychar)
 		if !ok {
 			continue
 		}

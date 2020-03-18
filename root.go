@@ -8,6 +8,7 @@ import (
 	"github.com/leaanthony/mewn"
 	"github.com/mitchellh/go-homedir"
 	"github.com/pkg/errors"
+	hook "github.com/robotn/gohook"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -136,6 +137,10 @@ func runUI(playchan chan string, audioEndedChan chan bool) error {
 	})
 
 	player := instant.NewPlayer(playchan, audioEndedChan)
+
+	instant.RegisterKeyboardHandler(func(e hook.Event, link string) {
+		player.Play(link)
+	})
 
 	app.Bind(keyboard.InitKeybindings)
 	app.Bind(keyboard.SetKeybinding)

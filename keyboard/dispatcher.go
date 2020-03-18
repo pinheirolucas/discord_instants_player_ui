@@ -1,20 +1,25 @@
 package keyboard
 
 import (
-	"fmt"
 	"strconv"
 	"sync"
 
 	"github.com/pkg/errors"
-	hook "github.com/robotn/gohook"
+
+	"discord-instants-player/instant"
 )
 
-var initialized bool
 var clearFuncs sync.Map
 
 func InitKeybindings(data map[string]interface{}) error {
-	if initialized {
-		return errors.New("bindings already initialized")
+	var keys []interface{}
+	clearFuncs.Range(func(key interface{}, value interface{}) bool {
+		keys = append(keys, key)
+		return true
+	})
+
+	for _, key := range keys {
+		Unbind(key.(int))
 	}
 
 	for k, v := range data {
@@ -28,11 +33,10 @@ func InitKeybindings(data map[string]interface{}) error {
 			return errors.Errorf("invalid value %v", v)
 		}
 
-		clear := SetEventListener(keyCode, buildPathHandler(path))
+		clear := SetEventListener(keyCode, instant.BuildKeyboardHandler(path))
 		clearFuncs.Store(keyCode, clear)
 	}
 
-	initialized = true
 	return nil
 }
 
@@ -42,7 +46,7 @@ func SetKeybinding(keyCode int, path string) {
 		clearLast()
 	}
 
-	clear := SetEventListener(keyCode, buildPathHandler(path))
+	clear := SetEventListener(keyCode, instant.BuildKeyboardHandler(path))
 	clearFuncs.Store(keyCode, clear)
 }
 
@@ -55,10 +59,4 @@ func Unbind(keyCode int) {
 	clear := f.(func())
 	clear()
 	clearFuncs.Delete(keyCode)
-}
-
-func buildPathHandler(path string) func(e hook.Event) {
-	return func(e hook.Event) {
-		fmt.Println("path:", path)
-	}
 }

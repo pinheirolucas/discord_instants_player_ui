@@ -4,16 +4,19 @@ import PropTypes from "prop-types";
 import TextField from "@material-ui/core/TextField";
 
 export default function KeybindingInput(props) {
-  const [value, setValue] = useState("");
+  const [code, setCode] = useState();
+
+  const { value } = props;
 
   function handleKeyDown(e) {
     const { onBindingChange } = props;
     const { key, keyCode } = e;
+    const old = { key: value, keyCode: code };
 
     e.preventDefault();
-    setValue(e.key.trim() || "Space");
+    setCode(keyCode);
 
-    onBindingChange && onBindingChange(key, keyCode);
+    onBindingChange && onBindingChange(old, { key, keyCode });
   }
 
   return (
