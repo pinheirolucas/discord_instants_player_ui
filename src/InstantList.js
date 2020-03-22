@@ -11,13 +11,16 @@ import IconButton from "@material-ui/core/IconButton";
 import DeleteIcon from "@material-ui/icons/Delete";
 import PlayCircleFilledIcon from "@material-ui/icons/PlayCircleFilled";
 import SendIcon from "@material-ui/icons/Send";
+import StopIcon from "@material-ui/icons/Stop";
 import createPersistedState from "use-persisted-state";
 import Tooltip from "@material-ui/core/Tooltip";
 
-import KeybindingInput from "./components/KeybindingInput";
-import play from "./play";
+import KeybindingInput from "./KeybindingInput";
 import SaveForm from "./SaveForm";
 import SnackbarContext from "./SnackbarContext";
+import { getContent } from "./service";
+import useAudioPlayer from "./useAudioPlayer";
+import useDiscordPlayer from "./useDiscordPlayer";
 
 const useStyles = makeStyles(theme => ({
   container: {
@@ -56,8 +59,14 @@ const useCodeKeyMap = createPersistedState("codeKeyMap");
 
 export default function InstantList() {
   const classes = useStyles();
-  const [playing, setPlaying] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
+  const [audioUrl, isAudioPlaying, playAudio, stopAudio] = useAudioPlayer();
+  const [
+    discordUrl,
+    isDiscordPlaying,
+    playDiscord,
+    stopDiscord
+  ] = useDiscordPlayer();
 
   const { openSnackbar, closeSnackbar } = useContext(SnackbarContext);
 
@@ -67,9 +76,9 @@ export default function InstantList() {
   const [codeKeyMap, setCodeKeyMap] = useCodeKeyMap({});
 
   useEffect(() => {
-    window.backend
-      .InitKeybindings(codeUrlMap)
-      .catch(() => console.log("keybindings already registered"));
+    // window.backend
+    //   .InitKeybindings(codeUrlMap)
+    //   .catch(() => console.log("keybindings already registered"));
   }, [codeUrlMap]);
 
   function handleBindingChange(instant) {
@@ -117,9 +126,9 @@ export default function InstantList() {
     setUrlCodeMap({ ...urlCodeMap });
   }
 
-  function showInstantNotFoundError(instant) {
+  function showInstantNotFoundError(instant, message) {
     openSnackbar({
-      message: "Parece que o instant não existe mais",
+      message,
       action: (
         <Button
           color="secondary"
@@ -133,38 +142,20 @@ export default function InstantList() {
   }
 
   async function handlePlay(instant) {
-    if (playing) {
+    const info = await getContent(instant.url);
+    if (!info.exists) {
+      showInstantNotFoundError(instant, "Parece que o instant não existe mais");
       return;
     }
 
-    try {
-      setPlaying(true);
-      const info = await window.backend.GetPlayableInstant(instant.url);
-      if (!info.Exists) {
-        showInstantNotFoundError(instant);
-        return;
-      }
-
-      await play(info.Content);
-    } finally {
-      setPlaying(false);
-    }
+    playAudio(instant.url, info.content);
   }
 
   async function handlePlayOnDiscord(instant) {
-    if (playing) {
+    const message = await playDiscord(instant.url);
+    if (message) {
+      showInstantNotFoundError(instant, message);
       return;
-    }
-
-    try {
-      setPlaying(true);
-      const exists = await window.backend.Player.Play(instant.url);
-      if (!exists) {
-        showInstantNotFoundError(instant);
-        return;
-      }
-    } finally {
-      setPlaying(false);
     }
   }
 
@@ -198,6 +189,20 @@ export default function InstantList() {
     return codeKeyMap[code] || "";
   }
 
+  function areDefaultButtonsDisabled(instant) {
+    return instant.url === audioUrl || instant.url === discordUrl;
+  }
+
+  async function handleStop() {
+    if (isAudioPlaying) {
+      stopAudio();
+    }
+
+    if (isDiscordPlaying) {
+      await stopDiscord();
+    }
+  }
+
   return (
     <Container>
       <Grid container spacing={4} className={classes.container}>
@@ -213,7 +218,7 @@ export default function InstantList() {
                     <Tooltip title="Reproduzir">
                       <IconButton
                         className={classes.play}
-                        disabled={playing}
+                        disabled={isDiscordPlaying}
                         onClick={() => handlePlay(instant)}
                       >
                         <PlayCircleFilledIcon />
@@ -222,16 +227,25 @@ export default function InstantList() {
                     <Tooltip title="Enviar para o Discord">
                       <IconButton
                         className={classes.discord}
-                        disabled={playing}
+                        disabled={isAudioPlaying}
                         onClick={() => handlePlayOnDiscord(instant)}
                       >
                         <SendIcon />
                       </IconButton>
                     </Tooltip>
+                    <Tooltip title="Parar reprodução">
+                      <IconButton
+                        className={classes.remove}
+                        disabled={!areDefaultButtonsDisabled(instant)}
+                        onClick={handleStop}
+                      >
+                        <StopIcon />
+                      </IconButton>
+                    </Tooltip>
                     <Tooltip title="Remover">
                       <IconButton
                         className={classes.remove}
-                        disabled={playing}
+                        disabled={areDefaultButtonsDisabled(instant)}
                         onClick={() => handleRemove(instant)}
                       >
                         <DeleteIcon />
