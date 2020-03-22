@@ -9,7 +9,7 @@ const update = require("update-electron-app");
 let mainWindow;
 
 update({
-  repo: "kitze/react-electron-example",
+  repo: "pinheirolucas/discord_instants_player_ui",
   updateInterval: "1 hour"
 });
 
