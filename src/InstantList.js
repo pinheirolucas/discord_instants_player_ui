@@ -84,7 +84,7 @@ export default function InstantList(props) {
   const { search } = props;
 
   const filteredInstants = search.length
-    ? instants.filter(({ name }) => name.toLowerCase().includes(search))
+    ? instants.filter(({ name }) => name.toLowerCase().includes(search.toLowerCase()))
     : instants;
 
   useEffect(() => {
