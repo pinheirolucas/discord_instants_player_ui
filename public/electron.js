@@ -15,15 +15,18 @@ update({
 
 function createWindow() {
   mainWindow = new BrowserWindow({
-    width: 900,
-    height: 680,
+    width: 1280,
+    height: 900,
     webPreferences: { nodeIntegration: true }
   });
-  mainWindow.loadURL(
-    isDev
-      ? "http://localhost:3000"
-      : `file://${path.join(__dirname, "../build/index.html")}`
-  );
+
+  if (isDev) {
+    mainWindow.loadURL("http://localhost:3000");
+    mainWindow.webContents.openDevTools();
+  } else {
+    mainWindow.loadURL(`file://${path.join(__dirname, "../build/index.html")}`);
+  }
+
   mainWindow.on("closed", () => (mainWindow = null));
 }
 

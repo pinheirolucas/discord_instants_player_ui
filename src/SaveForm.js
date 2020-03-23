@@ -98,7 +98,7 @@ function SaveForm(props) {
           onChange={handleName}
         />
       </DialogContent>
-      <DialogTitle>
+      <DialogContent>
         <TextField
           label="Link"
           value={link}
@@ -107,7 +107,7 @@ function SaveForm(props) {
           className={classes.input}
           onChange={handleLink}
         />
-      </DialogTitle>
+      </DialogContent>
       <DialogActions>
         <Button onClick={onCancel}>Cancelar</Button>
         <Button onClick={handleSave}>Salvar</Button>

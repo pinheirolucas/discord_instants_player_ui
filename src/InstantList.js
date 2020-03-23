@@ -12,8 +12,8 @@ import DeleteIcon from "@material-ui/icons/Delete";
 import PlayCircleFilledIcon from "@material-ui/icons/PlayCircleFilled";
 import SendIcon from "@material-ui/icons/Send";
 import StopIcon from "@material-ui/icons/Stop";
-import createPersistedState from "use-persisted-state";
 import Tooltip from "@material-ui/core/Tooltip";
+import Typography from "@material-ui/core/Typography";
 
 import KeybindingInput from "./KeybindingInput";
 import SaveForm from "./SaveForm";
@@ -21,10 +21,21 @@ import SnackbarContext from "./SnackbarContext";
 import { getContent } from "./service";
 import useAudioPlayer from "./useAudioPlayer";
 import useDiscordPlayer from "./useDiscordPlayer";
+import {
+  useInstantsState,
+  useUrlCodeMap,
+  useCodeUrlMap,
+  useCodeKeyMap
+} from "./storage";
 
 const useStyles = makeStyles(theme => ({
   container: {
-    margin: "20px 0"
+    margin: "20px 0",
+    width: "100%"
+  },
+  messageContainer: {
+    width: "100%",
+    textAlign: "center"
   },
   paper: {
     padding: "15px",
@@ -37,7 +48,7 @@ const useStyles = makeStyles(theme => ({
     marginTop: "15px"
   },
   fab: {
-    position: "absolute",
+    position: "fixed",
     bottom: theme.spacing(2),
     right: theme.spacing(2)
   },
@@ -52,12 +63,7 @@ const useStyles = makeStyles(theme => ({
   }
 }));
 
-const useInstantsState = createPersistedState("instants");
-const useUrlCodeMap = createPersistedState("urlCodeMap");
-const useCodeUrlMap = createPersistedState("codeUrlMap");
-const useCodeKeyMap = createPersistedState("codeKeyMap");
-
-export default function InstantList() {
+export default function InstantList(props) {
   const classes = useStyles();
   const [formOpen, setFormOpen] = useState(false);
   const [audioUrl, isAudioPlaying, playAudio, stopAudio] = useAudioPlayer();
@@ -74,6 +80,12 @@ export default function InstantList() {
   const [urlCodeMap, setUrlCodeMap] = useUrlCodeMap({});
   const [codeUrlMap, setCodeUrlMap] = useCodeUrlMap({});
   const [codeKeyMap, setCodeKeyMap] = useCodeKeyMap({});
+
+  const { search } = props;
+
+  const filteredInstants = search.length
+    ? instants.filter(({ name }) => name.toLowerCase().includes(search))
+    : instants;
 
   useEffect(() => {
     // window.backend
@@ -203,68 +215,93 @@ export default function InstantList() {
     }
   }
 
+  function buildInstantsList() {
+    if (search.length && !filteredInstants.length) {
+      return (
+        <div className={classes.messageContainer}>
+          <Typography variant="h6" style={{ textAlign: "center" }}>
+            Nenhum resultado para a pesquisa "{search}"
+          </Typography>
+        </div>
+      );
+    } else if (!search.length && !filteredInstants.length) {
+      return (
+        <div className={classes.messageContainer}>
+          <Typography variant="h6">
+            Você não possui instants cadastrados. Clique no botão + para
+            cadastrar seu primeiro instant!
+          </Typography>
+        </div>
+      );
+    } else {
+      return filteredInstants.map(instant => (
+        <Grid key={instant.url} item xs={3}>
+          <Paper className={classes.paper}>
+            <Grid container>
+              <Grid container>
+                <h3 className={classes.title}>{instant.name}</h3>
+              </Grid>
+              <Grid container>
+                <Grid item xs={12}>
+                  <Tooltip title="Reproduzir">
+                    <IconButton
+                      className={classes.play}
+                      disabled={isDiscordPlaying}
+                      onClick={() => handlePlay(instant)}
+                    >
+                      <PlayCircleFilledIcon />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title="Enviar para o Discord">
+                    <IconButton
+                      className={classes.discord}
+                      disabled={isAudioPlaying}
+                      onClick={() => handlePlayOnDiscord(instant)}
+                    >
+                      <SendIcon />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title="Parar reprodução">
+                    <IconButton
+                      className={classes.remove}
+                      disabled={!areDefaultButtonsDisabled(instant)}
+                      onClick={handleStop}
+                    >
+                      <StopIcon />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title="Remover">
+                    <IconButton
+                      className={classes.remove}
+                      disabled={areDefaultButtonsDisabled(instant)}
+                      onClick={() => handleRemove(instant)}
+                    >
+                      <DeleteIcon />
+                    </IconButton>
+                  </Tooltip>
+                </Grid>
+              </Grid>
+              <Grid container style={{ marginTop: "15px" }}>
+                <Grid item xs={12}>
+                  <KeybindingInput
+                    value={getKeyStr(instant)}
+                    onBindingChange={handleBindingChange(instant)}
+                  />
+                </Grid>
+              </Grid>
+            </Grid>
+          </Paper>
+        </Grid>
+      ));
+    }
+  }
+
+  const instantsList = buildInstantsList();
+
   return (
     <Container>
       <Grid container spacing={4} className={classes.container}>
-        {instants.map(instant => (
-          <Grid key={instant.url} item xs={3}>
-            <Paper className={classes.paper}>
-              <Grid container>
-                <Grid container>
-                  <h3 className={classes.title}>{instant.name}</h3>
-                </Grid>
-                <Grid container>
-                  <Grid item xs={12}>
-                    <Tooltip title="Reproduzir">
-                      <IconButton
-                        className={classes.play}
-                        disabled={isDiscordPlaying}
-                        onClick={() => handlePlay(instant)}
-                      >
-                        <PlayCircleFilledIcon />
-                      </IconButton>
-                    </Tooltip>
-                    <Tooltip title="Enviar para o Discord">
-                      <IconButton
-                        className={classes.discord}
-                        disabled={isAudioPlaying}
-                        onClick={() => handlePlayOnDiscord(instant)}
-                      >
-                        <SendIcon />
-                      </IconButton>
-                    </Tooltip>
-                    <Tooltip title="Parar reprodução">
-                      <IconButton
-                        className={classes.remove}
-                        disabled={!areDefaultButtonsDisabled(instant)}
-                        onClick={handleStop}
-                      >
-                        <StopIcon />
-                      </IconButton>
-                    </Tooltip>
-                    <Tooltip title="Remover">
-                      <IconButton
-                        className={classes.remove}
-                        disabled={areDefaultButtonsDisabled(instant)}
-                        onClick={() => handleRemove(instant)}
-                      >
-                        <DeleteIcon />
-                      </IconButton>
-                    </Tooltip>
-                  </Grid>
-                </Grid>
-                <Grid container style={{ marginTop: "15px" }}>
-                  <Grid item xs={12}>
-                    <KeybindingInput
-                      value={getKeyStr(instant)}
-                      onBindingChange={handleBindingChange(instant)}
-                    />
-                  </Grid>
-                </Grid>
-              </Grid>
-            </Paper>
-          </Grid>
-        ))}
+        {instantsList}
       </Grid>
       <SaveForm
         open={formOpen}

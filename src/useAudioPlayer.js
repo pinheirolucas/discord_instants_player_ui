@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 
 export default function useAudioPlayer() {
-  const player = useRef(new Audio());
+  const playerRef = useRef(new Audio());
   const [src, setSrc] = useState("");
   const [url, setUrl] = useState("");
   const isPlaying = Boolean(src);
@@ -12,16 +12,18 @@ export default function useAudioPlayer() {
       setUrl("");
     }
 
-    player.current.addEventListener("ended", handleEnd);
+    const player = playerRef.current;
+
+    player.addEventListener("ended", handleEnd);
     return () => {
-      player.current.removeEventListener("ended", handleEnd);
+      player.removeEventListener("ended", handleEnd);
     };
   }, []);
 
   function stop() {
-    player.current.pause();
-    player.current.currentTime = 0;
-    player.current.src = "";
+    playerRef.current.pause();
+    playerRef.current.currentTime = 0;
+    playerRef.current.src = "";
     setSrc("");
     setUrl("");
   }
@@ -33,8 +35,8 @@ export default function useAudioPlayer() {
 
     setSrc(src);
     setUrl(url);
-    player.current.src = src;
-    player.current.play();
+    playerRef.current.src = src;
+    playerRef.current.play();
   }
 
   return [url, isPlaying, play, stop];
