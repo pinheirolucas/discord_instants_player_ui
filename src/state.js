@@ -20,5 +20,3 @@ export function exportToJSON() {
   anchor.setAttribute("download", "discord-instants-player-config.json");
   anchor.click();
 }
-
-export function importFromJSON() {}

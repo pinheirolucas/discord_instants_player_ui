@@ -9,7 +9,9 @@ import IconButton from "@material-ui/core/IconButton";
 import CloseIcon from "@material-ui/icons/Close";
 import SearchIcon from "@material-ui/icons/Search";
 import MoreIcon from "@material-ui/icons/MoreVert";
-import { fade, makeStyles } from "@material-ui/core/styles";
+import LightIcon from "@material-ui/icons/Brightness7";
+import DarkIcon from "@material-ui/icons/Brightness4";
+import { fade, makeStyles, ThemeProvider } from "@material-ui/core/styles";
 import InputBase from "@material-ui/core/InputBase";
 import Menu from "@material-ui/core/Menu";
 import MenuItem from "@material-ui/core/MenuItem";
@@ -18,6 +20,8 @@ import InstantsList from "./InstantList";
 import SnackbarContext from "./SnackbarContext";
 import ImportForm from "./ImportForm";
 import { exportToJSON } from "./state";
+import { useTheme } from "./storage";
+import { darkTheme, lightTheme } from "./theme";
 
 import "./App.css";
 
@@ -92,6 +96,7 @@ function App() {
   );
   const [snackAction, setSnackAction] = useState(defaultSnackAction);
   const [search, setSearch] = useState("");
+  const [themeName, setThemeName] = useTheme("light");
 
   const menuOpen = Boolean(menuAnchor);
 
@@ -127,7 +132,7 @@ function App() {
   }
 
   return (
-    <React.Fragment>
+    <ThemeProvider theme={themeName === "light" ? lightTheme : darkTheme}>
       <CssBaseline />
       <div className={classes.root}>
         <AppBar position="fixed">
@@ -150,6 +155,23 @@ function App() {
                 onChange={handleSearchChange}
               />
             </div>
+            {themeName === "light" ? (
+              <IconButton
+                edge="end"
+                color="inherit"
+                onClick={() => setThemeName("dark")}
+              >
+                <DarkIcon />
+              </IconButton>
+            ) : (
+              <IconButton
+                edge="end"
+                color="inherit"
+                onClick={() => setThemeName("light")}
+              >
+                <LightIcon />
+              </IconButton>
+            )}
             <IconButton edge="end" color="inherit" onClick={handleMenuClick}>
               <MoreIcon />
             </IconButton>
@@ -198,7 +220,7 @@ function App() {
           </React.Fragment>
         }
       />
-    </React.Fragment>
+    </ThemeProvider>
   );
 }
 

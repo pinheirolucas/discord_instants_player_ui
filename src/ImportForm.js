@@ -59,9 +59,9 @@ function ImportForm(props) {
   const [fileSuccessMessage, setFileSuccessMessage] = useState("");
 
   const [instants, setInstants] = useInstantsState([]);
-  const [urlCodeMap, setUrlCodeMap] = useUrlCodeMap({});
-  const [codeUrlMap, setCodeUrlMap] = useCodeUrlMap({});
-  const [codeKeyMap, setCodeKeyMap] = useCodeKeyMap({});
+  const [, setUrlCodeMap] = useUrlCodeMap({});
+  const [, setCodeUrlMap] = useCodeUrlMap({});
+  const [, setCodeKeyMap] = useCodeKeyMap({});
 
   const {
     acceptedFiles,
