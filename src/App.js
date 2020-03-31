@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 
 import AppBar from "@material-ui/core/AppBar";
 import Toolbar from "@material-ui/core/Toolbar";
@@ -12,11 +12,14 @@ import MoreIcon from "@material-ui/icons/MoreVert";
 import LightIcon from "@material-ui/icons/Brightness7";
 import DarkIcon from "@material-ui/icons/Brightness4";
 import { fade, makeStyles, ThemeProvider } from "@material-ui/core/styles";
-import InputBase from "@material-ui/core/InputBase";
 import Menu from "@material-ui/core/Menu";
 import MenuItem from "@material-ui/core/MenuItem";
+import Tabs from "@material-ui/core/Tabs";
+import Tab from "@material-ui/core/Tab";
 
-import InstantsList from "./InstantList";
+import FocusableInput from "./FocusableInput";
+import FavoritesPanel from "./FavoritesPanel";
+import MyInstantsPanel from "./MyInstantsPanel";
 import SnackbarContext from "./SnackbarContext";
 import ImportForm from "./ImportForm";
 import { exportToJSON } from "./state";
@@ -84,10 +87,12 @@ const useStyles = makeStyles(theme => ({
 function App() {
   const classes = useStyles();
 
+  const [searchFocus, setSearchFocus] = useState(false);
   const [menuAnchor, setMenuAnchor] = useState(null);
   const [importFormOpen, setImportFormOpen] = useState(false);
   const [snackOpen, setSnackOpen] = useState(false);
   const [snackMessage, setSnackMessage] = useState("");
+  const [selectedTab, setSelectedTab] = useState("favorites");
   const [onSnackbarClose, setOnSnackbarClose] = useState(
     defaultOnSnackbarClose
   );
@@ -99,6 +104,21 @@ function App() {
   const [themeName, setThemeName] = useTheme("light");
 
   const menuOpen = Boolean(menuAnchor);
+
+  useEffect(() => {
+    function handleSearch(e) {
+      if (e.key !== "f" || !e.ctrlKey) {
+        return;
+      }
+
+      setSearchFocus(true);
+    }
+
+    window.addEventListener("keydown", handleSearch);
+    return () => {
+      window.removeEventListener("keydown", handleSearch);
+    };
+  }, []);
 
   function openSnackbar(options) {
     const { action, autoHideDuration, message, onClose } = options;
@@ -131,6 +151,34 @@ function App() {
     setMenuAnchor(null);
   }
 
+  function buildThemeIcon() {
+    return themeName === "light" ? (
+      <IconButton
+        edge="end"
+        color="inherit"
+        onClick={() => setThemeName("dark")}
+      >
+        <DarkIcon />
+      </IconButton>
+    ) : (
+      <IconButton
+        edge="end"
+        color="inherit"
+        onClick={() => setThemeName("light")}
+      >
+        <LightIcon />
+      </IconButton>
+    );
+  }
+
+  function buildTabPanel() {
+    return selectedTab === "favorites" ? (
+      <FavoritesPanel search={search} />
+    ) : (
+      <MyInstantsPanel search={search} />
+    );
+  }
+
   return (
     <ThemeProvider theme={themeName === "light" ? lightTheme : darkTheme}>
       <CssBaseline />
@@ -144,34 +192,19 @@ function App() {
               <div className={classes.searchIcon}>
                 <SearchIcon />
               </div>
-              <InputBase
+              <FocusableInput
                 placeholder="Pesquisar…"
+                focused={searchFocus}
                 classes={{
                   root: classes.inputRoot,
                   input: classes.inputInput
                 }}
                 inputProps={{ "aria-label": "pesquisar" }}
-                value={search}
+                onBlur={() => setSearchFocus(false)}
                 onChange={handleSearchChange}
               />
             </div>
-            {themeName === "light" ? (
-              <IconButton
-                edge="end"
-                color="inherit"
-                onClick={() => setThemeName("dark")}
-              >
-                <DarkIcon />
-              </IconButton>
-            ) : (
-              <IconButton
-                edge="end"
-                color="inherit"
-                onClick={() => setThemeName("light")}
-              >
-                <LightIcon />
-              </IconButton>
-            )}
+            {buildThemeIcon()}
             <IconButton edge="end" color="inherit" onClick={handleMenuClick}>
               <MoreIcon />
             </IconButton>
@@ -187,11 +220,17 @@ function App() {
             </MenuItem>
             <MenuItem onClick={() => exportToJSON()}>Exportar</MenuItem>
           </Menu>
+          <Tabs
+            value={selectedTab}
+            onChange={(_, newValue) => setSelectedTab(newValue)}
+          >
+            <Tab label="Favoritos" value="favorites" />
+            <Tab label="MyInstants" value="myinstants" />
+          </Tabs>
         </AppBar>
       </div>
-      <Toolbar />
       <SnackbarContext.Provider value={{ openSnackbar, closeSnackbar }}>
-        <InstantsList search={search} />
+        {buildTabPanel()}
       </SnackbarContext.Provider>
       <ImportForm
         open={importFormOpen}

@@ -96,6 +96,7 @@ function SaveForm(props) {
           helperText={nameError}
           className={classes.input}
           onChange={handleName}
+          autoFocus
         />
       </DialogContent>
       <DialogContent>

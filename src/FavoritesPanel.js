@@ -33,6 +33,9 @@ const useStyles = makeStyles(theme => ({
     margin: "20px 0",
     width: "100%"
   },
+  topDiff: {
+    marginTop: "125px"
+  },
   messageContainer: {
     width: "100%",
     textAlign: "center"
@@ -63,7 +66,7 @@ const useStyles = makeStyles(theme => ({
   }
 }));
 
-export default function InstantList(props) {
+function FavoritesPanel(props) {
   const classes = useStyles();
   const [formOpen, setFormOpen] = useState(false);
   const [audioUrl, isAudioPlaying, playAudio, stopAudio] = useAudioPlayer();
@@ -84,7 +87,9 @@ export default function InstantList(props) {
   const { search } = props;
 
   const filteredInstants = search.length
-    ? instants.filter(({ name }) => name.toLowerCase().includes(search.toLowerCase()))
+    ? instants.filter(({ name }) =>
+        name.toLowerCase().includes(search.toLowerCase())
+      )
     : instants;
 
   useEffect(() => {
@@ -244,40 +249,48 @@ export default function InstantList(props) {
               <Grid container>
                 <Grid item xs={12}>
                   <Tooltip title="Reproduzir">
-                    <IconButton
-                      className={classes.play}
-                      disabled={isDiscordPlaying}
-                      onClick={() => handlePlay(instant)}
-                    >
-                      <PlayCircleFilledIcon />
-                    </IconButton>
+                    <span>
+                      <IconButton
+                        className={classes.play}
+                        disabled={isDiscordPlaying}
+                        onClick={() => handlePlay(instant)}
+                      >
+                        <PlayCircleFilledIcon />
+                      </IconButton>
+                    </span>
                   </Tooltip>
                   <Tooltip title="Enviar para o Discord">
-                    <IconButton
-                      className={classes.discord}
-                      disabled={isAudioPlaying}
-                      onClick={() => handlePlayOnDiscord(instant)}
-                    >
-                      <SendIcon />
-                    </IconButton>
+                    <span>
+                      <IconButton
+                        className={classes.discord}
+                        disabled={isAudioPlaying}
+                        onClick={() => handlePlayOnDiscord(instant)}
+                      >
+                        <SendIcon />
+                      </IconButton>
+                    </span>
                   </Tooltip>
                   <Tooltip title="Parar reprodução">
-                    <IconButton
-                      className={classes.remove}
-                      disabled={!areDefaultButtonsDisabled(instant)}
-                      onClick={handleStop}
-                    >
-                      <StopIcon />
-                    </IconButton>
+                    <span>
+                      <IconButton
+                        className={classes.remove}
+                        disabled={!areDefaultButtonsDisabled(instant)}
+                        onClick={handleStop}
+                      >
+                        <StopIcon />
+                      </IconButton>
+                    </span>
                   </Tooltip>
                   <Tooltip title="Remover">
-                    <IconButton
-                      className={classes.remove}
-                      disabled={areDefaultButtonsDisabled(instant)}
-                      onClick={() => handleRemove(instant)}
-                    >
-                      <DeleteIcon />
-                    </IconButton>
+                    <span>
+                      <IconButton
+                        className={classes.remove}
+                        disabled={areDefaultButtonsDisabled(instant)}
+                        onClick={() => handleRemove(instant)}
+                      >
+                        <DeleteIcon />
+                      </IconButton>
+                    </span>
                   </Tooltip>
                 </Grid>
               </Grid>
@@ -299,7 +312,7 @@ export default function InstantList(props) {
   const instantsList = buildInstantsList();
 
   return (
-    <Container>
+    <Container className={classes.topDiff}>
       <Grid container spacing={4} className={classes.container}>
         {instantsList}
       </Grid>
@@ -314,3 +327,5 @@ export default function InstantList(props) {
     </Container>
   );
 }
+
+export default FavoritesPanel;

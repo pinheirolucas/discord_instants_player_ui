@@ -14,16 +14,20 @@ update({
 });
 
 function createWindow() {
-  mainWindow = new BrowserWindow({
-    width: 1280,
-    height: 900,
-    webPreferences: { nodeIntegration: true }
-  });
-
   if (isDev) {
+    mainWindow = new BrowserWindow({
+      width: 1600,
+      height: 900,
+      webPreferences: { nodeIntegration: true }
+    });
     mainWindow.loadURL("http://localhost:3000");
     mainWindow.webContents.openDevTools();
   } else {
+    mainWindow = new BrowserWindow({
+      width: 1280,
+      height: 900,
+      webPreferences: { nodeIntegration: true }
+    });
     mainWindow.setMenu(null);
     mainWindow.loadURL(`file://${path.join(__dirname, "../build/index.html")}`);
   }
