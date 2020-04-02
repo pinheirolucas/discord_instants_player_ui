@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 
 import AppBar from "@material-ui/core/AppBar";
 import Toolbar from "@material-ui/core/Toolbar";
@@ -87,6 +87,7 @@ const useStyles = makeStyles(theme => ({
 function App() {
   const classes = useStyles();
 
+  const timeout = useRef(null);
   const [searchFocus, setSearchFocus] = useState(false);
   const [menuAnchor, setMenuAnchor] = useState(null);
   const [importFormOpen, setImportFormOpen] = useState(false);
@@ -140,7 +141,12 @@ function App() {
   }
 
   function handleSearchChange(e) {
-    setSearch(e.target.value);
+    const value = e.target.value;
+
+    clearTimeout(timeout.current);
+    timeout.current = setTimeout(() => {
+      setSearch(value);
+    }, 300);
   }
 
   function handleMenuClick(e) {

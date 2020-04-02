@@ -25,7 +25,7 @@ export async function getContent(url) {
 export async function getMyInstants(page, search) {
   const params = [
     { value: page || 1, query: `page=${page}` },
-    { value: search, query: `search=${search}` }
+    { value: search, query: `&search=${search}` }
   ].reduce((acc, cur) => (cur.value ? acc + cur.query : acc), "");
 
   return axios

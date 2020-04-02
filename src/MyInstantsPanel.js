@@ -12,6 +12,7 @@ import PlayCircleFilledIcon from "@material-ui/icons/PlayCircleFilled";
 import SendIcon from "@material-ui/icons/Send";
 import StopIcon from "@material-ui/icons/Stop";
 import Tooltip from "@material-ui/core/Tooltip";
+import * as R from "ramda";
 
 import SnackbarContext from "./SnackbarContext";
 import { getContent, getMyInstants } from "./service";
@@ -77,18 +78,25 @@ function MyInstantsPanel(props) {
   const { openSnackbar } = useContext(SnackbarContext);
   const urls = favorites.map(instant => instant.url);
 
+  // useEffect(() => {
+  //   getMyInstants(page, search)
+  //     .then(data => {
+  //       setInstants(cur =>
+  //         R.uniqBy(R.path(["url"]), [...cur, ...(data.instants || [])])
+  //       );
+  //       setTotalPages(data.pages || 1);
+  //     })
+  //     .catch(err => openSnackbar({ message: err.message }));
+  // }, [page, openSnackbar]);
+
   useEffect(() => {
-    getMyInstants(page, search)
+    getMyInstants(1, search)
       .then(data => {
-        setInstants(cur => [...cur, ...(data.instants || [])]);
+        setInstants([...(data.instants || [])]);
         setTotalPages(data.pages || 1);
       })
-      .catch(err =>
-        openSnackbar({
-          message: err.message
-        })
-      );
-  }, [page, search, openSnackbar]);
+      .catch(err => openSnackbar({ message: err.message }));
+  }, [search, openSnackbar]);
 
   function areDefaultButtonsDisabled(instant) {
     return instant.url === audioUrl || instant.url === discordUrl;
