@@ -8,20 +8,11 @@ import DialogActions from "@material-ui/core/DialogActions";
 import TextField from "@material-ui/core/TextField";
 import { makeStyles } from "@material-ui/core/styles";
 
-const useStyles = makeStyles(theme => ({
+const useStyles = makeStyles((theme) => ({
   input: {
-    width: "250px"
-  }
+    width: "250px",
+  },
 }));
-
-const instantsUrlPrefix = "https://www.myinstants.com/media/sounds/";
-const instantsUrlSufix = ".mp3";
-
-function isInstantsUrlValid(url) {
-  return (
-    url && url.startsWith(instantsUrlPrefix) && url.endsWith(instantsUrlSufix)
-  );
-}
 
 function SaveForm(props) {
   const classes = useStyles();
@@ -55,7 +46,7 @@ function SaveForm(props) {
   }
 
   function handleLink(e) {
-    if (!isInstantsUrlValid(e.target.value)) {
+    if (!e.target.value) {
       setLinkError("Link inválido");
     } else {
       setLinkError("");
@@ -70,7 +61,7 @@ function SaveForm(props) {
       return;
     }
 
-    if (!isInstantsUrlValid(link)) {
+    if (!link) {
       setLinkError("Link inválido");
       return;
     }

@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from "react";
+import React, { useContext, useEffect, useState, useRef } from "react";
 
 import Grid from "@material-ui/core/Grid";
 import Container from "@material-ui/core/Container";
@@ -23,37 +23,37 @@ import { useInstantsState, useUrlCodeMap, useCodeUrlMap } from "./storage";
 const useStyles = makeStyles({
   container: {
     margin: "20px 0",
-    width: "100%"
+    width: "100%",
   },
   topDiff: {
-    marginTop: "125px"
+    marginTop: "125px",
   },
   messageContainer: {
     width: "100%",
-    textAlign: "center"
+    textAlign: "center",
   },
   paper: {
     padding: "15px",
-    position: "relative"
+    position: "relative",
   },
   title: {
-    marginBottom: "15px"
+    marginBottom: "15px",
   },
   inputWrapper: {
-    marginTop: "15px"
+    marginTop: "15px",
   },
   play: {
-    color: "#28a745"
+    color: "#28a745",
   },
   discord: {
-    color: "#7289da"
+    color: "#7289da",
   },
   stop: {
-    color: "#dc3545"
+    color: "#dc3545",
   },
   favorite: {
-    color: "#ffc107"
-  }
+    color: "#ffc107",
+  },
 });
 
 function MyInstantsPanel(props) {
@@ -65,9 +65,10 @@ function MyInstantsPanel(props) {
     discordUrl,
     isDiscordPlaying,
     playDiscord,
-    stopDiscord
+    stopDiscord,
   ] = useDiscordPlayer();
 
+  const lastSearch = useRef(search);
   const [favorites, setFavorites] = useInstantsState([]);
   const [urlCodeMap, setUrlCodeMap] = useUrlCodeMap({});
   const [codeUrlMap, setCodeUrlMap] = useCodeUrlMap({});
@@ -76,27 +77,26 @@ function MyInstantsPanel(props) {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const { openSnackbar } = useContext(SnackbarContext);
-  const urls = favorites.map(instant => instant.url);
-
-  // useEffect(() => {
-  //   getMyInstants(page, search)
-  //     .then(data => {
-  //       setInstants(cur =>
-  //         R.uniqBy(R.path(["url"]), [...cur, ...(data.instants || [])])
-  //       );
-  //       setTotalPages(data.pages || 1);
-  //     })
-  //     .catch(err => openSnackbar({ message: err.message }));
-  // }, [page, openSnackbar]);
+  const urls = favorites.map((instant) => instant.url);
 
   useEffect(() => {
-    getMyInstants(1, search)
-      .then(data => {
-        setInstants([...(data.instants || [])]);
-        setTotalPages(data.pages || 1);
-      })
-      .catch(err => openSnackbar({ message: err.message }));
-  }, [search, openSnackbar]);
+    function handleSuccess(data) {
+      if (search === lastSearch.current) {
+        setInstants((cur) =>
+          R.uniqBy(R.path(["url"]), [...cur, ...(data.instants || [])])
+        );
+        return;
+      }
+
+      setInstants(() => R.uniqBy(R.path(["url"]), [...(data.instants || [])]));
+      setTotalPages(data.pages || 1);
+      lastSearch.current = search;
+    }
+
+    getMyInstants(page, search)
+      .then(handleSuccess)
+      .catch((err) => openSnackbar({ message: err.message }));
+  }, [page, search, openSnackbar]);
 
   function areDefaultButtonsDisabled(instant) {
     return instant.url === audioUrl || instant.url === discordUrl;
@@ -154,7 +154,7 @@ function MyInstantsPanel(props) {
 
   function removeFromFavorites(instant) {
     const newFavorites = [...favorites];
-    const i = newFavorites.findIndex(current => current.url === instant.url);
+    const i = newFavorites.findIndex((current) => current.url === instant.url);
     if (i === -1) {
       return;
     }
@@ -175,7 +175,7 @@ function MyInstantsPanel(props) {
   return (
     <Container className={classes.topDiff}>
       <Grid container spacing={4} className={classes.container}>
-        {instants.map(instant => (
+        {instants.map((instant) => (
           <Grid key={instant.url} item xs={3}>
             <Paper className={classes.paper}>
               <Grid container>
