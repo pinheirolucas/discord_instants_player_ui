@@ -52,7 +52,9 @@ only in a packaged build, as a blank window.
 
 - Uses MUI v5 (`@mui/material`, `@mui/icons-material`) with the `@mui/styles` compatibility package, so the
   existing `makeStyles` call sites keep working. `@mui/styles` is deprecated and was dropped after MUI v6, so
-  moving past v5 means rewriting those call sites to `sx`/`styled` first.
+  moving past v5 means rewriting those call sites to `sx`/`styled` first. React is held at 18 for the same
+  reason — MUI v5 is the ceiling until that rewrite happens. Everything else in the tree is current, and
+  `pnpm audit` reports no known vulnerabilities.
 - `@mui/styles` resolves `makeStyles` against its own default theme, which in v5 is empty. Any component that
   calls `useStyles()` must therefore be rendered *below* `ThemeProvider`, not render it itself — this is why
   `App` is split into a provider shell and `AppContent`.
