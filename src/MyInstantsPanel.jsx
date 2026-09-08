@@ -144,7 +144,9 @@ function MyInstantsPanel(props) {
         {page === totalPages ? (
           <React.Fragment />
         ) : (
-          <Grid container item xs={12} justifyContent="center">
+          <Grid container size={12} sx={{
+            justifyContent: "center"
+          }}>
             <Button
               variant="contained"
               color="secondary"

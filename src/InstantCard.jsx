@@ -49,7 +49,7 @@ function InstantCard(props) {
   } = props;
 
   return (
-    <Grid item xs={3}>
+    <Grid size={3}>
       <Paper sx={{ padding: "15px", position: "relative" }}>
         <Grid container>
           <Grid container>
@@ -58,7 +58,7 @@ function InstantCard(props) {
             </Box>
           </Grid>
           <Grid container>
-            <Grid item xs={12}>
+            <Grid size={12}>
               <InstantCardAction
                 title="Reproduzir"
                 color={actionColors.play}

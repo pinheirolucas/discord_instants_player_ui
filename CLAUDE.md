@@ -49,10 +49,11 @@ only in a packaged build, as a blank window.
 
 ## Notes
 
-- Uses MUI v5 (`@mui/material`, `@mui/icons-material`). Styling is `sx` props, with `styled()` reserved for
-  the one genuinely reusable styled element — the AppBar search box in `App.jsx`. There is no `@mui/styles`
-  and no `makeStyles`; a `grep -r "makeStyles\|@mui/styles" src/` returning anything means something
-  regressed.
-- MUI and React are held at v5 / 18 by choice, not by a blocker — the `@mui/styles` cap is gone, so moving
-  further is now a normal upgrade rather than a prerequisite rewrite.
+- Uses MUI v9 (`@mui/material`, `@mui/icons-material`) on React 19. Styling is `sx` props, with `styled()`
+  reserved for the one genuinely reusable styled element — the AppBar search box in `App.jsx`. There is no
+  `@mui/styles` and no `makeStyles`.
+- Grid uses the modern API: `<Grid container>` with `<Grid size={n}>`, not the removed `item`/`xs` props.
+  The pre-v7 Grid still exists upstream as `GridLegacy`; this app does not use it.
+- MUI icons no longer carry `data-testid`, so address icon buttons structurally (position within the card
+  or header) rather than by test id.
 - `ramda` is used for small functional helpers (`src/instantUtils.js`, `state.js`, `ImportForm.jsx`) — prefer it over ad-hoc loops for consistency with existing code.
