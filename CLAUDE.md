@@ -54,6 +54,10 @@ only in a packaged build, as a blank window.
   `@mui/styles` and no `makeStyles`.
 - Grid uses the modern API: `<Grid container>` with `<Grid size={n}>`, not the removed `item`/`xs` props.
   The pre-v7 Grid still exists upstream as `GridLegacy`; this app does not use it.
-- MUI icons no longer carry `data-testid`, so address icon buttons structurally (position within the card
-  or header) rather than by test id.
+- MUI icons *do* still carry `data-testid` (e.g. `data-testid="PlayCircleFilledIcon"`) in v9, but the tests
+  do not use it. The real obstacle is `InstantCardAction`: it wraps its `IconButton` in a `<span>` so a
+  disabled button can still host the tooltip listener, and MUI clones that span and puts the tooltip's
+  title on it as `aria-label`. The button itself therefore has no accessible name, and
+  `getByRole("button", { name })` finds nothing — reach the span with `getByLabelText(title)` and take the
+  button inside it. MUI's `Switch` reports `role="switch"`, not `"checkbox"`.
 - `ramda` is used for small functional helpers (`src/instantUtils.js`, `state.js`, `ImportForm.jsx`) — prefer it over ad-hoc loops for consistency with existing code.
