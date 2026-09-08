@@ -23,7 +23,6 @@
     "@emotion/styled": "^11.14.1",
     "@mui/icons-material": "^5.18.0",
     "@mui/material": "^5.18.0",
-    "@mui/styles": "^5.18.0",
     "axios": "^1.20.0",
     "prop-types": "^15.8.1",
     "ramda": "^0.32.0",

@@ -11,8 +11,13 @@ import SearchIcon from "@mui/icons-material/Search";
 import MoreIcon from "@mui/icons-material/MoreVert";
 import LightIcon from "@mui/icons-material/Brightness7";
 import DarkIcon from "@mui/icons-material/Brightness4";
-import { alpha, ThemeProvider, StyledEngineProvider } from "@mui/material/styles";
-import makeStyles from '@mui/styles/makeStyles';
+import {
+  alpha,
+  styled,
+  ThemeProvider,
+  StyledEngineProvider
+} from "@mui/material/styles";
+import Box from "@mui/material/Box";
 import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
 import Tabs from "@mui/material/Tabs";
@@ -33,46 +38,39 @@ const defaultOnSnackbarClose = () => {};
 const defaultSnackAutoHideDuration = 6000;
 const defaultSnackAction = <React.Fragment />;
 
-const useStyles = makeStyles(theme => ({
-  root: {
-    flexGrow: 1
+// The search box is the one piece here that is a reusable styled element rather
+// than a one-off override: an icon absolutely positioned inside an input whose
+// width grows on focus. Everything else in this file is plain sx props.
+const Search = styled("div")(({ theme }) => ({
+  position: "relative",
+  borderRadius: theme.shape.borderRadius,
+  backgroundColor: alpha(theme.palette.common.white, 0.15),
+  "&:hover": {
+    backgroundColor: alpha(theme.palette.common.white, 0.25)
   },
-  title: {
-    flexGrow: 1,
-    display: "none",
-    [theme.breakpoints.up("sm")]: {
-      display: "block"
-    }
-  },
-  search: {
-    position: "relative",
-    borderRadius: theme.shape.borderRadius,
-    backgroundColor: alpha(theme.palette.common.white, 0.15),
-    "&:hover": {
-      backgroundColor: alpha(theme.palette.common.white, 0.25)
-    },
-    marginLeft: 0,
-    width: "100%",
-    [theme.breakpoints.up("sm")]: {
-      marginLeft: theme.spacing(1),
-      width: "auto"
-    }
-  },
-  searchIcon: {
-    padding: theme.spacing(0, 2),
-    height: "100%",
-    position: "absolute",
-    pointerEvents: "none",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center"
-  },
-  inputRoot: {
-    color: "inherit"
-  },
-  inputInput: {
+  marginLeft: 0,
+  width: "100%",
+  [theme.breakpoints.up("sm")]: {
+    marginLeft: theme.spacing(1),
+    width: "auto"
+  }
+}));
+
+const SearchIconWrapper = styled("div")(({ theme }) => ({
+  padding: theme.spacing(0, 2),
+  height: "100%",
+  position: "absolute",
+  pointerEvents: "none",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center"
+}));
+
+const SearchInput = styled(FocusableInput)(({ theme }) => ({
+  color: "inherit",
+  "& .MuiInputBase-input": {
     padding: theme.spacing(1, 1, 1, 0),
-    // vertical padding + font size from searchIcon
+    // vertical padding + font size from SearchIconWrapper
     paddingLeft: `calc(1em + ${theme.spacing(4)})`,
     transition: theme.transitions.create("width"),
     width: "100%",
@@ -85,10 +83,9 @@ const useStyles = makeStyles(theme => ({
   }
 }));
 
-// The providers have to sit above whatever calls useStyles: @mui/styles resolves
-// makeStyles against its own default theme, which in v5 is empty, so a component
-// that renders ThemeProvider in its own return value would style itself against
-// a theme with no palette/spacing/breakpoints and crash on theme.breakpoints.up.
+// App only owns the theme choice and the providers; AppContent holds the UI.
+// Keeping the providers above the consuming tree is what lets styled() and sx
+// resolve theme.breakpoints / theme.spacing at render time.
 function App() {
   const [themeName, setThemeName] = useTheme("light");
 
@@ -102,7 +99,6 @@ function App() {
 }
 
 function AppContent({ themeName, setThemeName }) {
-  const classes = useStyles();
 
   const timeout = useRef(null);
   const [searchFocus, setSearchFocus] = useState(false);
@@ -203,28 +199,28 @@ function AppContent({ themeName, setThemeName }) {
   return (
     <React.Fragment>
       <CssBaseline />
-        <div className={classes.root}>
+      <Box sx={{ flexGrow: 1 }}>
           <AppBar position="fixed">
             <Toolbar>
-              <Typography className={classes.title} variant="h6" noWrap>
+              <Typography
+                variant="h6"
+                noWrap
+                sx={{ flexGrow: 1, display: { xs: "none", sm: "block" } }}
+              >
                 Discord Instants Player
               </Typography>
-              <div className={classes.search}>
-                <div className={classes.searchIcon}>
+              <Search>
+                <SearchIconWrapper>
                   <SearchIcon />
-                </div>
-                <FocusableInput
+                </SearchIconWrapper>
+                <SearchInput
                   placeholder="Pesquisar…"
                   focused={searchFocus}
-                  classes={{
-                    root: classes.inputRoot,
-                    input: classes.inputInput
-                  }}
                   inputProps={{ "aria-label": "pesquisar" }}
                   onBlur={() => setSearchFocus(false)}
                   onChange={handleSearchChange}
                 />
-              </div>
+              </Search>
               {buildThemeIcon()}
               <IconButton edge="end" color="inherit" onClick={handleMenuClick} size="large">
                 <MoreIcon />
@@ -249,7 +245,7 @@ function AppContent({ themeName, setThemeName }) {
               <Tab label="MyInstants" value="myinstants" />
             </Tabs>
           </AppBar>
-        </div>
+      </Box>
         <SnackbarContext.Provider value={{ openSnackbar, closeSnackbar }}>
           {buildTabPanel()}
         </SnackbarContext.Provider>

@@ -2,62 +2,20 @@ import React, { useContext, useEffect, useState, useRef } from "react";
 
 import Grid from "@mui/material/Grid";
 import Container from "@mui/material/Container";
-import Paper from "@mui/material/Paper";
-import makeStyles from '@mui/styles/makeStyles';
-import IconButton from "@mui/material/IconButton";
+
+import InstantCard, { InstantCardAction, actionColors } from "./InstantCard";
 import Button from "@mui/material/Button";
 import StarIcon from "@mui/icons-material/Star";
 import StarBorderIcon from "@mui/icons-material/StarBorder";
-import PlayCircleFilledIcon from "@mui/icons-material/PlayCircleFilled";
-import SendIcon from "@mui/icons-material/Send";
-import StopIcon from "@mui/icons-material/Stop";
-import Tooltip from "@mui/material/Tooltip";
 import * as R from "ramda";
 
 import SnackbarContext from "./SnackbarContext";
 import { getContent, getMyInstants } from "./service";
 import useAudioPlayer from "./useAudioPlayer";
 import useDiscordPlayer from "./useDiscordPlayer";
-import { useInstantsState, useUrlCodeMap, useCodeUrlMap } from "./storage";
-
-const useStyles = makeStyles({
-  container: {
-    margin: "20px 0",
-    width: "100%",
-  },
-  topDiff: {
-    marginTop: "125px",
-  },
-  messageContainer: {
-    width: "100%",
-    textAlign: "center",
-  },
-  paper: {
-    padding: "15px",
-    position: "relative",
-  },
-  title: {
-    marginBottom: "15px",
-  },
-  inputWrapper: {
-    marginTop: "15px",
-  },
-  play: {
-    color: "#28a745",
-  },
-  discord: {
-    color: "#7289da",
-  },
-  stop: {
-    color: "#dc3545",
-  },
-  favorite: {
-    color: "#ffc107",
-  },
-});
+import { useInstantsState } from "./storage";
 
 function MyInstantsPanel(props) {
-  const classes = useStyles();
   const { search } = props;
 
   const [audioUrl, isAudioPlaying, playAudio, stopAudio] = useAudioPlayer();
@@ -70,8 +28,6 @@ function MyInstantsPanel(props) {
 
   const lastSearch = useRef(search);
   const [favorites, setFavorites] = useInstantsState([]);
-  const [urlCodeMap, setUrlCodeMap] = useUrlCodeMap({});
-  const [codeUrlMap, setCodeUrlMap] = useCodeUrlMap({});
 
   const [instants, setInstants] = useState([]);
   const [page, setPage] = useState(1);
@@ -142,16 +98,6 @@ function MyInstantsPanel(props) {
     setFavorites([...favorites, instant]);
   }
 
-  function clearStorageForUrl(url) {
-    const code = urlCodeMap[url];
-
-    delete urlCodeMap[url];
-    delete codeUrlMap[code];
-
-    setCodeUrlMap({ ...codeUrlMap });
-    setUrlCodeMap({ ...urlCodeMap });
-  }
-
   function removeFromFavorites(instant) {
     const newFavorites = [...favorites];
     const i = newFavorites.findIndex((current) => current.url === instant.url);
@@ -159,7 +105,6 @@ function MyInstantsPanel(props) {
       return;
     }
 
-    clearStorageForUrl(instant.url);
     newFavorites.splice(i, 1);
     setFavorites(newFavorites);
   }
@@ -173,66 +118,28 @@ function MyInstantsPanel(props) {
   }
 
   return (
-    <Container className={classes.topDiff}>
-      <Grid container spacing={4} className={classes.container}>
+    <Container sx={{ marginTop: "125px" }}>
+      <Grid container spacing={4} sx={{ margin: "20px 0", width: "100%" }}>
         {instants.map((instant) => (
-          <Grid key={instant.url} item xs={3}>
-            <Paper className={classes.paper}>
-              <Grid container>
-                <Grid container>
-                  <h3 className={classes.title}>{instant.name}</h3>
-                </Grid>
-                <Grid container>
-                  <Grid item xs={12}>
-                    <Tooltip title="Reproduzir">
-                      <span>
-                        <IconButton
-                          className={classes.play}
-                          disabled={isDiscordPlaying}
-                          onClick={() => handlePlay(instant)}
-                          size="large">
-                          <PlayCircleFilledIcon />
-                        </IconButton>
-                      </span>
-                    </Tooltip>
-                    <Tooltip title="Enviar para o Discord">
-                      <span>
-                        <IconButton
-                          className={classes.discord}
-                          disabled={isAudioPlaying}
-                          onClick={() => handlePlayOnDiscord(instant)}
-                          size="large">
-                          <SendIcon />
-                        </IconButton>
-                      </span>
-                    </Tooltip>
-                    <Tooltip title="Parar reprodução">
-                      <span>
-                        <IconButton
-                          className={classes.stop}
-                          disabled={!areDefaultButtonsDisabled(instant)}
-                          onClick={handleStop}
-                          size="large">
-                          <StopIcon />
-                        </IconButton>
-                      </span>
-                    </Tooltip>
-                    <Tooltip title="Adicionar aos favoritos">
-                      <span>
-                        <IconButton
-                          className={classes.favorite}
-                          disabled={areDefaultButtonsDisabled(instant)}
-                          onClick={() => handleFavorite(instant)}
-                          size="large">
-                          {buildFavoriteIcon(instant)}
-                        </IconButton>
-                      </span>
-                    </Tooltip>
-                  </Grid>
-                </Grid>
-              </Grid>
-            </Paper>
-          </Grid>
+          <InstantCard
+            key={instant.url}
+            instant={instant}
+            isAudioPlaying={isAudioPlaying}
+            isDiscordPlaying={isDiscordPlaying}
+            isActive={areDefaultButtonsDisabled(instant)}
+            onPlay={handlePlay}
+            onPlayOnDiscord={handlePlayOnDiscord}
+            onStop={handleStop}
+          >
+            <InstantCardAction
+              title="Adicionar aos favoritos"
+              color={actionColors.favorite}
+              disabled={areDefaultButtonsDisabled(instant)}
+              onClick={() => handleFavorite(instant)}
+            >
+              {buildFavoriteIcon(instant)}
+            </InstantCardAction>
+          </InstantCard>
         ))}
         {page === totalPages ? (
           <React.Fragment />

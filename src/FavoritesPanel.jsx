@@ -1,73 +1,24 @@
-import React, { useContext, useEffect, useState } from "react";
+import React, { useContext, useState } from "react";
 
 import Grid from "@mui/material/Grid";
 import Container from "@mui/material/Container";
-import Paper from "@mui/material/Paper";
-import makeStyles from '@mui/styles/makeStyles';
+import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Fab from "@mui/material/Fab";
 import AddIcon from "@mui/icons-material/Add";
-import IconButton from "@mui/material/IconButton";
 import DeleteIcon from "@mui/icons-material/Delete";
-import PlayCircleFilledIcon from "@mui/icons-material/PlayCircleFilled";
-import SendIcon from "@mui/icons-material/Send";
-import StopIcon from "@mui/icons-material/Stop";
-import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 
-import KeybindingInput from "./KeybindingInput";
+import InstantCard, { InstantCardAction, actionColors } from "./InstantCard";
+
 import SaveForm from "./SaveForm";
 import SnackbarContext from "./SnackbarContext";
 import { getContent } from "./service";
 import useAudioPlayer from "./useAudioPlayer";
 import useDiscordPlayer from "./useDiscordPlayer";
-import {
-  useInstantsState,
-  useUrlCodeMap,
-  useCodeUrlMap,
-  useCodeKeyMap
-} from "./storage";
-
-const useStyles = makeStyles(theme => ({
-  container: {
-    margin: "20px 0",
-    width: "100%"
-  },
-  topDiff: {
-    marginTop: "125px"
-  },
-  messageContainer: {
-    width: "100%",
-    textAlign: "center"
-  },
-  paper: {
-    padding: "15px",
-    position: "relative"
-  },
-  title: {
-    marginBottom: "15px"
-  },
-  inputWrapper: {
-    marginTop: "15px"
-  },
-  fab: {
-    position: "fixed",
-    bottom: theme.spacing(2),
-    right: theme.spacing(2)
-  },
-  play: {
-    color: "#28a745"
-  },
-  discord: {
-    color: "#7289da"
-  },
-  remove: {
-    color: "#dc3545"
-  }
-}));
+import { useInstantsState } from "./storage";
 
 function FavoritesPanel(props) {
-  const classes = useStyles();
   const [formOpen, setFormOpen] = useState(false);
   const [audioUrl, isAudioPlaying, playAudio, stopAudio] = useAudioPlayer();
   const [
@@ -80,9 +31,6 @@ function FavoritesPanel(props) {
   const { openSnackbar, closeSnackbar } = useContext(SnackbarContext);
 
   const [instants, setInstants] = useInstantsState([]);
-  const [urlCodeMap, setUrlCodeMap] = useUrlCodeMap({});
-  const [codeUrlMap, setCodeUrlMap] = useCodeUrlMap({});
-  const [codeKeyMap, setCodeKeyMap] = useCodeKeyMap({});
 
   const { search } = props;
 
@@ -91,30 +39,6 @@ function FavoritesPanel(props) {
         name.toLowerCase().includes(search.toLowerCase())
       )
     : instants;
-
-  useEffect(() => {
-    // window.backend
-    //   .InitKeybindings(codeUrlMap)
-    //   .catch(() => console.log("keybindings already registered"));
-  }, [codeUrlMap]);
-
-  function handleBindingChange(instant) {
-    return (old, current) => {
-      const url = codeUrlMap[current.keyCode];
-      if (url) {
-        delete urlCodeMap[url];
-      }
-
-      if (old.keyCode !== null && old.keyCode !== undefined) {
-        delete urlCodeMap[instant.url];
-        delete codeUrlMap[old.keyCode];
-      }
-
-      setUrlCodeMap({ ...urlCodeMap, [instant.url]: current.keyCode });
-      setCodeUrlMap({ ...codeUrlMap, [current.keyCode]: instant.url });
-      setCodeKeyMap({ ...codeKeyMap, [current.keyCode]: current.key });
-    };
-  }
 
   function handleSnackbarRemoveAction(instant) {
     handleRemove(instant);
@@ -128,19 +52,8 @@ function FavoritesPanel(props) {
       return;
     }
 
-    clearStorageForUrl(instant.url);
     newInstants.splice(i, 1);
     setInstants(newInstants);
-  }
-
-  function clearStorageForUrl(url) {
-    const code = urlCodeMap[url];
-
-    delete urlCodeMap[url];
-    delete codeUrlMap[code];
-
-    setCodeUrlMap({ ...codeUrlMap });
-    setUrlCodeMap({ ...urlCodeMap });
   }
 
   function showInstantNotFoundError(instant, message) {
@@ -197,15 +110,6 @@ function FavoritesPanel(props) {
     setFormOpen(false);
   }
 
-  function getKeyStr(instant) {
-    const code = urlCodeMap[instant.url];
-    if (code === null || code === undefined) {
-      return "";
-    }
-
-    return codeKeyMap[code] || "";
-  }
-
   function areDefaultButtonsDisabled(instant) {
     return instant.url === audioUrl || instant.url === discordUrl;
   }
@@ -223,88 +127,42 @@ function FavoritesPanel(props) {
   function buildInstantsList() {
     if (search.length && !filteredInstants.length) {
       return (
-        <div className={classes.messageContainer}>
-          <Typography variant="h6" style={{ textAlign: "center" }}>
+        <Box sx={{ width: "100%", textAlign: "center" }}>
+          <Typography variant="h6">
             Nenhum resultado para a pesquisa "{search}"
           </Typography>
-        </div>
+        </Box>
       );
     } else if (!search.length && !filteredInstants.length) {
       return (
-        <div className={classes.messageContainer}>
+        <Box sx={{ width: "100%", textAlign: "center" }}>
           <Typography variant="h6">
             Você não possui instants cadastrados. Clique no botão + para
             cadastrar seu primeiro instant!
           </Typography>
-        </div>
+        </Box>
       );
     } else {
       return filteredInstants.map(instant => (
-        <Grid key={instant.url} item xs={3}>
-          <Paper className={classes.paper}>
-            <Grid container>
-              <Grid container>
-                <h3 className={classes.title}>{instant.name}</h3>
-              </Grid>
-              <Grid container>
-                <Grid item xs={12}>
-                  <Tooltip title="Reproduzir">
-                    <span>
-                      <IconButton
-                        className={classes.play}
-                        disabled={isDiscordPlaying}
-                        onClick={() => handlePlay(instant)}
-                        size="large">
-                        <PlayCircleFilledIcon />
-                      </IconButton>
-                    </span>
-                  </Tooltip>
-                  <Tooltip title="Enviar para o Discord">
-                    <span>
-                      <IconButton
-                        className={classes.discord}
-                        disabled={isAudioPlaying}
-                        onClick={() => handlePlayOnDiscord(instant)}
-                        size="large">
-                        <SendIcon />
-                      </IconButton>
-                    </span>
-                  </Tooltip>
-                  <Tooltip title="Parar reprodução">
-                    <span>
-                      <IconButton
-                        className={classes.remove}
-                        disabled={!areDefaultButtonsDisabled(instant)}
-                        onClick={handleStop}
-                        size="large">
-                        <StopIcon />
-                      </IconButton>
-                    </span>
-                  </Tooltip>
-                  <Tooltip title="Remover">
-                    <span>
-                      <IconButton
-                        className={classes.remove}
-                        disabled={areDefaultButtonsDisabled(instant)}
-                        onClick={() => handleRemove(instant)}
-                        size="large">
-                        <DeleteIcon />
-                      </IconButton>
-                    </span>
-                  </Tooltip>
-                </Grid>
-              </Grid>
-              <Grid container style={{ marginTop: "15px" }}>
-                <Grid item xs={12}>
-                  <KeybindingInput
-                    value={getKeyStr(instant)}
-                    onBindingChange={handleBindingChange(instant)}
-                  />
-                </Grid>
-              </Grid>
-            </Grid>
-          </Paper>
-        </Grid>
+        <InstantCard
+          key={instant.url}
+          instant={instant}
+          isAudioPlaying={isAudioPlaying}
+          isDiscordPlaying={isDiscordPlaying}
+          isActive={areDefaultButtonsDisabled(instant)}
+          onPlay={handlePlay}
+          onPlayOnDiscord={handlePlayOnDiscord}
+          onStop={handleStop}
+        >
+          <InstantCardAction
+            title="Remover"
+            color={actionColors.remove}
+            disabled={areDefaultButtonsDisabled(instant)}
+            onClick={() => handleRemove(instant)}
+          >
+            <DeleteIcon />
+          </InstantCardAction>
+        </InstantCard>
       ));
     }
   }
@@ -312,8 +170,8 @@ function FavoritesPanel(props) {
   const instantsList = buildInstantsList();
 
   return (
-    <Container className={classes.topDiff}>
-      <Grid container spacing={4} className={classes.container}>
+    <Container sx={{ marginTop: "125px" }}>
+      <Grid container spacing={4} sx={{ margin: "20px 0", width: "100%" }}>
         {instantsList}
       </Grid>
       <SaveForm
@@ -321,7 +179,15 @@ function FavoritesPanel(props) {
         onCancel={handleFormCancel}
         onSave={handleFormSave}
       />
-      <Fab color="secondary" className={classes.fab} onClick={handleFormOpen}>
+      <Fab
+        color="secondary"
+        sx={theme => ({
+          position: "fixed",
+          bottom: theme.spacing(2),
+          right: theme.spacing(2)
+        })}
+        onClick={handleFormOpen}
+      >
         <AddIcon />
       </Fab>
     </Container>

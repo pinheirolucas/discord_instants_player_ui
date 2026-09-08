@@ -4,11 +4,11 @@ Desktop app (Electron + React, built with Vite) for browsing, favoriting, and pl
 
 ## Features
 
-- **Favorites**: save clips, assign a keyboard shortcut to each, and play/remove them.
+- **Favorites**: save clips, and play/remove them.
 - **MyInstants browser**: paginated search of myinstants.com, with a star toggle to favorite results.
 - Play a clip locally, or send it to the Discord bot to play in a voice channel — mutually exclusive per panel.
 - Light/dark theme toggle.
-- Import/export all app data (favorites, keybindings, theme) as a JSON file.
+- Import/export all app data (favorites, theme) as a JSON file.
 - Runs both as an Electron desktop app and as a plain web page pointed at the backend.
 
 ## Requirements

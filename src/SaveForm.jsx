@@ -6,16 +6,8 @@ import DialogTitle from "@mui/material/DialogTitle";
 import DialogContent from "@mui/material/DialogContent";
 import DialogActions from "@mui/material/DialogActions";
 import TextField from "@mui/material/TextField";
-import makeStyles from '@mui/styles/makeStyles';
-
-const useStyles = makeStyles((theme) => ({
-  input: {
-    width: "250px",
-  },
-}));
 
 function SaveForm(props) {
-  const classes = useStyles();
 
   const [name, setName] = useState("");
   const [nameError, setNameError] = useState("");
@@ -85,7 +77,7 @@ function SaveForm(props) {
           value={name}
           error={Boolean(nameError)}
           helperText={nameError}
-          className={classes.input}
+          sx={{ width: "250px" }}
           onChange={handleName}
           autoFocus
         />
@@ -96,7 +88,7 @@ function SaveForm(props) {
           value={link}
           error={Boolean(linkError)}
           helperText={linkError}
-          className={classes.input}
+          sx={{ width: "250px" }}
           onChange={handleLink}
         />
       </DialogContent>
