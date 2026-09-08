@@ -13,7 +13,7 @@ Desktop app (Electron + React) for browsing, favoriting, and playing "instants" 
 
 ## Requirements
 
-- Node.js and [Yarn](https://yarnpkg.com/)
+- Node.js and [pnpm](https://pnpm.io/) (both pinned in `.tool-versions`, which asdf and mise both read)
 - The [`discord_instants_player`](https://github.com/pinheirolucas/discord_instants_player) backend running and reachable at `http://localhost:9001` (see [Backend connection](#backend-connection))
 
 ## Installation
@@ -21,7 +21,7 @@ Desktop app (Electron + React) for browsing, favoriting, and playing "instants" 
 ```bash
 git clone https://github.com/pinheirolucas/discord_instants_player_ui.git
 cd discord_instants_player_ui
-yarn install
+pnpm install
 ```
 
 ## Usage
@@ -29,13 +29,13 @@ yarn install
 Start the backend first (see its README), then:
 
 ```bash
-yarn start
+pnpm start
 ```
 
 This runs the React dev server and opens the Electron window pointed at it. To run only the React app in a browser instead:
 
 ```bash
-yarn react-start
+pnpm react-start
 ```
 
 then open http://localhost:3000.
@@ -47,8 +47,8 @@ The backend URL is hardcoded in [`src/service.js`](./src/service.js) as `http://
 ## Building
 
 ```bash
-yarn build      # production React build + packaged Electron app
-yarn release    # production build + publish via electron-builder (GitHub releases)
+pnpm build      # production React build + packaged Electron app
+pnpm release    # production build + publish via electron-builder (GitHub releases)
 ```
 
 Packaged builds are published to GitHub releases and picked up automatically by the app's built-in auto-updater.
@@ -56,9 +56,9 @@ Packaged builds are published to GitHub releases and picked up automatically by 
 ## Development
 
 ```bash
-yarn react-start   # React dev server only, at http://localhost:3000
-yarn react-test    # run the test suite (Jest, watch mode)
-yarn react-build   # production build to build/
+pnpm react-start   # React dev server only, at http://localhost:3000
+pnpm react-test    # run the test suite (Jest, watch mode)
+pnpm react-build   # production build to build/
 ```
 
 ## License

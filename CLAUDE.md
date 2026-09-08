@@ -9,19 +9,22 @@ A Create React App + Electron desktop UI for browsing/playing "instants" (short 
 ## Commands
 
 ```bash
-yarn start          # runs CRA dev server + Electron together (BROWSER=none via cross-env, waits on :3000)
-yarn react-start     # CRA dev server only, at http://localhost:3000
-yarn react-build     # production React build -> build/
-yarn react-test      # CRA test runner (Jest, interactive watch mode)
-yarn build           # react-build then electron-build (electron-builder)
-yarn release         # react-build then electron-builder --publish=always
+pnpm start          # runs CRA dev server + Electron together (BROWSER=none via cross-env, waits on :3000)
+pnpm react-start     # CRA dev server only, at http://localhost:3000
+pnpm react-build     # production React build -> build/
+pnpm react-test      # CRA test runner (Jest, interactive watch mode)
+pnpm build           # react-build then electron-build (electron-builder)
+pnpm release         # react-build then electron-builder --publish=always
 ```
 
-Run a single test file the same way CRA does: `yarn react-test src/SomeFile.test.js` (or pass `--watchAll=false` for a single non-watch run). There are currently no `*.test.js` files in `src/`.
+Run a single test file the same way CRA does: `pnpm react-test src/SomeFile.test.js` (or pass `--watchAll=false` for a single non-watch run). There are currently no `*.test.js` files in `src/`.
 
 ## Toolchain
 
-Node is pinned in `.tool-versions` (the asdf format, read by asdf and mise alike). Two constraints follow from the
+Node and pnpm are both pinned in `.tool-versions` (the asdf format, read by asdf and mise alike).
+pnpm blocks dependency build scripts by default; the allowlist lives in `pnpm-workspace.yaml`
+(pnpm 11 no longer reads settings from the `pnpm` key in `package.json`), and Electron's postinstall
+is the one entry that must stay enabled — it downloads the platform binary. Two constraints follow from the
 current dependency versions, both temporary:
 
 - **CRA 3.4 cannot build on modern Node.** Its webpack 4 asks OpenSSL for MD4, which OpenSSL 3
@@ -29,8 +32,8 @@ current dependency versions, both temporary:
   `cross-env NODE_OPTIONS=--openssl-legacy-provider`. Remove that once the build tool is
   replaced.
 - **Electron 8 has no `darwin-arm64` build** — Apple Silicon support starts at Electron 11, so
-  on an M-series Mac `yarn install` 404s on the Electron download. Install with
-  `npm_config_arch=x64 yarn install` to get the x64 build, which runs under Rosetta. Remove
+  on an M-series Mac `pnpm install` 404s on the Electron download. Install with
+  `npm_config_arch=x64 pnpm install` to get the x64 build, which runs under Rosetta. Remove
   that workaround once Electron is bumped past 11.
 
 ## Backend connection

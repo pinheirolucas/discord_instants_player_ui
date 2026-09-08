@@ -1,0 +1,11 @@
+# pnpm blocks dependency build scripts by default. Electron's postinstall is the
+# one this project actually needs — it downloads the platform binary, without
+# which `electron .` has nothing to run. The rest stay blocked deliberately:
+# core-js/es5-ext only print postinstall banners, and fsevents is an optional
+# native build that does not compile against modern Node headers anyway.
+allowBuilds:
+  electron: true
+  core-js: false
+  core-js-pure: false
+  es5-ext: false
+  fsevents: false
