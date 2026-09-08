@@ -43,18 +43,16 @@ only in a packaged build, as a blank window.
   - `useAudioPlayer` (`src/useAudioPlayer.js`) — plays a clip locally via an `HTMLAudioElement`, given the base64 data URI returned by `GET /play?url=` (`service.js#getContent`).
   - `useDiscordPlayer` (`src/useDiscordPlayer.js`) — tells the bot to play a clip via `POST /bot/play` (`service.js#playOnDiscord`), which blocks server-side until playback ends/is stopped and returns an `exitReason`; the hook only clears its "now playing" URL when `exitReason === "end"`.
   Both `FavoritesPanel` and `MyInstantsPanel` instantiate both hooks independently and disable the "play locally" button while Discord playback is active and vice versa (`areDefaultButtonsDisabled`), but each panel's playback state is separate from the other panel's.
-- **Two main tabs** in `App.jsx`: `FavoritesPanel` (user's saved instants, plus add/remove via `SaveForm`) and `MyInstantsPanel` (paginated/searchable browse of `GET /instant/list`, scraped server-side from myinstants.com, with a star toggle to add/remove favorites). Both duplicate a similar card layout and the play/send-to-discord/stop button set — when changing that UI, check both files.
+- **Two main tabs** in `App.jsx`: `FavoritesPanel` (user's saved instants, plus add/remove via `SaveForm`) and `MyInstantsPanel` (paginated/searchable browse of `GET /instant/list`, scraped server-side from myinstants.com, with a star toggle to add/remove favorites). Both render their cards through the shared `src/InstantCard.jsx`, which owns the Paper/title layout and the play/send-to-discord/stop buttons; each panel passes its own trailing action as children (remove vs. favorite). Change the card there, not in the panels.
 - **Global UI chrome**: search box in the `AppBar` (`App.jsx`) debounces input (300ms) before updating `search` state passed down to both panels; theme toggle (light/dark, `src/theme.js`, persisted); a `SnackbarContext` (`src/SnackbarContext.js`) provider exposes `openSnackbar`/`closeSnackbar` app-wide (used e.g. to show "instant no longer exists" errors with a "REMOVE" action button).
 - UI copy/strings throughout are in Portuguese.
 
 ## Notes
 
-- Uses MUI v5 (`@mui/material`, `@mui/icons-material`) with the `@mui/styles` compatibility package, so the
-  existing `makeStyles` call sites keep working. `@mui/styles` is deprecated and was dropped after MUI v6, so
-  moving past v5 means rewriting those call sites to `sx`/`styled` first. React is held at 18 for the same
-  reason — MUI v5 is the ceiling until that rewrite happens. Everything else in the tree is current, and
-  `pnpm audit` reports no known vulnerabilities.
-- `@mui/styles` resolves `makeStyles` against its own default theme, which in v5 is empty. Any component that
-  calls `useStyles()` must therefore be rendered *below* `ThemeProvider`, not render it itself — this is why
-  `App` is split into a provider shell and `AppContent`.
+- Uses MUI v5 (`@mui/material`, `@mui/icons-material`). Styling is `sx` props, with `styled()` reserved for
+  the one genuinely reusable styled element — the AppBar search box in `App.jsx`. There is no `@mui/styles`
+  and no `makeStyles`; a `grep -r "makeStyles\|@mui/styles" src/` returning anything means something
+  regressed.
+- MUI and React are held at v5 / 18 by choice, not by a blocker — the `@mui/styles` cap is gone, so moving
+  further is now a normal upgrade rather than a prerequisite rewrite.
 - `ramda` is used for small functional helpers (`src/instantUtils.js`, `state.js`, `ImportForm.jsx`) — prefer it over ad-hoc loops for consistency with existing code.

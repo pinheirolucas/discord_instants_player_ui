@@ -7,41 +7,35 @@ import DialogTitle from "@mui/material/DialogTitle";
 import DialogContent from "@mui/material/DialogContent";
 import DialogActions from "@mui/material/DialogActions";
 import Grid from "@mui/material/Grid";
+import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import Switch from "@mui/material/Switch";
 import FormControlLabel from "@mui/material/FormControlLabel";
 import Radio from "@mui/material/Radio";
 import RadioGroup from "@mui/material/RadioGroup";
-import makeStyles from '@mui/styles/makeStyles';
 import { useDropzone } from "react-dropzone";
 
 import { useInstantsState } from "./storage";
 import { getUrls } from "./instantUtils";
 
-const useStyles = makeStyles({
-  content: {
-    overflow: "hidden"
-  },
-  dropzone: {
-    flex: 1,
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    padding: "20px",
-    borderWidth: "2px",
-    borderRadius: "2px",
-    borderColor: "#eeeeee",
-    borderStyle: "dashed",
-    backgroundColor: "#fafafa",
-    color: "#bdbdbd",
-    outline: "none",
-    transition: "border .24s ease-in-out",
-    textAlign: "center"
-  }
-});
+const dropzoneSx = {
+  flex: 1,
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "center",
+  padding: "20px",
+  borderWidth: "2px",
+  borderRadius: "2px",
+  borderColor: "#eeeeee",
+  borderStyle: "dashed",
+  backgroundColor: "#fafafa",
+  color: "#bdbdbd",
+  outline: "none",
+  transition: "border .24s ease-in-out",
+  textAlign: "center"
+};
 
 function ImportForm(props) {
-  const classes = useStyles();
 
   const readerRef = useRef(new FileReader());
   const [switches, setSwitches] = useState({
@@ -170,13 +164,13 @@ function ImportForm(props) {
   return (
     <Dialog open={open} scroll="body" onClose={handleClose}>
       <DialogTitle>Importar instants</DialogTitle>
-      <DialogContent className={classes.content}>
+      <DialogContent sx={{ overflow: "hidden" }}>
         <Grid container spacing={3}>
           <Grid item xs={12}>
-            <div {...getRootProps({ className: classes.dropzone })}>
+            <Box {...getRootProps()} sx={dropzoneSx}>
               <input {...getInputProps()} />
               <p>{dropzoneMessage}</p>
-            </div>
+            </Box>
           </Grid>
           {showAllOptions ? (
             <Grid container item spacing={3}>
