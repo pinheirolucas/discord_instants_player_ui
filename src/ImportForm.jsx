@@ -166,20 +166,20 @@ function ImportForm(props) {
       <DialogTitle>Importar instants</DialogTitle>
       <DialogContent sx={{ overflow: "hidden" }}>
         <Grid container spacing={3}>
-          <Grid item xs={12}>
+          <Grid size={12}>
             <Box {...getRootProps()} sx={dropzoneSx}>
               <input {...getInputProps()} />
               <p>{dropzoneMessage}</p>
             </Box>
           </Grid>
           {showAllOptions ? (
-            <Grid container item spacing={3}>
-              <Grid item xs={12}>
+            <Grid container spacing={3}>
+              <Grid size={12}>
                 <Typography variant="body1">
                   O que você deseja importar?
                 </Typography>
               </Grid>
-              <Grid item xs={12}>
+              <Grid size={12}>
                 <FormControlLabel
                   control={
                     <Switch
@@ -192,13 +192,13 @@ function ImportForm(props) {
                 />
               </Grid>
               {showInstantOptions ? (
-                <Grid container item spacing={3}>
-                  <Grid item xs={12}>
+                <Grid container spacing={3}>
+                  <Grid size={12}>
                     <Typography variant="body1">
                       E o que você deseja fazer com os instants que já existem?
                     </Typography>
                   </Grid>
-                  <Grid item xs={12}>
+                  <Grid size={12}>
                     <RadioGroup
                       name="instantsAction"
                       value={switches.instantsAction}
