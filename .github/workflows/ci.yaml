@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Set up repo
+        uses: actions/checkout@v7
+
+      # pnpm/action-setup only reads a version from package.json's
+      # "packageManager" key, which this project does not set — .tool-versions is
+      # the single source of truth for both toolchains. Pull the pnpm line out of
+      # it here instead of hardcoding the version twice.
+      - name: Read pnpm version from .tool-versions
+        id: pnpm-version
+        run: echo "version=$(awk '$1 == "pnpm" { print $2 }' .tool-versions)" >> "$GITHUB_OUTPUT"
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: ${{ steps.pnpm-version.outputs.version }}
+
+      # Must come after pnpm is installed: cache: pnpm makes setup-node shell out
+      # to `pnpm store path`. setup-node reads the `nodejs` line of
+      # .tool-versions natively.
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: .tool-versions
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Test
+        run: pnpm react-test run
+
+      - name: Build
+        run: pnpm react-build
