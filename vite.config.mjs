@@ -25,12 +25,11 @@ export default defineConfig({
     // "files" globs package from build/ — keep CRA's output directory.
     outDir: "build",
 
-    // Electron 8 ships Chromium 80. Vite's default target emits syntax that
-    // Chromium 80 cannot parse, and the failure is production-only and silent:
-    // the dev server works, the build succeeds, and the packaged app then shows
-    // a blank window with "Uncaught SyntaxError: Unexpected token '='". Raise
-    // this in step with the Electron version.
-    target: "chrome80"
+    // Pinned to the Chromium that the Electron version in devDependencies
+    // ships (44.2.0 -> Chromium 152). Getting this wrong is production-only and
+    // silent: the dev server works, the build succeeds, and the packaged app
+    // shows a blank window with a SyntaxError. Raise it in step with Electron.
+    target: "chrome152"
   },
 
   server: {

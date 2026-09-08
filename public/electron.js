@@ -1,33 +1,40 @@
-const electron = require("electron");
-const app = electron.app;
-const BrowserWindow = electron.BrowserWindow;
-
+const { app, BrowserWindow } = require("electron");
 const path = require("path");
-const isDev = require("electron-is-dev");
-const update = require("update-electron-app");
+const {
+  updateElectronApp,
+  UpdateSourceType
+} = require("update-electron-app");
+
+// Dev is "not packaged". This used to be the electron-is-dev package, which went
+// ESM-only in v3 and so cannot be required from this CommonJS file at all.
+const isDev = !app.isPackaged;
 
 let mainWindow;
 
-update({
-  repo: "pinheirolucas/discord_instants_player_ui",
+updateElectronApp({
+  updateSource: {
+    type: UpdateSourceType.ElectronPublicUpdateService,
+    repo: "pinheirolucas/discord_instants_player_ui"
+  },
   updateInterval: "1 hour"
 });
 
 function createWindow() {
+  // No webPreferences overrides on purpose: contextIsolation stays on and
+  // nodeIntegration stays off, which is what modern Electron defaults to. The
+  // renderer only uses web APIs (axios over fetch, localStorage), so it needs
+  // nothing from Node and no preload bridge. If the shelved global-keybinding
+  // feature in FavoritesPanel comes back, a contextBridge preload is where it
+  // would go.
+  mainWindow = new BrowserWindow({
+    width: isDev ? 1600 : 1280,
+    height: 900
+  });
+
   if (isDev) {
-    mainWindow = new BrowserWindow({
-      width: 1600,
-      height: 900,
-      webPreferences: { nodeIntegration: true }
-    });
     mainWindow.loadURL("http://localhost:3000");
     mainWindow.webContents.openDevTools();
   } else {
-    mainWindow = new BrowserWindow({
-      width: 1280,
-      height: 900,
-      webPreferences: { nodeIntegration: true }
-    });
     mainWindow.setMenu(null);
     mainWindow.loadURL(`file://${path.join(__dirname, "../build/index.html")}`);
   }
