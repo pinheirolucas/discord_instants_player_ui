@@ -1,0 +1,7 @@
+# pnpm blocks dependency build scripts by default. Electron's postinstall is the
+# one this project actually needs — it downloads the platform binary, without
+# which `electron .` has nothing to run. electron-winstaller is a Windows-only
+# installer helper pulled in by electron-builder and is not needed to build here.
+allowBuilds:
+  electron: true
+  electron-winstaller: false

@@ -7,38 +7,40 @@
   "build": {
     "publish": {
       "provider": "github"
+    },
+    "files": [
+      "build/**/*",
+      "node_modules/**/*",
+      "package.json"
+    ],
+    "extraMetadata": {
+      "main": "build/electron.js"
     }
   },
   "private": true,
   "dependencies": {
-    "@material-ui/core": "^4.9.7",
-    "@material-ui/icons": "^4.9.1",
-    "@testing-library/jest-dom": "^4.2.4",
-    "@testing-library/react": "^9.3.2",
-    "@testing-library/user-event": "^7.1.2",
-    "axios": "^0.19.2",
-    "cross-env": "^7.0.2",
-    "electron-is-dev": "^1.1.0",
-    "ramda": "^0.27.0",
-    "react": "^16.13.1",
-    "react-dom": "^16.13.1",
-    "react-dropzone": "^10.2.1",
-    "react-scripts": "3.4.0",
-    "update-electron-app": "^1.5.0",
-    "use-persisted-state": "^0.3.0"
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.1",
+    "@mui/icons-material": "^5.18.0",
+    "@mui/material": "^5.18.0",
+    "@mui/styles": "^5.18.0",
+    "axios": "^1.20.0",
+    "prop-types": "^15.8.1",
+    "ramda": "^0.32.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-dropzone": "^20.1.1",
+    "update-electron-app": "^3.3.0",
+    "use-persisted-state": "^0.3.3"
   },
   "scripts": {
-    "react-start": "react-scripts start",
-    "react-build": "react-scripts build",
-    "react-test": "react-scripts test",
-    "react-eject": "react-scripts eject",
+    "react-start": "vite",
+    "react-build": "vite build",
+    "react-test": "vitest",
     "electron-build": "electron-builder",
-    "release": "yarn react-build && electron-builder --publish=always",
-    "build": "yarn react-build && yarn electron-build",
-    "start": "concurrently \"cross-env BROWSER=none yarn react-start\" \"wait-on http://localhost:3000 && electron .\""
-  },
-  "eslintConfig": {
-    "extends": "react-app"
+    "release": "pnpm react-build && electron-builder --publish=always",
+    "build": "pnpm react-build && pnpm electron-build",
+    "start": "concurrently \"pnpm react-start\" \"wait-on http://localhost:3000 && electron .\""
   },
   "browserslist": {
     "production": [
@@ -53,9 +55,17 @@
     ]
   },
   "devDependencies": {
-    "concurrently": "^5.1.0",
-    "electron": "^8.1.1",
-    "electron-builder": "^22.4.1",
-    "wait-on": "^4.0.1"
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/react": "^16.3.3",
+    "@testing-library/user-event": "^14.6.7",
+    "@vitejs/plugin-react": "^6.1.1",
+    "concurrently": "^10.0.5",
+    "electron": "^44.2.0",
+    "electron-builder": "^26.15.3",
+    "jsdom": "^30.0.1",
+    "vite": "^8.2.2",
+    "vitest": "^5.0.0",
+    "wait-on": "^9.1.0"
   }
 }

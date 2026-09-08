@@ -1,17 +1,17 @@
 import React, { useContext, useEffect, useState, useRef } from "react";
 
-import Grid from "@material-ui/core/Grid";
-import Container from "@material-ui/core/Container";
-import Paper from "@material-ui/core/Paper";
-import { makeStyles } from "@material-ui/core/styles";
-import IconButton from "@material-ui/core/IconButton";
-import Button from "@material-ui/core/Button";
-import StarIcon from "@material-ui/icons/Star";
-import StarBorderIcon from "@material-ui/icons/StarBorder";
-import PlayCircleFilledIcon from "@material-ui/icons/PlayCircleFilled";
-import SendIcon from "@material-ui/icons/Send";
-import StopIcon from "@material-ui/icons/Stop";
-import Tooltip from "@material-ui/core/Tooltip";
+import Grid from "@mui/material/Grid";
+import Container from "@mui/material/Container";
+import Paper from "@mui/material/Paper";
+import makeStyles from '@mui/styles/makeStyles';
+import IconButton from "@mui/material/IconButton";
+import Button from "@mui/material/Button";
+import StarIcon from "@mui/icons-material/Star";
+import StarBorderIcon from "@mui/icons-material/StarBorder";
+import PlayCircleFilledIcon from "@mui/icons-material/PlayCircleFilled";
+import SendIcon from "@mui/icons-material/Send";
+import StopIcon from "@mui/icons-material/Stop";
+import Tooltip from "@mui/material/Tooltip";
 import * as R from "ramda";
 
 import SnackbarContext from "./SnackbarContext";
@@ -190,7 +190,7 @@ function MyInstantsPanel(props) {
                           className={classes.play}
                           disabled={isDiscordPlaying}
                           onClick={() => handlePlay(instant)}
-                        >
+                          size="large">
                           <PlayCircleFilledIcon />
                         </IconButton>
                       </span>
@@ -201,7 +201,7 @@ function MyInstantsPanel(props) {
                           className={classes.discord}
                           disabled={isAudioPlaying}
                           onClick={() => handlePlayOnDiscord(instant)}
-                        >
+                          size="large">
                           <SendIcon />
                         </IconButton>
                       </span>
@@ -212,7 +212,7 @@ function MyInstantsPanel(props) {
                           className={classes.stop}
                           disabled={!areDefaultButtonsDisabled(instant)}
                           onClick={handleStop}
-                        >
+                          size="large">
                           <StopIcon />
                         </IconButton>
                       </span>
@@ -223,7 +223,7 @@ function MyInstantsPanel(props) {
                           className={classes.favorite}
                           disabled={areDefaultButtonsDisabled(instant)}
                           onClick={() => handleFavorite(instant)}
-                        >
+                          size="large">
                           {buildFavoriteIcon(instant)}
                         </IconButton>
                       </span>
@@ -237,7 +237,7 @@ function MyInstantsPanel(props) {
         {page === totalPages ? (
           <React.Fragment />
         ) : (
-          <Grid container item xs={12} justify="center">
+          <Grid container item xs={12} justifyContent="center">
             <Button
               variant="contained"
               color="secondary"

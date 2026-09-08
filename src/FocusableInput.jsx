@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from "react";
 
-import InputBase from "@material-ui/core/InputBase";
+import InputBase from "@mui/material/InputBase";
 
 function FocusableInput({ focused, ...rest }) {
   const inputRef = useRef(null);

@@ -1,19 +1,19 @@
 import React, { useContext, useEffect, useState } from "react";
 
-import Grid from "@material-ui/core/Grid";
-import Container from "@material-ui/core/Container";
-import Paper from "@material-ui/core/Paper";
-import { makeStyles } from "@material-ui/core/styles";
-import Button from "@material-ui/core/Button";
-import Fab from "@material-ui/core/Fab";
-import AddIcon from "@material-ui/icons/Add";
-import IconButton from "@material-ui/core/IconButton";
-import DeleteIcon from "@material-ui/icons/Delete";
-import PlayCircleFilledIcon from "@material-ui/icons/PlayCircleFilled";
-import SendIcon from "@material-ui/icons/Send";
-import StopIcon from "@material-ui/icons/Stop";
-import Tooltip from "@material-ui/core/Tooltip";
-import Typography from "@material-ui/core/Typography";
+import Grid from "@mui/material/Grid";
+import Container from "@mui/material/Container";
+import Paper from "@mui/material/Paper";
+import makeStyles from '@mui/styles/makeStyles';
+import Button from "@mui/material/Button";
+import Fab from "@mui/material/Fab";
+import AddIcon from "@mui/icons-material/Add";
+import IconButton from "@mui/material/IconButton";
+import DeleteIcon from "@mui/icons-material/Delete";
+import PlayCircleFilledIcon from "@mui/icons-material/PlayCircleFilled";
+import SendIcon from "@mui/icons-material/Send";
+import StopIcon from "@mui/icons-material/Stop";
+import Tooltip from "@mui/material/Tooltip";
+import Typography from "@mui/material/Typography";
 
 import KeybindingInput from "./KeybindingInput";
 import SaveForm from "./SaveForm";
@@ -254,7 +254,7 @@ function FavoritesPanel(props) {
                         className={classes.play}
                         disabled={isDiscordPlaying}
                         onClick={() => handlePlay(instant)}
-                      >
+                        size="large">
                         <PlayCircleFilledIcon />
                       </IconButton>
                     </span>
@@ -265,7 +265,7 @@ function FavoritesPanel(props) {
                         className={classes.discord}
                         disabled={isAudioPlaying}
                         onClick={() => handlePlayOnDiscord(instant)}
-                      >
+                        size="large">
                         <SendIcon />
                       </IconButton>
                     </span>
@@ -276,7 +276,7 @@ function FavoritesPanel(props) {
                         className={classes.remove}
                         disabled={!areDefaultButtonsDisabled(instant)}
                         onClick={handleStop}
-                      >
+                        size="large">
                         <StopIcon />
                       </IconButton>
                     </span>
@@ -287,7 +287,7 @@ function FavoritesPanel(props) {
                         className={classes.remove}
                         disabled={areDefaultButtonsDisabled(instant)}
                         onClick={() => handleRemove(instant)}
-                      >
+                        size="large">
                         <DeleteIcon />
                       </IconButton>
                     </span>
