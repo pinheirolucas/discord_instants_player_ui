@@ -7,6 +7,14 @@
   "build": {
     "publish": {
       "provider": "github"
+    },
+    "files": [
+      "build/**/*",
+      "node_modules/**/*",
+      "package.json"
+    ],
+    "extraMetadata": {
+      "main": "build/electron.js"
     }
   },
   "private": true,
@@ -17,29 +25,23 @@
     "@testing-library/react": "^9.3.2",
     "@testing-library/user-event": "^7.1.2",
     "axios": "^1.20.0",
-    "cross-env": "^10.1.0",
     "electron-is-dev": "^1.1.0",
     "prop-types": "^15.8.1",
     "ramda": "^0.32.0",
     "react": "^16.13.1",
     "react-dom": "^16.13.1",
     "react-dropzone": "^10.2.1",
-    "react-scripts": "3.4.0",
     "update-electron-app": "^1.5.0",
     "use-persisted-state": "^0.3.3"
   },
   "scripts": {
-    "react-start": "cross-env NODE_OPTIONS=--openssl-legacy-provider react-scripts start",
-    "react-build": "cross-env NODE_OPTIONS=--openssl-legacy-provider react-scripts build",
-    "react-test": "cross-env NODE_OPTIONS=--openssl-legacy-provider react-scripts test",
-    "react-eject": "react-scripts eject",
+    "react-start": "vite",
+    "react-build": "vite build",
+    "react-test": "vitest",
     "electron-build": "electron-builder",
     "release": "pnpm react-build && electron-builder --publish=always",
     "build": "pnpm react-build && pnpm electron-build",
-    "start": "concurrently \"cross-env BROWSER=none pnpm react-start\" \"wait-on http://localhost:3000 && electron .\""
-  },
-  "eslintConfig": {
-    "extends": "react-app"
+    "start": "concurrently \"pnpm react-start\" \"wait-on http://localhost:3000 && electron .\""
   },
   "browserslist": {
     "production": [
@@ -54,9 +56,13 @@
     ]
   },
   "devDependencies": {
+    "@vitejs/plugin-react": "^6.1.1",
     "concurrently": "^10.0.5",
     "electron": "^8.1.1",
     "electron-builder": "^22.4.1",
+    "jsdom": "^30.0.1",
+    "vite": "^8.2.2",
+    "vitest": "^5.0.0",
     "wait-on": "^9.1.0"
   }
 }
