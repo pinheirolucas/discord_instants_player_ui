@@ -17,7 +17,7 @@ pnpm build          # react-build then electron-build (electron-builder)
 pnpm release        # react-build then electron-builder --publish=always
 ```
 
-Run a single test file with `pnpm react-test run src/SomeFile.test.jsx`. There are no test files yet, so the suite passes vacuously (`passWithNoTests` in `vite.config.mjs`).
+Run a single test file with `pnpm react-test run src/SomeFile.test.jsx`. Tests live next to the code they cover, as `*.test.js`/`*.test.jsx`.
 
 ## Toolchain
 
