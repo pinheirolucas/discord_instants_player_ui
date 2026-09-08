@@ -65,12 +65,12 @@ function ImportForm(props) {
 
   const {
     acceptedFiles,
-    rejectedFiles,
+    fileRejections,
     getRootProps,
     getInputProps
   } = useDropzone({
     multiple: false,
-    accept: "application/json"
+    accept: { "application/json": [".json"] }
   });
 
   const { open, onClose } = props;
@@ -105,26 +105,26 @@ function ImportForm(props) {
     };
   }, [open, clear]);
 
+  // Acceptance and rejection are handled in one effect on purpose. react-dropzone
+  // hands back a fresh `acceptedFiles` identity even when a file was rejected and
+  // the array stays empty, so as two separate effects the acceptedFiles one runs
+  // second, calls clear(), and wipes the error the rejection just set.
   useEffect(() => {
     clear();
-    if (rejectedFiles.length) {
+
+    if (fileRejections.length) {
       setFileContentError(
         "O tipo de arquivo inserido é inválido. Apenas arquivos com extensão .json são permitidos"
       );
-    } else {
-      setFileContentError("");
+      return;
     }
-  }, [rejectedFiles, clear]);
 
-  useEffect(() => {
-    clear();
-    const reader = readerRef.current;
     const [file] = acceptedFiles;
     if (file) {
       setFileSuccessMessage(`Arquivo "${file.name}" carregado.`);
-      reader.readAsText(file, "utf-8");
+      readerRef.current.readAsText(file, "utf-8");
     }
-  }, [acceptedFiles, clear]);
+  }, [acceptedFiles, fileRejections, clear]);
 
   function handleSave() {
     // TODO: validate the keybindings to remove the unused ones

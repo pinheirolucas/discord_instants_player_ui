@@ -42,8 +42,8 @@ importers:
         specifier: ^16.13.1
         version: 16.14.0(react@16.14.0)
       react-dropzone:
-        specifier: ^10.2.1
-        version: 10.2.2(react@16.14.0)
+        specifier: ^20.1.1
+        version: 20.1.1(react@16.14.0)
       update-electron-app:
         specifier: ^1.5.0
         version: 1.5.0
@@ -622,9 +622,9 @@ packages:
     engines: {node: '>= 4.5.0'}
     hasBin: true
 
-  attr-accept@2.2.5:
-    resolution: {integrity: sha512-0bDNnY/u6pPwHDMoF0FieU354oBi0a8rD9FcsLwzcGWbc8KS8KPIi7y+s13OlVY+gMWc/9xEMUgNE6Qm8ZllYQ==}
-    engines: {node: '>=4'}
+  attr-accept@4.0.0:
+    resolution: {integrity: sha512-hmCnJClmeKNKlsBHgbM8yLZRiQZ4/20UXbLJb6OUT16eWcM5/xNZerr80a/zCYob768KIGq++aLrQNTuwPsIOQ==}
+    engines: {node: '>= 22'}
 
   axios@1.20.0:
     resolution: {integrity: sha512-r8aOh8j9cGKpgQAqpzrUHnSIc6a59Y3Xf/cv8sy1DrHCkZHzQGEuoq1tARk6qSyDdtQGSDgpb9kFlruzPvrgwg==}
@@ -1072,9 +1072,9 @@ packages:
       picomatch:
         optional: true
 
-  file-selector@0.1.19:
-    resolution: {integrity: sha512-kCWw3+Aai8Uox+5tHCNgMFaUdgidxvMnLWO6fM5sZ0hA2wlHP5/DHGF0ECe84BiB95qdJbKNEJhWKVDvMN+JDQ==}
-    engines: {node: '>= 10'}
+  file-selector@5.0.1:
+    resolution: {integrity: sha512-v0g/PTeuQgvKCBrVRsfVudvwXlRHSWHEQkVgKawgCGHkEpKA1clp3Om5jvEVhz8G9W/mOYjJH9FhkH4C888PgQ==}
+    engines: {node: '>= 22'}
 
   filelist@1.0.6:
     resolution: {integrity: sha512-5giy2PkLYY1cP39p17Ech+2xlpTRL9HLspOfEgm0L6CwBXBTgsK5ou0JtzYuepxkaQ/tvhCFIJ5uXo0OrM2DxA==}
@@ -1704,11 +1704,15 @@ packages:
     peerDependencies:
       react: ^16.14.0
 
-  react-dropzone@10.2.2:
-    resolution: {integrity: sha512-U5EKckXVt6IrEyhMMsgmHQiWTGLudhajPPG77KFSvgsMqNEHSyGpqWvOMc5+DhEah/vH4E1n+J5weBNLd5VtyA==}
-    engines: {node: '>= 8'}
+  react-dropzone@20.1.1:
+    resolution: {integrity: sha512-2cilRFP8bsjDOHpV0sJ6XY8pzJhmz4/cQ6s9yeckOACWYDR+n4MGGtnJh3Rycq/9SLhDWugqDx1z5mtfmOOZhw==}
+    engines: {node: '>= 22'}
     peerDependencies:
-      react: '>= 16.8'
+      '@types/react': '*'
+      react: '>= 18'
+    peerDependenciesMeta:
+      '@types/react':
+        optional: true
 
   react-is@16.13.1:
     resolution: {integrity: sha512-24e6ynE2H+OKt4kqsOvNd8kBpV65zoxbA4BVsEOB3ARVWQki/DHzaUoC5KuON/BiccDaCCTZBuOcfZs70kR8bQ==}
@@ -2743,7 +2747,7 @@ snapshots:
 
   atob@2.1.2: {}
 
-  attr-accept@2.2.5: {}
+  attr-accept@4.0.0: {}
 
   axios@1.20.0(debug@4.4.3(supports-color@10.2.2))(supports-color@10.2.2):
     dependencies:
@@ -3260,9 +3264,7 @@ snapshots:
     optionalDependencies:
       picomatch: 4.0.7
 
-  file-selector@0.1.19:
-    dependencies:
-      tslib: 2.8.1
+  file-selector@5.0.1: {}
 
   filelist@1.0.6:
     dependencies:
@@ -3907,11 +3909,10 @@ snapshots:
       react: 16.14.0
       scheduler: 0.19.1
 
-  react-dropzone@10.2.2(react@16.14.0):
+  react-dropzone@20.1.1(react@16.14.0):
     dependencies:
-      attr-accept: 2.2.5
-      file-selector: 0.1.19
-      prop-types: 15.8.1
+      attr-accept: 4.0.0
+      file-selector: 5.0.1
       react: 16.14.0
 
   react-is@16.13.1: {}
