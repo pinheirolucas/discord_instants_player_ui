@@ -6,5 +6,9 @@
 #
 # Electron itself needs no entry: from v44 it ships no install script at all and
 # downloads its platform binary lazily, on the first `electron .`.
+#
+# msw's postinstall only copies its browser service worker into a public
+# directory; the tests here use msw/node (setupServer), which needs no worker.
 allowBuilds:
   electron-winstaller: false
+  msw: false
