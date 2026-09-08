@@ -19,6 +19,20 @@ yarn release         # react-build then electron-builder --publish=always
 
 Run a single test file the same way CRA does: `yarn react-test src/SomeFile.test.js` (or pass `--watchAll=false` for a single non-watch run). There are currently no `*.test.js` files in `src/`.
 
+## Toolchain
+
+Node is pinned in `.tool-versions` (the asdf format, read by asdf and mise alike). Two constraints follow from the
+current dependency versions, both temporary:
+
+- **CRA 3.4 cannot build on modern Node.** Its webpack 4 asks OpenSSL for MD4, which OpenSSL 3
+  refuses (`ERR_OSSL_EVP_UNSUPPORTED`). The `react-*` scripts therefore run through
+  `cross-env NODE_OPTIONS=--openssl-legacy-provider`. Remove that once the build tool is
+  replaced.
+- **Electron 8 has no `darwin-arm64` build** — Apple Silicon support starts at Electron 11, so
+  on an M-series Mac `yarn install` 404s on the Electron download. Install with
+  `npm_config_arch=x64 yarn install` to get the x64 build, which runs under Rosetta. Remove
+  that workaround once Electron is bumped past 11.
+
 ## Backend connection
 
 `src/service.js` hardcodes the backend URL as `http://localhost:9001` (the Go server's default `server.address`). There is no env-based override — if the backend runs on a different host/port, `apiUrl` in `service.js` must be edited directly. (The Go backend advertises itself via mDNS/zeroconf for auto-discovery, but this UI does not currently consume that — it always talks to localhost:9001.)

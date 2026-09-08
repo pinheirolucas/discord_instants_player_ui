@@ -17,7 +17,7 @@
     "@testing-library/react": "^9.3.2",
     "@testing-library/user-event": "^7.1.2",
     "axios": "^0.19.2",
-    "cross-env": "^7.0.2",
+    "cross-env": "^10.1.0",
     "electron-is-dev": "^1.1.0",
     "ramda": "^0.27.0",
     "react": "^16.13.1",
@@ -28,9 +28,9 @@
     "use-persisted-state": "^0.3.0"
   },
   "scripts": {
-    "react-start": "react-scripts start",
-    "react-build": "react-scripts build",
-    "react-test": "react-scripts test",
+    "react-start": "cross-env NODE_OPTIONS=--openssl-legacy-provider react-scripts start",
+    "react-build": "cross-env NODE_OPTIONS=--openssl-legacy-provider react-scripts build",
+    "react-test": "cross-env NODE_OPTIONS=--openssl-legacy-provider react-scripts test",
     "react-eject": "react-scripts eject",
     "electron-build": "electron-builder",
     "release": "yarn react-build && electron-builder --publish=always",
@@ -53,9 +53,9 @@
     ]
   },
   "devDependencies": {
-    "concurrently": "^5.1.0",
+    "concurrently": "^10.0.5",
     "electron": "^8.1.1",
     "electron-builder": "^22.4.1",
-    "wait-on": "^4.0.1"
+    "wait-on": "^9.1.0"
   }
 }
