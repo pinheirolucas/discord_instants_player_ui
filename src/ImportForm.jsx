@@ -1,18 +1,18 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 
 import * as R from "ramda";
-import Button from "@material-ui/core/Button";
-import Dialog from "@material-ui/core/Dialog";
-import DialogTitle from "@material-ui/core/DialogTitle";
-import DialogContent from "@material-ui/core/DialogContent";
-import DialogActions from "@material-ui/core/DialogActions";
-import Grid from "@material-ui/core/Grid";
-import Typography from "@material-ui/core/Typography";
-import Switch from "@material-ui/core/Switch";
-import FormControlLabel from "@material-ui/core/FormControlLabel";
-import Radio from "@material-ui/core/Radio";
-import RadioGroup from "@material-ui/core/RadioGroup";
-import { makeStyles } from "@material-ui/core/styles";
+import Button from "@mui/material/Button";
+import Dialog from "@mui/material/Dialog";
+import DialogTitle from "@mui/material/DialogTitle";
+import DialogContent from "@mui/material/DialogContent";
+import DialogActions from "@mui/material/DialogActions";
+import Grid from "@mui/material/Grid";
+import Typography from "@mui/material/Typography";
+import Switch from "@mui/material/Switch";
+import FormControlLabel from "@mui/material/FormControlLabel";
+import Radio from "@mui/material/Radio";
+import RadioGroup from "@mui/material/RadioGroup";
+import makeStyles from '@mui/styles/makeStyles';
 import { useDropzone } from "react-dropzone";
 
 import {

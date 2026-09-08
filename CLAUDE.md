@@ -52,5 +52,10 @@ from the current Electron version, and is temporary:
 
 ## Notes
 
-- Uses Material-UI v4 (`@material-ui/core`, `@material-ui/icons`) — not MUI v5+, so v4-era APIs (`makeStyles`, `fade`, etc.) apply.
+- Uses MUI v5 (`@mui/material`, `@mui/icons-material`) with the `@mui/styles` compatibility package, so the
+  existing `makeStyles` call sites keep working. `@mui/styles` is deprecated and was dropped after MUI v6, so
+  moving past v5 means rewriting those call sites to `sx`/`styled` first.
+- `@mui/styles` resolves `makeStyles` against its own default theme, which in v5 is empty. Any component that
+  calls `useStyles()` must therefore be rendered *below* `ThemeProvider`, not render it itself — this is why
+  `App` is split into a provider shell and `AppContent`.
 - `ramda` is used for small functional helpers (`src/instantUtils.js`, `state.js`, `ImportForm.js`) — prefer it over ad-hoc loops for consistency with existing code.

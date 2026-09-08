@@ -1,21 +1,22 @@
 import React, { useState, useEffect, useRef } from "react";
 
-import AppBar from "@material-ui/core/AppBar";
-import Toolbar from "@material-ui/core/Toolbar";
-import Typography from "@material-ui/core/Typography";
-import CssBaseline from "@material-ui/core/CssBaseline";
-import Snackbar from "@material-ui/core/Snackbar";
-import IconButton from "@material-ui/core/IconButton";
-import CloseIcon from "@material-ui/icons/Close";
-import SearchIcon from "@material-ui/icons/Search";
-import MoreIcon from "@material-ui/icons/MoreVert";
-import LightIcon from "@material-ui/icons/Brightness7";
-import DarkIcon from "@material-ui/icons/Brightness4";
-import { fade, makeStyles, ThemeProvider } from "@material-ui/core/styles";
-import Menu from "@material-ui/core/Menu";
-import MenuItem from "@material-ui/core/MenuItem";
-import Tabs from "@material-ui/core/Tabs";
-import Tab from "@material-ui/core/Tab";
+import AppBar from "@mui/material/AppBar";
+import Toolbar from "@mui/material/Toolbar";
+import Typography from "@mui/material/Typography";
+import CssBaseline from "@mui/material/CssBaseline";
+import Snackbar from "@mui/material/Snackbar";
+import IconButton from "@mui/material/IconButton";
+import CloseIcon from "@mui/icons-material/Close";
+import SearchIcon from "@mui/icons-material/Search";
+import MoreIcon from "@mui/icons-material/MoreVert";
+import LightIcon from "@mui/icons-material/Brightness7";
+import DarkIcon from "@mui/icons-material/Brightness4";
+import { alpha, ThemeProvider, StyledEngineProvider } from "@mui/material/styles";
+import makeStyles from '@mui/styles/makeStyles';
+import Menu from "@mui/material/Menu";
+import MenuItem from "@mui/material/MenuItem";
+import Tabs from "@mui/material/Tabs";
+import Tab from "@mui/material/Tab";
 
 import FocusableInput from "./FocusableInput";
 import FavoritesPanel from "./FavoritesPanel";
@@ -46,9 +47,9 @@ const useStyles = makeStyles(theme => ({
   search: {
     position: "relative",
     borderRadius: theme.shape.borderRadius,
-    backgroundColor: fade(theme.palette.common.white, 0.15),
+    backgroundColor: alpha(theme.palette.common.white, 0.15),
     "&:hover": {
-      backgroundColor: fade(theme.palette.common.white, 0.25)
+      backgroundColor: alpha(theme.palette.common.white, 0.25)
     },
     marginLeft: 0,
     width: "100%",
@@ -72,7 +73,7 @@ const useStyles = makeStyles(theme => ({
   inputInput: {
     padding: theme.spacing(1, 1, 1, 0),
     // vertical padding + font size from searchIcon
-    paddingLeft: `calc(1em + ${theme.spacing(4)}px)`,
+    paddingLeft: `calc(1em + ${theme.spacing(4)})`,
     transition: theme.transitions.create("width"),
     width: "100%",
     [theme.breakpoints.up("sm")]: {
@@ -84,7 +85,23 @@ const useStyles = makeStyles(theme => ({
   }
 }));
 
+// The providers have to sit above whatever calls useStyles: @mui/styles resolves
+// makeStyles against its own default theme, which in v5 is empty, so a component
+// that renders ThemeProvider in its own return value would style itself against
+// a theme with no palette/spacing/breakpoints and crash on theme.breakpoints.up.
 function App() {
+  const [themeName, setThemeName] = useTheme("light");
+
+  return (
+    <StyledEngineProvider injectFirst>
+      <ThemeProvider theme={themeName === "light" ? lightTheme : darkTheme}>
+        <AppContent themeName={themeName} setThemeName={setThemeName} />
+      </ThemeProvider>
+    </StyledEngineProvider>
+  );
+}
+
+function AppContent({ themeName, setThemeName }) {
   const classes = useStyles();
 
   const timeout = useRef(null);
@@ -102,8 +119,6 @@ function App() {
   );
   const [snackAction, setSnackAction] = useState(defaultSnackAction);
   const [search, setSearch] = useState("");
-  const [themeName, setThemeName] = useTheme("light");
-
   const menuOpen = Boolean(menuAnchor);
 
   useEffect(() => {
@@ -163,7 +178,7 @@ function App() {
         edge="end"
         color="inherit"
         onClick={() => setThemeName("dark")}
-      >
+        size="large">
         <DarkIcon />
       </IconButton>
     ) : (
@@ -171,7 +186,7 @@ function App() {
         edge="end"
         color="inherit"
         onClick={() => setThemeName("light")}
-      >
+        size="large">
         <LightIcon />
       </IconButton>
     );
@@ -186,86 +201,86 @@ function App() {
   }
 
   return (
-    <ThemeProvider theme={themeName === "light" ? lightTheme : darkTheme}>
+    <React.Fragment>
       <CssBaseline />
-      <div className={classes.root}>
-        <AppBar position="fixed">
-          <Toolbar>
-            <Typography className={classes.title} variant="h6" noWrap>
-              Discord Instants Player
-            </Typography>
-            <div className={classes.search}>
-              <div className={classes.searchIcon}>
-                <SearchIcon />
+        <div className={classes.root}>
+          <AppBar position="fixed">
+            <Toolbar>
+              <Typography className={classes.title} variant="h6" noWrap>
+                Discord Instants Player
+              </Typography>
+              <div className={classes.search}>
+                <div className={classes.searchIcon}>
+                  <SearchIcon />
+                </div>
+                <FocusableInput
+                  placeholder="Pesquisar…"
+                  focused={searchFocus}
+                  classes={{
+                    root: classes.inputRoot,
+                    input: classes.inputInput
+                  }}
+                  inputProps={{ "aria-label": "pesquisar" }}
+                  onBlur={() => setSearchFocus(false)}
+                  onChange={handleSearchChange}
+                />
               </div>
-              <FocusableInput
-                placeholder="Pesquisar…"
-                focused={searchFocus}
-                classes={{
-                  root: classes.inputRoot,
-                  input: classes.inputInput
-                }}
-                inputProps={{ "aria-label": "pesquisar" }}
-                onBlur={() => setSearchFocus(false)}
-                onChange={handleSearchChange}
-              />
-            </div>
-            {buildThemeIcon()}
-            <IconButton edge="end" color="inherit" onClick={handleMenuClick}>
-              <MoreIcon />
-            </IconButton>
-          </Toolbar>
-          <Menu
-            anchorEl={menuAnchor}
-            open={menuOpen}
-            onClose={handleMenuClose}
-            keepMounted
-          >
-            <MenuItem onClick={() => setImportFormOpen(true)}>
-              Importar
-            </MenuItem>
-            <MenuItem onClick={() => exportToJSON()}>Exportar</MenuItem>
-          </Menu>
-          <Tabs
-            value={selectedTab}
-            onChange={(_, newValue) => setSelectedTab(newValue)}
-          >
-            <Tab label="Favoritos" value="favorites" />
-            <Tab label="MyInstants" value="myinstants" />
-          </Tabs>
-        </AppBar>
-      </div>
-      <SnackbarContext.Provider value={{ openSnackbar, closeSnackbar }}>
-        {buildTabPanel()}
-      </SnackbarContext.Provider>
-      <ImportForm
-        open={importFormOpen}
-        onClose={() => setImportFormOpen(false)}
-      />
-      <Snackbar
-        anchorOrigin={{
-          vertical: "bottom",
-          horizontal: "center"
-        }}
-        open={snackOpen}
-        autoHideDuration={snackAutoHideDuration}
-        onClose={handleSnackbarClose}
-        message={snackMessage}
-        action={
-          <React.Fragment>
-            {snackAction}
-            <IconButton
-              size="small"
-              aria-label="close"
-              color="inherit"
-              onClick={handleSnackbarClose}
+              {buildThemeIcon()}
+              <IconButton edge="end" color="inherit" onClick={handleMenuClick} size="large">
+                <MoreIcon />
+              </IconButton>
+            </Toolbar>
+            <Menu
+              anchorEl={menuAnchor}
+              open={menuOpen}
+              onClose={handleMenuClose}
+              keepMounted
             >
-              <CloseIcon fontSize="small" />
-            </IconButton>
-          </React.Fragment>
-        }
-      />
-    </ThemeProvider>
+              <MenuItem onClick={() => setImportFormOpen(true)}>
+                Importar
+              </MenuItem>
+              <MenuItem onClick={() => exportToJSON()}>Exportar</MenuItem>
+            </Menu>
+            <Tabs
+              value={selectedTab}
+              onChange={(_, newValue) => setSelectedTab(newValue)}
+            >
+              <Tab label="Favoritos" value="favorites" />
+              <Tab label="MyInstants" value="myinstants" />
+            </Tabs>
+          </AppBar>
+        </div>
+        <SnackbarContext.Provider value={{ openSnackbar, closeSnackbar }}>
+          {buildTabPanel()}
+        </SnackbarContext.Provider>
+        <ImportForm
+          open={importFormOpen}
+          onClose={() => setImportFormOpen(false)}
+        />
+        <Snackbar
+          anchorOrigin={{
+            vertical: "bottom",
+            horizontal: "center"
+          }}
+          open={snackOpen}
+          autoHideDuration={snackAutoHideDuration}
+          onClose={handleSnackbarClose}
+          message={snackMessage}
+          action={
+            <React.Fragment>
+              {snackAction}
+              <IconButton
+                size="small"
+                aria-label="close"
+                color="inherit"
+                onClick={handleSnackbarClose}
+              >
+                <CloseIcon fontSize="small" />
+              </IconButton>
+            </React.Fragment>
+          }
+        />
+    </React.Fragment>
   );
 }
 
