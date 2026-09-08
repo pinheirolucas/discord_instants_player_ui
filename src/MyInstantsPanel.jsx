@@ -18,7 +18,7 @@ import SnackbarContext from "./SnackbarContext";
 import { getContent, getMyInstants } from "./service";
 import useAudioPlayer from "./useAudioPlayer";
 import useDiscordPlayer from "./useDiscordPlayer";
-import { useInstantsState, useUrlCodeMap, useCodeUrlMap } from "./storage";
+import { useInstantsState } from "./storage";
 
 const useStyles = makeStyles({
   container: {
@@ -70,8 +70,6 @@ function MyInstantsPanel(props) {
 
   const lastSearch = useRef(search);
   const [favorites, setFavorites] = useInstantsState([]);
-  const [urlCodeMap, setUrlCodeMap] = useUrlCodeMap({});
-  const [codeUrlMap, setCodeUrlMap] = useCodeUrlMap({});
 
   const [instants, setInstants] = useState([]);
   const [page, setPage] = useState(1);
@@ -142,16 +140,6 @@ function MyInstantsPanel(props) {
     setFavorites([...favorites, instant]);
   }
 
-  function clearStorageForUrl(url) {
-    const code = urlCodeMap[url];
-
-    delete urlCodeMap[url];
-    delete codeUrlMap[code];
-
-    setCodeUrlMap({ ...codeUrlMap });
-    setUrlCodeMap({ ...urlCodeMap });
-  }
-
   function removeFromFavorites(instant) {
     const newFavorites = [...favorites];
     const i = newFavorites.findIndex((current) => current.url === instant.url);
@@ -159,7 +147,6 @@ function MyInstantsPanel(props) {
       return;
     }
 
-    clearStorageForUrl(instant.url);
     newFavorites.splice(i, 1);
     setFavorites(newFavorites);
   }

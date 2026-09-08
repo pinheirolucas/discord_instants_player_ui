@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from "react";
+import React, { useContext, useState } from "react";
 
 import Grid from "@mui/material/Grid";
 import Container from "@mui/material/Container";
@@ -15,18 +15,12 @@ import StopIcon from "@mui/icons-material/Stop";
 import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 
-import KeybindingInput from "./KeybindingInput";
 import SaveForm from "./SaveForm";
 import SnackbarContext from "./SnackbarContext";
 import { getContent } from "./service";
 import useAudioPlayer from "./useAudioPlayer";
 import useDiscordPlayer from "./useDiscordPlayer";
-import {
-  useInstantsState,
-  useUrlCodeMap,
-  useCodeUrlMap,
-  useCodeKeyMap
-} from "./storage";
+import { useInstantsState } from "./storage";
 
 const useStyles = makeStyles(theme => ({
   container: {
@@ -46,9 +40,6 @@ const useStyles = makeStyles(theme => ({
   },
   title: {
     marginBottom: "15px"
-  },
-  inputWrapper: {
-    marginTop: "15px"
   },
   fab: {
     position: "fixed",
@@ -80,9 +71,6 @@ function FavoritesPanel(props) {
   const { openSnackbar, closeSnackbar } = useContext(SnackbarContext);
 
   const [instants, setInstants] = useInstantsState([]);
-  const [urlCodeMap, setUrlCodeMap] = useUrlCodeMap({});
-  const [codeUrlMap, setCodeUrlMap] = useCodeUrlMap({});
-  const [codeKeyMap, setCodeKeyMap] = useCodeKeyMap({});
 
   const { search } = props;
 
@@ -91,30 +79,6 @@ function FavoritesPanel(props) {
         name.toLowerCase().includes(search.toLowerCase())
       )
     : instants;
-
-  useEffect(() => {
-    // window.backend
-    //   .InitKeybindings(codeUrlMap)
-    //   .catch(() => console.log("keybindings already registered"));
-  }, [codeUrlMap]);
-
-  function handleBindingChange(instant) {
-    return (old, current) => {
-      const url = codeUrlMap[current.keyCode];
-      if (url) {
-        delete urlCodeMap[url];
-      }
-
-      if (old.keyCode !== null && old.keyCode !== undefined) {
-        delete urlCodeMap[instant.url];
-        delete codeUrlMap[old.keyCode];
-      }
-
-      setUrlCodeMap({ ...urlCodeMap, [instant.url]: current.keyCode });
-      setCodeUrlMap({ ...codeUrlMap, [current.keyCode]: instant.url });
-      setCodeKeyMap({ ...codeKeyMap, [current.keyCode]: current.key });
-    };
-  }
 
   function handleSnackbarRemoveAction(instant) {
     handleRemove(instant);
@@ -128,19 +92,8 @@ function FavoritesPanel(props) {
       return;
     }
 
-    clearStorageForUrl(instant.url);
     newInstants.splice(i, 1);
     setInstants(newInstants);
-  }
-
-  function clearStorageForUrl(url) {
-    const code = urlCodeMap[url];
-
-    delete urlCodeMap[url];
-    delete codeUrlMap[code];
-
-    setCodeUrlMap({ ...codeUrlMap });
-    setUrlCodeMap({ ...urlCodeMap });
   }
 
   function showInstantNotFoundError(instant, message) {
@@ -195,15 +148,6 @@ function FavoritesPanel(props) {
 
     setInstants([...instants, { name, url }]);
     setFormOpen(false);
-  }
-
-  function getKeyStr(instant) {
-    const code = urlCodeMap[instant.url];
-    if (code === null || code === undefined) {
-      return "";
-    }
-
-    return codeKeyMap[code] || "";
   }
 
   function areDefaultButtonsDisabled(instant) {
@@ -292,14 +236,6 @@ function FavoritesPanel(props) {
                       </IconButton>
                     </span>
                   </Tooltip>
-                </Grid>
-              </Grid>
-              <Grid container style={{ marginTop: "15px" }}>
-                <Grid item xs={12}>
-                  <KeybindingInput
-                    value={getKeyStr(instant)}
-                    onBindingChange={handleBindingChange(instant)}
-                  />
                 </Grid>
               </Grid>
             </Grid>

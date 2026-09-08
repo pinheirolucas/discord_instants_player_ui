@@ -15,12 +15,7 @@ import RadioGroup from "@mui/material/RadioGroup";
 import makeStyles from '@mui/styles/makeStyles';
 import { useDropzone } from "react-dropzone";
 
-import {
-  useInstantsState,
-  useUrlCodeMap,
-  useCodeUrlMap,
-  useCodeKeyMap
-} from "./storage";
+import { useInstantsState } from "./storage";
 import { getUrls } from "./instantUtils";
 
 const useStyles = makeStyles({
@@ -50,7 +45,6 @@ function ImportForm(props) {
 
   const readerRef = useRef(new FileReader());
   const [switches, setSwitches] = useState({
-    importKeybindings: false,
     importInstants: false,
     instantsAction: ""
   });
@@ -59,9 +53,6 @@ function ImportForm(props) {
   const [fileSuccessMessage, setFileSuccessMessage] = useState("");
 
   const [instants, setInstants] = useInstantsState([]);
-  const [, setUrlCodeMap] = useUrlCodeMap({});
-  const [, setCodeUrlMap] = useCodeUrlMap({});
-  const [, setCodeKeyMap] = useCodeKeyMap({});
 
   const {
     acceptedFiles,
@@ -77,7 +68,6 @@ function ImportForm(props) {
 
   const clear = useCallback(() => {
     setSwitches({
-      importKeybindings: false,
       importInstants: false,
       instantsAction: ""
     });
@@ -127,13 +117,6 @@ function ImportForm(props) {
   }, [acceptedFiles, fileRejections, clear]);
 
   function handleSave() {
-    // TODO: validate the keybindings to remove the unused ones
-    if (switches.importKeybindings) {
-      setUrlCodeMap(fileContent.urlCodeMap || {});
-      setCodeUrlMap(fileContent.codeUrlMap || {});
-      setCodeKeyMap(fileContent.codeKeyMap || {});
-    }
-
     if (switches.importInstants) {
       switch (switches.instantsAction) {
         case "replace":
@@ -169,12 +152,9 @@ function ImportForm(props) {
   }
 
   function isDone() {
-    const { importInstants, importKeybindings, instantsAction } = switches;
+    const { importInstants, instantsAction } = switches;
     return (
-      !Boolean(fileContentError) &&
-      ((importKeybindings && !importInstants) ||
-        (importKeybindings && importInstants && instantsAction) ||
-        (!importKeybindings && importInstants && instantsAction))
+      !Boolean(fileContentError) && Boolean(importInstants && instantsAction)
     );
   }
 
@@ -204,18 +184,6 @@ function ImportForm(props) {
                 <Typography variant="body1">
                   O que você deseja importar?
                 </Typography>
-              </Grid>
-              <Grid item xs={12}>
-                <FormControlLabel
-                  control={
-                    <Switch
-                      name="importKeybindings"
-                      checked={switches.importKeybindings}
-                      onChange={handleChange}
-                    />
-                  }
-                  label="Atalhos de teclado"
-                />
               </Grid>
               <Grid item xs={12}>
                 <FormControlLabel
