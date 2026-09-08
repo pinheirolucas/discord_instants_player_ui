@@ -1,7 +1,10 @@
-# pnpm blocks dependency build scripts by default. Electron's postinstall is the
-# one this project actually needs — it downloads the platform binary, without
-# which `electron .` has nothing to run. electron-winstaller is a Windows-only
-# installer helper pulled in by electron-builder and is not needed to build here.
+# pnpm blocks dependency build scripts by default. electron-winstaller is the
+# only dependency in this tree that declares one; it is a Windows-only installer
+# helper pulled in by electron-builder and is not needed to build here, so it
+# stays blocked. Naming it explicitly is what keeps `pnpm install` from ending in
+# ERR_PNPM_IGNORED_BUILDS.
+#
+# Electron itself needs no entry: from v44 it ships no install script at all and
+# downloads its platform binary lazily, on the first `electron .`.
 allowBuilds:
-  electron: true
   electron-winstaller: false
