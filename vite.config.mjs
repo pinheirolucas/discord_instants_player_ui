@@ -42,9 +42,6 @@ export default defineConfig({
   test: {
     environment: "jsdom",
     globals: true,
-    setupFiles: "./src/setupTests.js",
-    // No tests exist yet; this keeps `pnpm react-test` green instead of failing
-    // on an empty suite. Drop it once the first test lands.
-    passWithNoTests: true
+    setupFiles: "./src/setupTests.js"
   }
 });

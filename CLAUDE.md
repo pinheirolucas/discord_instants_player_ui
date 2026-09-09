@@ -17,7 +17,7 @@ pnpm build          # react-build then electron-build (electron-builder)
 pnpm release        # react-build then electron-builder --publish=always
 ```
 
-Run a single test file with `pnpm react-test run src/SomeFile.test.jsx`. There are no test files yet, so the suite passes vacuously (`passWithNoTests` in `vite.config.mjs`).
+Run a single test file with `pnpm react-test run src/SomeFile.test.jsx`. Tests live next to the code they cover, as `*.test.js`/`*.test.jsx`.
 
 ## Toolchain
 
@@ -54,6 +54,13 @@ only in a packaged build, as a blank window.
   `@mui/styles` and no `makeStyles`.
 - Grid uses the modern API: `<Grid container>` with `<Grid size={n}>`, not the removed `item`/`xs` props.
   The pre-v7 Grid still exists upstream as `GridLegacy`; this app does not use it.
-- MUI icons no longer carry `data-testid`, so address icon buttons structurally (position within the card
-  or header) rather than by test id.
+- MUI icons carry `data-testid` (e.g. `data-testid="PlayCircleFilledIcon"`) **only outside production
+  builds** — `createSvgIcon` sets it to `undefined` when `NODE_ENV === "production"`. So it is available in
+  Vitest but absent from anything driving `pnpm react-build` output (an Electron probe, say). MUI 5 emitted
+  it unconditionally; the gate arrived with the v6/v7 line. Do not rely on it outside the test environment.
+  The tests here do not use it at all, because of a second obstacle — `InstantCardAction`: it wraps its `IconButton` in a `<span>` so a
+  disabled button can still host the tooltip listener, and MUI clones that span and puts the tooltip's
+  title on it as `aria-label`. The button itself therefore has no accessible name, and
+  `getByRole("button", { name })` finds nothing — reach the span with `getByLabelText(title)` and take the
+  button inside it. MUI's `Switch` reports `role="switch"`, not `"checkbox"`.
 - `ramda` is used for small functional helpers (`src/instantUtils.js`, `state.js`, `ImportForm.jsx`) — prefer it over ad-hoc loops for consistency with existing code.
