@@ -1,29 +1,31 @@
 const { contextBridge, ipcRenderer } = require("electron");
 
-const channel = "discovery:api-url";
+const serversChannel = "discovery:servers";
+const refreshChannel = "discovery:refresh";
 
 const listeners = new Set();
-let lastApiUrl = null;
+let lastServers = [];
 
-ipcRenderer.on(channel, (_event, apiUrl) => {
-  lastApiUrl = apiUrl;
-  listeners.forEach(listener => listener(apiUrl));
+ipcRenderer.on(serversChannel, (_event, servers) => {
+  lastServers = Array.isArray(servers) ? servers : [];
+  listeners.forEach(listener => listener(lastServers));
 });
 
 contextBridge.exposeInMainWorld("instantsDiscovery", {
-  onApiUrl: listener => {
+  onServers: listener => {
     if (typeof listener !== "function") {
       return () => {};
     }
 
     listeners.add(listener);
 
-    if (lastApiUrl) {
-      listener(lastApiUrl);
+    if (lastServers.length > 0) {
+      listener(lastServers);
     }
 
     return () => {
       listeners.delete(listener);
     };
-  }
+  },
+  refresh: () => ipcRenderer.send(refreshChannel)
 });

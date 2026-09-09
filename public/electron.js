@@ -1,4 +1,5 @@
-const { app, BrowserWindow } = require("electron");
+const { app, BrowserWindow, ipcMain } = require("electron");
+const os = require("os");
 const path = require("path");
 const { Bonjour } = require("bonjour-service");
 const {
@@ -6,11 +7,13 @@ const {
   UpdateSourceType
 } = require("update-electron-app");
 const {
-  discoveryChannel,
+  discoveryServersChannel,
+  discoveryRefreshChannel,
   discoveryType,
   discoveryProtocol,
   discoveryQueryInterval,
-  buildApiUrl
+  buildServer,
+  sortServers
 } = require("./discovery");
 
 // Dev is "not packaged". This used to be the electron-is-dev package, which went
@@ -21,7 +24,7 @@ let mainWindow;
 let bonjour = null;
 let browser = null;
 let discoveryTimer = null;
-let discoveredApiUrl = null;
+let discovered = new Map();
 
 updateElectronApp({
   updateSource: {
@@ -31,11 +34,23 @@ updateElectronApp({
   updateInterval: "1 hour"
 });
 
-function publishApiUrl(apiUrl) {
-  discoveredApiUrl = apiUrl;
+function localAddresses() {
+  const found = new Set();
+  const interfaces = os.networkInterfaces();
 
+  Object.keys(interfaces).forEach(name => {
+    (interfaces[name] || []).forEach(entry => found.add(entry.address));
+  });
+
+  return found;
+}
+
+function publishServers() {
   if (mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.webContents.send(discoveryChannel, apiUrl);
+    mainWindow.webContents.send(
+      discoveryServersChannel,
+      sortServers(Array.from(discovered.values()))
+    );
   }
 }
 
@@ -44,14 +59,29 @@ function startDiscovery() {
   browser = bonjour.find({ type: discoveryType, protocol: discoveryProtocol });
 
   browser.on("up", service => {
-    const apiUrl = buildApiUrl(service);
+    const server = buildServer(service, localAddresses());
 
-    if (apiUrl) {
-      publishApiUrl(apiUrl);
+    if (server) {
+      discovered.set(server.id, server);
+      publishServers();
+    }
+  });
+
+  browser.on("down", service => {
+    const id = service && service.fqdn;
+
+    if (id && discovered.delete(id)) {
+      publishServers();
     }
   });
 
   discoveryTimer = setInterval(() => browser.update(), discoveryQueryInterval);
+}
+
+function refreshDiscovery() {
+  if (browser) {
+    browser.update();
+  }
 }
 
 function stopDiscovery() {
@@ -70,7 +100,7 @@ function stopDiscovery() {
     bonjour = null;
   }
 
-  discoveredApiUrl = null;
+  discovered = new Map();
 }
 
 function createWindow() {
@@ -85,8 +115,8 @@ function createWindow() {
   });
 
   mainWindow.webContents.on("did-finish-load", () => {
-    if (discoveredApiUrl) {
-      publishApiUrl(discoveredApiUrl);
+    if (discovered.size > 0) {
+      publishServers();
     }
   });
 
@@ -105,6 +135,8 @@ function createWindow() {
     mainWindow = null;
   });
 }
+
+ipcMain.on(discoveryRefreshChannel, () => refreshDiscovery());
 
 app.on("ready", createWindow);
 
