@@ -54,8 +54,11 @@ only in a packaged build, as a blank window.
   `@mui/styles` and no `makeStyles`.
 - Grid uses the modern API: `<Grid container>` with `<Grid size={n}>`, not the removed `item`/`xs` props.
   The pre-v7 Grid still exists upstream as `GridLegacy`; this app does not use it.
-- MUI icons *do* still carry `data-testid` (e.g. `data-testid="PlayCircleFilledIcon"`) in v9, but the tests
-  do not use it. The real obstacle is `InstantCardAction`: it wraps its `IconButton` in a `<span>` so a
+- MUI icons carry `data-testid` (e.g. `data-testid="PlayCircleFilledIcon"`) **only outside production
+  builds** — `createSvgIcon` sets it to `undefined` when `NODE_ENV === "production"`. So it is available in
+  Vitest but absent from anything driving `pnpm react-build` output (an Electron probe, say). MUI 5 emitted
+  it unconditionally; the gate arrived with the v6/v7 line. Do not rely on it outside the test environment.
+  The tests here do not use it at all, because of a second obstacle — `InstantCardAction`: it wraps its `IconButton` in a `<span>` so a
   disabled button can still host the tooltip listener, and MUI clones that span and puts the tooltip's
   title on it as `aria-label`. The button itself therefore has no accessible name, and
   `getByRole("button", { name })` finds nothing — reach the span with `getByLabelText(title)` and take the
