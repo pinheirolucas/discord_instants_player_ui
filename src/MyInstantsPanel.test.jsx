@@ -325,3 +325,59 @@ describe("MyInstantsPanel when the listing does not arrive", () => {
     expect(container.firstChild).not.toBeNull();
   });
 });
+
+// getContent used to have no error handling at all, so a backend error reached
+// this handler as `undefined` and `info.exists` threw inside an unawaited click
+// handler — the button did nothing and said nothing. It rejects with the
+// backend's message now, and the handler shows it.
+describe("MyInstantsPanel when a clip cannot be fetched", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    FakeAudio.played = [];
+    vi.stubGlobal("Audio", FakeAudio);
+    vi.mocked(getContent).mockReset();
+    vi.mocked(getMyInstants).mockReset().mockResolvedValue(page1);
+    vi.mocked(playOnDiscord).mockReset();
+    vi.mocked(stopPlayingOnDiscord).mockReset().mockResolvedValue({});
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("shows the backend message instead of failing silently", async () => {
+    const user = userEvent.setup();
+    vi.mocked(getContent).mockRejectedValue(new Error("Nenhuma URL enviada"));
+
+    const { snackbar } = renderPanel();
+    await screen.findByRole("heading", { name: "Primeiro" });
+
+    await user.click(action("Reproduzir", within(card("Primeiro"))));
+
+    await waitFor(() =>
+      expect(snackbar.openSnackbar).toHaveBeenCalledWith({
+        message: "Nenhuma URL enviada"
+      })
+    );
+    expect(FakeAudio.played).toEqual([]);
+  });
+
+  it("plays nothing and stays usable after the failure", async () => {
+    const user = userEvent.setup();
+    vi.mocked(getContent).mockRejectedValueOnce(new Error("Nenhuma URL enviada"));
+
+    renderPanel();
+    await screen.findByRole("heading", { name: "Primeiro" });
+    await user.click(action("Reproduzir", within(card("Primeiro"))));
+
+    vi.mocked(getContent).mockResolvedValue({
+      exists: true,
+      content: "data:audio/mp3;base64,BBBB"
+    });
+    await user.click(action("Reproduzir", within(card("Primeiro"))));
+
+    await waitFor(() =>
+      expect(FakeAudio.played).toEqual(["data:audio/mp3;base64,BBBB"])
+    );
+  });
+});

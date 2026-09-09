@@ -2,6 +2,25 @@ import axios from "axios";
 
 export const defaultApiUrl = "http://localhost:9001";
 
+const genericErrorMessage = "Erro desconhecido, tente novamente mais tarde";
+
+function backendMessage(err) {
+  return (
+    (err && err.response && err.response.data && err.response.data.message) ||
+    null
+  );
+}
+
+function unwrapData(response) {
+  const body = (response && response.data) || {};
+
+  if (!body.data) {
+    throw new Error(body.message || genericErrorMessage);
+  }
+
+  return body.data;
+}
+
 let apiUrl = defaultApiUrl;
 
 let healthy = true;
@@ -100,17 +119,17 @@ export function resetApiUrl() {
 }
 
 export async function playOnDiscord(url) {
+  let response;
+
   try {
-    const response = await axios.post(`${apiUrl}/bot/play`, { url });
+    response = await axios.post(`${apiUrl}/bot/play`, { url });
     markHealth(true);
-    return response.data.data.exitReason;
   } catch (err) {
     markFromError(err);
-    throw new Error(
-      (err.response && err.response.data && err.response.data.message) ||
-        "Erro desconhecido, tente novamente mais tarde"
-    );
+    throw new Error(backendMessage(err) || genericErrorMessage);
   }
+
+  return unwrapData(response).exitReason;
 }
 
 export async function stopPlayingOnDiscord() {
@@ -125,14 +144,17 @@ export async function stopPlayingOnDiscord() {
 }
 
 export async function getContent(url) {
+  let response;
+
   try {
-    const response = await axios.get(`${apiUrl}/play?url=${url}`);
+    response = await axios.get(`${apiUrl}/play?url=${url}`);
     markHealth(true);
-    return response.data.data;
   } catch (err) {
     markFromError(err);
-    throw err;
+    throw new Error(backendMessage(err) || genericErrorMessage);
   }
+
+  return unwrapData(response);
 }
 
 export async function getMyInstants(page, search) {
@@ -145,22 +167,10 @@ export async function getMyInstants(page, search) {
     .get(`${apiUrl}/instant/list?${params}`)
     .catch(err => {
       markFromError(err);
-      throw new Error(
-        (err.response && err.response.data && err.response.data.message) ||
-          "Erro desconhecido, tente novamente mais tarde"
-      );
+      throw new Error(backendMessage(err) || genericErrorMessage);
     })
     .then(resp => {
       markHealth(true);
-
-      const body = resp.data || {};
-
-      if (!body.data) {
-        throw new Error(
-          body.message || "Erro desconhecido, tente novamente mais tarde"
-        );
-      }
-
-      return body.data;
+      return unwrapData(resp);
     });
 }
