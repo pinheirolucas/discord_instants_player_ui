@@ -143,15 +143,24 @@ export async function getMyInstants(page, search) {
 
   return axios
     .get(`${apiUrl}/instant/list?${params}`)
-    .then(resp => {
-      markHealth(true);
-      return resp.data.data;
-    })
     .catch(err => {
       markFromError(err);
       throw new Error(
         (err.response && err.response.data && err.response.data.message) ||
           "Erro desconhecido, tente novamente mais tarde"
       );
+    })
+    .then(resp => {
+      markHealth(true);
+
+      const body = resp.data || {};
+
+      if (!body.data) {
+        throw new Error(
+          body.message || "Erro desconhecido, tente novamente mais tarde"
+        );
+      }
+
+      return body.data;
     });
 }

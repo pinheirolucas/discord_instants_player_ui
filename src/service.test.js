@@ -326,21 +326,41 @@ describe("getMyInstants", () => {
     );
   });
 
-  // Third instance of the HTTP-200-error problem. The catch is chained after
-  // the unwrapping then(), so it would catch a throw — but nothing throws:
-  // resp.data.data is simply undefined and gets returned. MyInstantsPanel's
-  // success handler then reads `data.instants` off undefined, which *does*
-  // throw, inside the promise chain, so the user gets a snackbar reading
-  // "Cannot read properties of undefined (reading 'instants')" instead of the
-  // backend's message.
-  it("resolves to undefined when the error arrives with HTTP 200", async () => {
+  // The backend reports most errors as HTTP 200 with {label, message} and no
+  // data, so an absent `data` is an error, not an empty listing — the envelope
+  // check runs after the catch so its throw reaches the caller untouched.
+  it("throws the backend message when the error arrives with HTTP 200", async () => {
     server.use(
       http.get(`${apiUrl}/instant/list`, () =>
         errorAt200("invalid_page", "A página enviada é inválida")
       )
     );
 
-    await expect(getMyInstants(1)).resolves.toBeUndefined();
+    await expect(getMyInstants(1)).rejects.toThrow("A página enviada é inválida");
+  });
+
+  it("falls back to the generic message when a 200 error body carries none", async () => {
+    server.use(
+      http.get(`${apiUrl}/instant/list`, () => HttpResponse.json({ label: "nope" }))
+    );
+
+    await expect(getMyInstants(1)).rejects.toThrow(
+      "Erro desconhecido, tente novamente mais tarde"
+    );
+  });
+
+  it("still rejects when the body is empty altogether", async () => {
+    server.use(http.get(`${apiUrl}/instant/list`, () => HttpResponse.json({})));
+
+    await expect(getMyInstants(1)).rejects.toThrow(
+      "Erro desconhecido, tente novamente mais tarde"
+    );
+  });
+
+  it("keeps resolving a real listing", async () => {
+    captureQuery();
+
+    await expect(getMyInstants(1)).resolves.toEqual(listing);
   });
 });
 
@@ -521,7 +541,9 @@ describe("connection health", () => {
       )
     );
 
-    await expect(getMyInstants(1)).resolves.toBeUndefined();
+    await expect(getMyInstants(1)).rejects.toThrow(
+      "O site myinstants.com respondeu com um status de erro"
+    );
     expect(isHealthy()).toBe(true);
   });
 

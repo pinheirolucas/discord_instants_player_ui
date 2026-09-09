@@ -37,15 +37,17 @@ function MyInstantsPanel(props) {
 
   useEffect(() => {
     function handleSuccess(data) {
+      const listing = data || {};
+
       if (search === lastSearch.current) {
         setInstants((cur) =>
-          R.uniqBy(R.path(["url"]), [...cur, ...(data.instants || [])])
+          R.uniqBy(R.path(["url"]), [...cur, ...(listing.instants || [])])
         );
         return;
       }
 
-      setInstants(() => R.uniqBy(R.path(["url"]), [...(data.instants || [])]));
-      setTotalPages(data.pages || 1);
+      setInstants(() => R.uniqBy(R.path(["url"]), [...(listing.instants || [])]));
+      setTotalPages(listing.pages || 1);
       lastSearch.current = search;
     }
 
