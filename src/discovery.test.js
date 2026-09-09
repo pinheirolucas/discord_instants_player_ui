@@ -2,7 +2,13 @@ import { createRequire } from "node:module";
 import { describe, it, expect } from "vitest";
 
 const require = createRequire(import.meta.url);
-const { buildApiUrl, pickHost } = require("../public/discovery.js");
+const {
+  buildApiUrl,
+  buildServer,
+  hostnameFromService,
+  pickHost,
+  sortServers
+} = require("../public/discovery.js");
 
 function realService(overrides = {}) {
   return {
@@ -108,5 +114,123 @@ describe("pickHost", () => {
     });
 
     expect(pickHost(service)).toBeNull();
+  });
+});
+
+describe("hostnameFromService", () => {
+  it("recovers the hostname the advertiser used, not the mangled name", () => {
+    expect(hostnameFromService(realService())).toBe("MacBook-Pro-de-Lucas");
+  });
+
+  it("survives the -2 suffix macOS adds after a name collision", () => {
+    const service = realService({
+      name: "MacBook-Pro-de-Lucas-2",
+      fqdn: "MacBook-Pro-de-Lucas-2.local-9001._myinstants._tcp.local"
+    });
+
+    expect(hostnameFromService(service)).toBe("MacBook-Pro-de-Lucas-2");
+  });
+
+  it("keeps a hostname that carries no .local suffix", () => {
+    const service = realService({
+      fqdn: "raspberrypi-9001._myinstants._tcp.local"
+    });
+
+    expect(hostnameFromService(service)).toBe("raspberrypi");
+  });
+
+  it("returns null when the fqdn is not one of ours", () => {
+    expect(hostnameFromService(realService({ fqdn: "printer._ipp._tcp.local" })))
+      .toBeNull();
+    expect(hostnameFromService({})).toBeNull();
+  });
+});
+
+describe("buildServer", () => {
+  it("carries the address, port and hostname alongside the url", () => {
+    expect(buildServer(realService(), new Set())).toEqual({
+      id: "MacBook-Pro-de-Lucas.local-9001._myinstants._tcp.local",
+      apiUrl: "http://10.0.0.133:9001",
+      address: "10.0.0.133",
+      port: 9001,
+      hostname: "MacBook-Pro-de-Lucas",
+      isLocal: false
+    });
+  });
+
+  it("marks a server whose address belongs to this machine", () => {
+    const server = buildServer(realService(), new Set(["10.0.0.133"]));
+
+    expect(server.isLocal).toBe(true);
+  });
+
+  it("does not mark a server on another machine", () => {
+    const service = realService({ addresses: ["10.0.0.42"] });
+    const server = buildServer(service, new Set(["10.0.0.133"]));
+
+    expect(server.isLocal).toBe(false);
+  });
+
+  it("keys distinct ports on the same host as distinct servers", () => {
+    const a = buildServer(realService(), new Set());
+    const b = buildServer(
+      realService({
+        port: 9002,
+        fqdn: "MacBook-Pro-de-Lucas.local-9002._myinstants._tcp.local"
+      }),
+      new Set()
+    );
+
+    expect(a.id).not.toBe(b.id);
+    expect(a.apiUrl).not.toBe(b.apiUrl);
+  });
+
+  it("refuses a service the api gate rejects", () => {
+    expect(buildServer(realService({ txt: { api: "2" } }), new Set())).toBeNull();
+  });
+
+  it("tolerates a missing local-address set", () => {
+    expect(buildServer(realService()).isLocal).toBe(false);
+  });
+});
+
+describe("sortServers", () => {
+  const local9002 = { apiUrl: "b", address: "10.0.0.133", port: 9002, isLocal: true };
+  const local9001 = { apiUrl: "a", address: "10.0.0.133", port: 9001, isLocal: true };
+  const remote9001 = { apiUrl: "c", address: "10.0.0.42", port: 9001, isLocal: false };
+  const remote8080 = { apiUrl: "d", address: "10.0.0.87", port: 8080, isLocal: false };
+
+  it("puts servers on this machine first", () => {
+    const sorted = sortServers([remote9001, local9002]);
+
+    expect(sorted.map(s => s.apiUrl)).toEqual(["b", "c"]);
+  });
+
+  it("orders by port within the same locality", () => {
+    const sorted = sortServers([local9002, local9001]);
+
+    expect(sorted.map(s => s.apiUrl)).toEqual(["a", "b"]);
+  });
+
+  it("breaks a port tie on the address", () => {
+    const other = { apiUrl: "e", address: "10.0.0.10", port: 9001, isLocal: false };
+    const sorted = sortServers([remote9001, other]);
+
+    expect(sorted.map(s => s.apiUrl)).toEqual(["e", "c"]);
+  });
+
+  it("gives the same order whatever order discovery reported", () => {
+    const a = sortServers([local9002, remote8080, local9001, remote9001]);
+    const b = sortServers([remote9001, local9001, remote8080, local9002]);
+
+    expect(a.map(s => s.apiUrl)).toEqual(b.map(s => s.apiUrl));
+    expect(a.map(s => s.apiUrl)).toEqual(["a", "b", "d", "c"]);
+  });
+
+  it("does not mutate the list it was given", () => {
+    const input = [local9002, local9001];
+    sortServers(input);
+
+    expect(input.map(s => s.apiUrl)).toEqual(["b", "a"]);
   });
 });

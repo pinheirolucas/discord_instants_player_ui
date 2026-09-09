@@ -22,15 +22,24 @@ import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
 import Tabs from "@mui/material/Tabs";
 import Tab from "@mui/material/Tab";
+import Button from "@mui/material/Button";
 
 import FocusableInput from "./FocusableInput";
 import FavoritesPanel from "./FavoritesPanel";
 import MyInstantsPanel from "./MyInstantsPanel";
 import SnackbarContext from "./SnackbarContext";
 import ImportForm from "./ImportForm";
-import { setApiUrl } from "./service";
+import ServerMenu, { formatApiUrl } from "./ServerMenu";
+import {
+  defaultApiUrl,
+  getApiUrl,
+  isHealthy,
+  onConnectionError,
+  onHealthChange,
+  setApiUrl
+} from "./service";
 import { exportToJSON } from "./state";
-import { useTheme } from "./storage";
+import { useSelectedServer, useTheme } from "./storage";
 import { darkTheme, lightTheme } from "./theme";
 
 import "./App.css";
@@ -102,6 +111,12 @@ function App() {
 function AppContent({ themeName, setThemeName }) {
 
   const timeout = useRef(null);
+  const serverButtonRef = useRef(null);
+  const healthyRef = useRef(isHealthy());
+  const [servers, setServers] = useState([]);
+  const [serverMenuOpen, setServerMenuOpen] = useState(false);
+  const [healthy, setHealthy] = useState(isHealthy);
+  const [selectedServer, setSelectedServer] = useSelectedServer(null);
   const [searchFocus, setSearchFocus] = useState(false);
   const [menuAnchor, setMenuAnchor] = useState(null);
   const [importFormOpen, setImportFormOpen] = useState(false);
@@ -136,12 +151,12 @@ function AppContent({ themeName, setThemeName }) {
   useEffect(() => {
     const discovery = window.instantsDiscovery;
 
-    if (!discovery || typeof discovery.onApiUrl !== "function") {
+    if (!discovery || typeof discovery.onServers !== "function") {
       return undefined;
     }
 
-    const unsubscribe = discovery.onApiUrl(discovered => {
-      setApiUrl(discovered);
+    const unsubscribe = discovery.onServers(discovered => {
+      setServers(Array.isArray(discovered) ? discovered : []);
     });
 
     return () => {
@@ -151,7 +166,53 @@ function AppContent({ themeName, setThemeName }) {
     };
   }, []);
 
+  useEffect(() => {
+    return onHealthChange(next => {
+      healthyRef.current = next;
+      setHealthy(next);
+    });
+  }, []);
+
+  useEffect(() => {
+    return onConnectionError(() => showConnectionSnackbar());
+  }, []);
+
+  useEffect(() => {
+    if (selectedServer && setApiUrl(selectedServer)) {
+      return;
+    }
+
+    if (servers.length > 0) {
+      setApiUrl(servers[0].apiUrl);
+      return;
+    }
+
+    setApiUrl(defaultApiUrl);
+  }, [servers, selectedServer]);
+
+  function showConnectionSnackbar() {
+    setSnackOpen(true);
+    setSnackMessage(
+      `Não foi possível falar com ${formatApiUrl(getApiUrl())}`
+    );
+    setSnackAction(
+      <Button
+        color="inherit"
+        size="small"
+        onClick={() => setServerMenuOpen(true)}
+      >
+        Trocar
+      </Button>
+    );
+    setOnSnackbarClose(defaultOnSnackbarClose);
+    setSnackAutoHideDuration(defaultSnackAutoHideDuration);
+  }
+
   function openSnackbar(options) {
+    if (!healthyRef.current) {
+      return;
+    }
+
     const { action, autoHideDuration, message, onClose } = options;
 
     setSnackOpen(true);
@@ -240,6 +301,28 @@ function AppContent({ themeName, setThemeName }) {
                   onChange={handleSearchChange}
                 />
               </Search>
+              <ServerMenu
+                servers={servers}
+                currentApiUrl={getApiUrl()}
+                healthy={healthy}
+                anchorRef={serverButtonRef}
+                open={serverMenuOpen}
+                onOpen={() => setServerMenuOpen(true)}
+                onClose={() => setServerMenuOpen(false)}
+                onSelect={server => {
+                  setSelectedServer(server.apiUrl);
+                  setServerMenuOpen(false);
+                }}
+                onRefresh={() => {
+                  const discovery = window.instantsDiscovery;
+
+                  if (discovery && typeof discovery.refresh === "function") {
+                    discovery.refresh();
+                  }
+
+                  setServerMenuOpen(false);
+                }}
+              />
               {buildThemeIcon()}
               <IconButton edge="end" color="inherit" onClick={handleMenuClick} size="large">
                 <MoreIcon />

@@ -10,7 +10,10 @@ import {
   getApiUrl,
   setApiUrl,
   resetApiUrl,
-  defaultApiUrl
+  defaultApiUrl,
+  isHealthy,
+  onHealthChange,
+  onConnectionError
 } from "./service";
 
 // Mocking at the request level rather than stubbing axios keeps these tests
@@ -498,3 +501,154 @@ describe("api base url", () => {
     expect(hit).toBe(true);
   });
 });
+
+describe("connection health", () => {
+  it("starts healthy", () => {
+    expect(isHealthy()).toBe(true);
+  });
+
+  it("goes unhealthy when the backend cannot be reached at all", async () => {
+    server.use(http.get(`${apiUrl}/instant/list`, () => HttpResponse.error()));
+
+    await expect(getMyInstants(1)).rejects.toThrow();
+    expect(isHealthy()).toBe(false);
+  });
+
+  it("stays healthy when the backend answers with an error body at 200", async () => {
+    server.use(
+      http.get(`${apiUrl}/instant/list`, () =>
+        errorAt200("bad_http_status", "O site myinstants.com respondeu com um status de erro")
+      )
+    );
+
+    await expect(getMyInstants(1)).resolves.toBeUndefined();
+    expect(isHealthy()).toBe(true);
+  });
+
+  it("stays healthy on a genuine non-200 — the server did answer", async () => {
+    server.use(
+      http.get(`${apiUrl}/instant/list`, () =>
+        errorAtStatus(500, { message: "boom" })
+      )
+    );
+
+    await expect(getMyInstants(1)).rejects.toThrow();
+    expect(isHealthy()).toBe(true);
+  });
+
+  it("recovers once a request succeeds again", async () => {
+    server.use(http.post(`${apiUrl}/bot/play`, () => HttpResponse.error()));
+    await expect(playOnDiscord("x")).rejects.toThrow();
+    expect(isHealthy()).toBe(false);
+
+    server.resetHandlers();
+    server.use(
+      http.post(`${apiUrl}/bot/play`, () => success({ exitReason: "end" }))
+    );
+    await playOnDiscord("x");
+
+    expect(isHealthy()).toBe(true);
+  });
+
+  it("notifies listeners on each transition, not on every request", async () => {
+    const seen = [];
+    const unsubscribe = onHealthChange(next => seen.push(next));
+
+    server.use(http.post(`${apiUrl}/bot/stop`, () => HttpResponse.error()));
+    await expect(stopPlayingOnDiscord()).rejects.toThrow();
+    await expect(stopPlayingOnDiscord()).rejects.toThrow();
+
+    server.resetHandlers();
+    server.use(http.post(`${apiUrl}/bot/stop`, () => success({})));
+    await stopPlayingOnDiscord();
+
+    unsubscribe();
+    expect(seen).toEqual([false, true]);
+  });
+
+  it("stops notifying after unsubscribe", async () => {
+    const seen = [];
+    onHealthChange(next => seen.push(next))();
+
+    server.use(http.get(`${apiUrl}/play`, () => HttpResponse.error()));
+    await expect(getContent("x")).rejects.toThrow();
+
+    expect(seen).toEqual([]);
+    expect(isHealthy()).toBe(false);
+  });
+
+  it("ignores a listener that is not a function", () => {
+    expect(() => onHealthChange(null)()).not.toThrow();
+  });
+
+  it("assumes a newly selected server is healthy until proven otherwise", async () => {
+    server.use(http.get(`${apiUrl}/play`, () => HttpResponse.error()));
+    await expect(getContent("x")).rejects.toThrow();
+    expect(isHealthy()).toBe(false);
+
+    setApiUrl("http://10.0.0.42:9001");
+
+    expect(isHealthy()).toBe(true);
+  });
+});
+
+describe("connection error notifications", () => {
+  it("fires on every connection failure, not only the first", async () => {
+    let count = 0;
+    const unsubscribe = onConnectionError(() => {
+      count += 1;
+    });
+
+    server.use(http.post(`${apiUrl}/bot/play`, () => HttpResponse.error()));
+    await expect(playOnDiscord("x")).rejects.toThrow();
+    await expect(playOnDiscord("x")).rejects.toThrow();
+    await expect(playOnDiscord("x")).rejects.toThrow();
+
+    unsubscribe();
+    expect(count).toBe(3);
+  });
+
+  it("does not fire when the backend answered", async () => {
+    let count = 0;
+    const unsubscribe = onConnectionError(() => {
+      count += 1;
+    });
+
+    server.use(
+      http.post(`${apiUrl}/bot/play`, () => errorAt200("not_found", "não existe"))
+    );
+    await expect(playOnDiscord("x")).rejects.toThrow();
+
+    unsubscribe();
+    expect(count).toBe(0);
+  });
+
+  it("stops firing after unsubscribe", async () => {
+    let count = 0;
+    onConnectionError(() => {
+      count += 1;
+    })();
+
+    server.use(http.post(`${apiUrl}/bot/play`, () => HttpResponse.error()));
+    await expect(playOnDiscord("x")).rejects.toThrow();
+
+    expect(count).toBe(0);
+  });
+
+  it("ignores a listener that is not a function", () => {
+    expect(() => onConnectionError(undefined)()).not.toThrow();
+  });
+});
+
+describe("health does not confuse a decoding failure with a dead server", () => {
+  it("stays healthy when /bot/play answers 200 with no data envelope", async () => {
+    server.use(
+      http.post(`${apiUrl}/bot/play`, () =>
+        errorAt200("not_found", "O instant não existe mais")
+      )
+    );
+
+    await expect(playOnDiscord("x")).rejects.toThrow();
+    expect(isHealthy()).toBe(true);
+  });
+})
