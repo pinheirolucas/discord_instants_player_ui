@@ -6,7 +6,11 @@ import {
   playOnDiscord,
   stopPlayingOnDiscord,
   getContent,
-  getMyInstants
+  getMyInstants,
+  getApiUrl,
+  setApiUrl,
+  resetApiUrl,
+  defaultApiUrl
 } from "./service";
 
 // Mocking at the request level rather than stubbing axios keeps these tests
@@ -39,7 +43,10 @@ function errorAtStatus(status, body) {
 }
 
 beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
-afterEach(() => server.resetHandlers());
+afterEach(() => {
+  server.resetHandlers();
+  resetApiUrl();
+});
 afterAll(() => server.close());
 
 describe("playOnDiscord", () => {
@@ -331,5 +338,163 @@ describe("getMyInstants", () => {
     );
 
     await expect(getMyInstants(1)).resolves.toBeUndefined();
+  });
+});
+
+describe("api base url", () => {
+  const discovered = "http://10.0.0.133:9001";
+
+  it("starts at localhost:9001", () => {
+    expect(defaultApiUrl).toBe("http://localhost:9001");
+    expect(getApiUrl()).toBe(defaultApiUrl);
+  });
+
+  it("keeps talking to localhost when no bridge exposes a discovered address", async () => {
+    expect(window.instantsDiscovery).toBeUndefined();
+
+    let hit = false;
+    server.use(
+      http.get(`${apiUrl}/instant/list`, () => {
+        hit = true;
+        return success({ instants: [], pages: 0 });
+      })
+    );
+
+    await getMyInstants(1);
+
+    expect(hit).toBe(true);
+    expect(getApiUrl()).toBe(defaultApiUrl);
+  });
+
+  it("sends every subsequent request to an adopted address", async () => {
+    expect(setApiUrl(discovered)).toBe(true);
+    expect(getApiUrl()).toBe(discovered);
+
+    const seen = [];
+    server.use(
+      http.post(`${discovered}/bot/play`, ({ request }) => {
+        seen.push(new URL(request.url).origin);
+        return success({ exitReason: "end" });
+      }),
+      http.post(`${discovered}/bot/stop`, ({ request }) => {
+        seen.push(new URL(request.url).origin);
+        return new HttpResponse(null, { status: 200 });
+      }),
+      http.get(`${discovered}/play`, ({ request }) => {
+        seen.push(new URL(request.url).origin);
+        return success({ exists: true, content: "" });
+      }),
+      http.get(`${discovered}/instant/list`, ({ request }) => {
+        seen.push(new URL(request.url).origin);
+        return success({ instants: [], pages: 0 });
+      })
+    );
+
+    await playOnDiscord("https://www.myinstants.com/a/");
+    await stopPlayingOnDiscord();
+    await getContent("https://www.myinstants.com/a/");
+    await getMyInstants(1);
+
+    expect(seen).toEqual([discovered, discovered, discovered, discovered]);
+  });
+
+  it("restores the default when the address is reset", async () => {
+    setApiUrl(discovered);
+    resetApiUrl();
+
+    expect(getApiUrl()).toBe(defaultApiUrl);
+
+    let hit = false;
+    server.use(
+      http.get(`${apiUrl}/instant/list`, () => {
+        hit = true;
+        return success({ instants: [], pages: 0 });
+      })
+    );
+
+    await getMyInstants(1);
+
+    expect(hit).toBe(true);
+  });
+
+  it("strips a trailing slash so paths are not doubled", async () => {
+    expect(setApiUrl("http://10.0.0.133:9001/")).toBe(true);
+    expect(getApiUrl()).toBe(discovered);
+
+    let path;
+    server.use(
+      http.post(`${discovered}/bot/stop`, ({ request }) => {
+        path = new URL(request.url).pathname;
+        return new HttpResponse(null, { status: 200 });
+      })
+    );
+
+    await stopPlayingOnDiscord();
+
+    expect(path).toBe("/bot/stop");
+  });
+
+  it("keeps a base path announced by the service", async () => {
+    expect(setApiUrl("http://10.0.0.133:9001/api/")).toBe(true);
+    expect(getApiUrl()).toBe("http://10.0.0.133:9001/api");
+
+    let path;
+    server.use(
+      http.post(`${discovered}/api/bot/stop`, ({ request }) => {
+        path = new URL(request.url).pathname;
+        return new HttpResponse(null, { status: 200 });
+      })
+    );
+
+    await stopPlayingOnDiscord();
+
+    expect(path).toBe("/api/bot/stop");
+  });
+
+  it("accepts an ipv6 address in brackets and https", () => {
+    expect(setApiUrl("http://[2001:db8::42]:9001")).toBe(true);
+    expect(getApiUrl()).toBe("http://[2001:db8::42]:9001");
+
+    expect(setApiUrl("https://instants.lan:9001")).toBe(true);
+    expect(getApiUrl()).toBe("https://instants.lan:9001");
+  });
+
+  it.each([
+    ["an empty string", ""],
+    ["blank space", "   "],
+    ["a bare host and port", "10.0.0.133:9001"],
+    ["a schemeless host", "localhost:9001"],
+    ["a word", "not a url"],
+    ["an unusable scheme", "ftp://10.0.0.133:9001"],
+    ["a file url", "file:///etc/passwd"],
+    ["a scheme with no host", "http://"],
+    ["a query string", "http://10.0.0.133:9001?x=1"],
+    ["a fragment", "http://10.0.0.133:9001/#x"],
+    ["null", null],
+    ["undefined", undefined],
+    ["a number", 9001],
+    ["an object", {}]
+  ])("ignores %s instead of adopting it", (_label, value) => {
+    expect(setApiUrl(value)).toBe(false);
+    expect(getApiUrl()).toBe(defaultApiUrl);
+  });
+
+  it("does not lose a good address to a malformed one that arrives later", async () => {
+    setApiUrl(discovered);
+
+    expect(setApiUrl("nonsense")).toBe(false);
+    expect(getApiUrl()).toBe(discovered);
+
+    let hit = false;
+    server.use(
+      http.get(`${discovered}/instant/list`, () => {
+        hit = true;
+        return success({ instants: [], pages: 0 });
+      })
+    );
+
+    await getMyInstants(1);
+
+    expect(hit).toBe(true);
   });
 });

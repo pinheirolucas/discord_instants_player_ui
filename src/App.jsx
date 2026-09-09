@@ -28,6 +28,7 @@ import FavoritesPanel from "./FavoritesPanel";
 import MyInstantsPanel from "./MyInstantsPanel";
 import SnackbarContext from "./SnackbarContext";
 import ImportForm from "./ImportForm";
+import { setApiUrl } from "./service";
 import { exportToJSON } from "./state";
 import { useTheme } from "./storage";
 import { darkTheme, lightTheme } from "./theme";
@@ -129,6 +130,24 @@ function AppContent({ themeName, setThemeName }) {
     window.addEventListener("keydown", handleSearch);
     return () => {
       window.removeEventListener("keydown", handleSearch);
+    };
+  }, []);
+
+  useEffect(() => {
+    const discovery = window.instantsDiscovery;
+
+    if (!discovery || typeof discovery.onApiUrl !== "function") {
+      return undefined;
+    }
+
+    const unsubscribe = discovery.onApiUrl(discovered => {
+      setApiUrl(discovered);
+    });
+
+    return () => {
+      if (typeof unsubscribe === "function") {
+        unsubscribe();
+      }
     };
   }, []);
 

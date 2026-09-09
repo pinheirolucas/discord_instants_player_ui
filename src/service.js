@@ -1,6 +1,50 @@
 import axios from "axios";
 
-const apiUrl = "http://localhost:9001";
+export const defaultApiUrl = "http://localhost:9001";
+
+let apiUrl = defaultApiUrl;
+
+function normalizeApiUrl(value) {
+  if (typeof value !== "string" || !value.trim()) {
+    return null;
+  }
+
+  let parsed;
+  try {
+    parsed = new URL(value.trim());
+  } catch (err) {
+    return null;
+  }
+
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+    return null;
+  }
+
+  if (!parsed.hostname || parsed.search || parsed.hash) {
+    return null;
+  }
+
+  return `${parsed.origin}${parsed.pathname}`.replace(/\/+$/, "");
+}
+
+export function getApiUrl() {
+  return apiUrl;
+}
+
+export function setApiUrl(value) {
+  const normalized = normalizeApiUrl(value);
+
+  if (!normalized) {
+    return false;
+  }
+
+  apiUrl = normalized;
+  return true;
+}
+
+export function resetApiUrl() {
+  apiUrl = defaultApiUrl;
+}
 
 export async function playOnDiscord(url) {
   try {
