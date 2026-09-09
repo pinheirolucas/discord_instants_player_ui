@@ -263,3 +263,121 @@ describe("MyInstantsPanel", () => {
     });
   });
 });
+
+// The backend reports most errors as HTTP 200 with no `data`, which used to
+// reach this panel as `undefined`. Both `instants` reads sit inside setInstants
+// updater closures, so React evaluated them during state processing rather than
+// inside the promise chain: the TypeError escaped the effect's own catch and
+// unmounted the tree to a blank window. service.js now rejects instead, and
+// handleSuccess no longer dereferences whatever it is handed.
+describe("MyInstantsPanel when the listing does not arrive", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    FakeAudio.played = [];
+    vi.stubGlobal("Audio", FakeAudio);
+    vi.mocked(getContent).mockReset();
+    vi.mocked(getMyInstants).mockReset();
+    vi.mocked(playOnDiscord).mockReset();
+    vi.mocked(stopPlayingOnDiscord).mockReset().mockResolvedValue({});
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("shows the backend message and stays mounted when the call rejects", async () => {
+    vi.mocked(getMyInstants).mockRejectedValue(
+      new Error("O site myinstants.com respondeu com um status de erro")
+    );
+
+    const { snackbar, container } = renderPanel();
+
+    await waitFor(() =>
+      expect(snackbar.openSnackbar).toHaveBeenCalledWith({
+        message: "O site myinstants.com respondeu com um status de erro"
+      })
+    );
+
+    expect(container.firstChild).not.toBeNull();
+    expect(screen.queryByRole("heading", { name: "Primeiro" })).toBeNull();
+  });
+
+  it("renders empty rather than throwing if it is handed no listing at all", async () => {
+    vi.mocked(getMyInstants).mockResolvedValue(undefined);
+
+    const { container, snackbar } = renderPanel();
+
+    await waitFor(() => expect(getMyInstants).toHaveBeenCalled());
+
+    expect(container.firstChild).not.toBeNull();
+    expect(snackbar.openSnackbar).not.toHaveBeenCalled();
+  });
+
+  it("survives an undefined listing on the search path too", async () => {
+    vi.mocked(getMyInstants).mockResolvedValue(undefined);
+
+    const { rerenderWithSearch, container } = renderPanel({ search: "" });
+
+    await waitFor(() => expect(getMyInstants).toHaveBeenCalled());
+    rerenderWithSearch("boo");
+
+    await waitFor(() => expect(getMyInstants).toHaveBeenCalledTimes(2));
+    expect(container.firstChild).not.toBeNull();
+  });
+});
+
+// getContent used to have no error handling at all, so a backend error reached
+// this handler as `undefined` and `info.exists` threw inside an unawaited click
+// handler — the button did nothing and said nothing. It rejects with the
+// backend's message now, and the handler shows it.
+describe("MyInstantsPanel when a clip cannot be fetched", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    FakeAudio.played = [];
+    vi.stubGlobal("Audio", FakeAudio);
+    vi.mocked(getContent).mockReset();
+    vi.mocked(getMyInstants).mockReset().mockResolvedValue(page1);
+    vi.mocked(playOnDiscord).mockReset();
+    vi.mocked(stopPlayingOnDiscord).mockReset().mockResolvedValue({});
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("shows the backend message instead of failing silently", async () => {
+    const user = userEvent.setup();
+    vi.mocked(getContent).mockRejectedValue(new Error("Nenhuma URL enviada"));
+
+    const { snackbar } = renderPanel();
+    await screen.findByRole("heading", { name: "Primeiro" });
+
+    await user.click(action("Reproduzir", within(card("Primeiro"))));
+
+    await waitFor(() =>
+      expect(snackbar.openSnackbar).toHaveBeenCalledWith({
+        message: "Nenhuma URL enviada"
+      })
+    );
+    expect(FakeAudio.played).toEqual([]);
+  });
+
+  it("plays nothing and stays usable after the failure", async () => {
+    const user = userEvent.setup();
+    vi.mocked(getContent).mockRejectedValueOnce(new Error("Nenhuma URL enviada"));
+
+    renderPanel();
+    await screen.findByRole("heading", { name: "Primeiro" });
+    await user.click(action("Reproduzir", within(card("Primeiro"))));
+
+    vi.mocked(getContent).mockResolvedValue({
+      exists: true,
+      content: "data:audio/mp3;base64,BBBB"
+    });
+    await user.click(action("Reproduzir", within(card("Primeiro"))));
+
+    await waitFor(() =>
+      expect(FakeAudio.played).toEqual(["data:audio/mp3;base64,BBBB"])
+    );
+  });
+});

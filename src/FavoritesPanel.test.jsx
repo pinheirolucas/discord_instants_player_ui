@@ -277,3 +277,64 @@ describe("FavoritesPanel", () => {
     );
   });
 });
+
+describe("FavoritesPanel when a clip cannot be fetched", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    FakeAudio.played = [];
+    vi.stubGlobal("Audio", FakeAudio);
+    vi.mocked(getContent).mockReset();
+    vi.mocked(playOnDiscord).mockReset();
+    vi.mocked(stopPlayingOnDiscord).mockReset().mockResolvedValue({});
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("shows the backend message rather than failing silently", async () => {
+    const user = userEvent.setup();
+    vi.mocked(getContent).mockRejectedValue(new Error("Nenhuma URL enviada"));
+
+    const { snackbar } = renderPanel();
+
+    await user.click(action("Reproduzir", within(card("Primeiro"))));
+
+    await waitFor(() =>
+      expect(snackbar.openSnackbar).toHaveBeenCalledWith({
+        message: "Nenhuma URL enviada"
+      })
+    );
+    expect(FakeAudio.played).toEqual([]);
+  });
+
+  it("keeps the remove-action snackbar for an instant that is merely gone", async () => {
+    const user = userEvent.setup();
+    vi.mocked(getContent).mockResolvedValue({ exists: false });
+
+    const { snackbar } = renderPanel();
+
+    await user.click(action("Reproduzir", within(card("Primeiro"))));
+
+    await waitFor(() => expect(snackbar.openSnackbar).toHaveBeenCalled());
+    const call = snackbar.openSnackbar.mock.calls[0][0];
+    expect(call.message).toBe("Parece que o instant não existe mais");
+    expect(call.action).toBeTruthy();
+  });
+
+  it("carries the backend message out of a failed discord send", async () => {
+    const user = userEvent.setup();
+    vi.mocked(playOnDiscord).mockRejectedValue(
+      new Error("O instant enviado não foi encontrado")
+    );
+
+    const { snackbar } = renderPanel();
+
+    await user.click(action("Enviar para o Discord", within(card("Primeiro"))));
+
+    await waitFor(() => expect(snackbar.openSnackbar).toHaveBeenCalled());
+    expect(snackbar.openSnackbar.mock.calls[0][0].message).toBe(
+      "O instant enviado não foi encontrado"
+    );
+  });
+});

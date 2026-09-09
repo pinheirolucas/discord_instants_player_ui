@@ -101,21 +101,24 @@ describe("playOnDiscord", () => {
     );
   });
 
-  // Pre-existing bug, asserted as current behaviour rather than fixed. Because
-  // the backend sends its errors with HTTP 200, axios does not reject; the
-  // success path runs, `response.data.data` is undefined, and reading
-  // `.exitReason` off it throws a TypeError that lands in the same catch. That
-  // catch sees no `err.response`, so it discards the real message.
-  //
-  // Net effect: every ordinary /bot/play failure reaches the user as the
-  // generic "Erro desconhecido" snackbar instead of "O instant enviado não foi
-  // encontrado". The specific message the backend went to the trouble of
-  // writing is never displayed.
-  it("swallows the backend message when the error arrives with HTTP 200", async () => {
+  // The backend sends its errors with HTTP 200, so axios does not reject and the
+  // envelope has to be judged on the success path — before `.exitReason` is read
+  // off a `data` that is not there.
+  it("surfaces the backend message when the error arrives with HTTP 200", async () => {
     server.use(
       http.post(`${apiUrl}/bot/play`, () =>
         errorAt200("instant_not_found", "O instant enviado não foi encontrado")
       )
+    );
+
+    await expect(playOnDiscord("https://www.myinstants.com/a/")).rejects.toThrow(
+      "O instant enviado não foi encontrado"
+    );
+  });
+
+  it("falls back to the generic message when a 200 error body carries none", async () => {
+    server.use(
+      http.post(`${apiUrl}/bot/play`, () => HttpResponse.json({ label: "nope" }))
     );
 
     await expect(playOnDiscord("https://www.myinstants.com/a/")).rejects.toThrow(
@@ -207,26 +210,38 @@ describe("getContent", () => {
     expect(received).toBe("https://x/a?b=1");
   });
 
-  // Same HTTP-200-error problem as playOnDiscord, with a different outcome:
-  // getContent has no error handling at all, so it quietly resolves to
-  // undefined. Both panels then do `info.exists` on it and blow up with a
-  // TypeError inside an unawaited handler, so the user sees nothing happen.
-  it("resolves to undefined when the error arrives with HTTP 200", async () => {
+  it("surfaces the backend message when the error arrives with HTTP 200", async () => {
     server.use(
       http.get(`${apiUrl}/play`, () => errorAt200("empty_url", "Nenhuma URL enviada"))
     );
 
-    await expect(getContent("https://www.myinstants.com/a/")).resolves.toBeUndefined();
+    await expect(getContent("https://www.myinstants.com/a/")).rejects.toThrow(
+      "Nenhuma URL enviada"
+    );
   });
 
-  it("rejects with the raw axios error on a real error status", async () => {
+  // Was the raw axios error, whose message is "Request failed with status
+  // code 500" — no use to a panel that puts it straight in a snackbar.
+  it("rejects with a message-bearing error on a real error status", async () => {
+    server.use(
+      http.get(`${apiUrl}/play`, () =>
+        errorAtStatus(500, { label: "unknown_error", message: "Falha ao baixar" })
+      )
+    );
+
+    await expect(getContent("https://www.myinstants.com/a/")).rejects.toThrow(
+      "Falha ao baixar"
+    );
+  });
+
+  it("falls back to the generic message when the error body carries none", async () => {
     server.use(
       http.get(`${apiUrl}/play`, () => errorAtStatus(500, { label: "unknown_error" }))
     );
 
-    await expect(getContent("https://www.myinstants.com/a/")).rejects.toMatchObject({
-      response: { status: 500 }
-    });
+    await expect(getContent("https://www.myinstants.com/a/")).rejects.toThrow(
+      "Erro desconhecido, tente novamente mais tarde"
+    );
   });
 });
 
@@ -326,21 +341,41 @@ describe("getMyInstants", () => {
     );
   });
 
-  // Third instance of the HTTP-200-error problem. The catch is chained after
-  // the unwrapping then(), so it would catch a throw — but nothing throws:
-  // resp.data.data is simply undefined and gets returned. MyInstantsPanel's
-  // success handler then reads `data.instants` off undefined, which *does*
-  // throw, inside the promise chain, so the user gets a snackbar reading
-  // "Cannot read properties of undefined (reading 'instants')" instead of the
-  // backend's message.
-  it("resolves to undefined when the error arrives with HTTP 200", async () => {
+  // The backend reports most errors as HTTP 200 with {label, message} and no
+  // data, so an absent `data` is an error, not an empty listing — the envelope
+  // check runs after the catch so its throw reaches the caller untouched.
+  it("throws the backend message when the error arrives with HTTP 200", async () => {
     server.use(
       http.get(`${apiUrl}/instant/list`, () =>
         errorAt200("invalid_page", "A página enviada é inválida")
       )
     );
 
-    await expect(getMyInstants(1)).resolves.toBeUndefined();
+    await expect(getMyInstants(1)).rejects.toThrow("A página enviada é inválida");
+  });
+
+  it("falls back to the generic message when a 200 error body carries none", async () => {
+    server.use(
+      http.get(`${apiUrl}/instant/list`, () => HttpResponse.json({ label: "nope" }))
+    );
+
+    await expect(getMyInstants(1)).rejects.toThrow(
+      "Erro desconhecido, tente novamente mais tarde"
+    );
+  });
+
+  it("still rejects when the body is empty altogether", async () => {
+    server.use(http.get(`${apiUrl}/instant/list`, () => HttpResponse.json({})));
+
+    await expect(getMyInstants(1)).rejects.toThrow(
+      "Erro desconhecido, tente novamente mais tarde"
+    );
+  });
+
+  it("keeps resolving a real listing", async () => {
+    captureQuery();
+
+    await expect(getMyInstants(1)).resolves.toEqual(listing);
   });
 });
 
@@ -521,7 +556,9 @@ describe("connection health", () => {
       )
     );
 
-    await expect(getMyInstants(1)).resolves.toBeUndefined();
+    await expect(getMyInstants(1)).rejects.toThrow(
+      "O site myinstants.com respondeu com um status de erro"
+    );
     expect(isHealthy()).toBe(true);
   });
 

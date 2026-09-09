@@ -72,7 +72,15 @@ function FavoritesPanel(props) {
   }
 
   async function handlePlay(instant) {
-    const info = await getContent(instant.url);
+    let info;
+
+    try {
+      info = await getContent(instant.url);
+    } catch (err) {
+      openSnackbar({ message: err.message });
+      return;
+    }
+
     if (!info.exists) {
       showInstantNotFoundError(instant, "Parece que o instant não existe mais");
       return;

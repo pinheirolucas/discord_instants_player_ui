@@ -37,15 +37,17 @@ function MyInstantsPanel(props) {
 
   useEffect(() => {
     function handleSuccess(data) {
+      const listing = data || {};
+
       if (search === lastSearch.current) {
         setInstants((cur) =>
-          R.uniqBy(R.path(["url"]), [...cur, ...(data.instants || [])])
+          R.uniqBy(R.path(["url"]), [...cur, ...(listing.instants || [])])
         );
         return;
       }
 
-      setInstants(() => R.uniqBy(R.path(["url"]), [...(data.instants || [])]));
-      setTotalPages(data.pages || 1);
+      setInstants(() => R.uniqBy(R.path(["url"]), [...(listing.instants || [])]));
+      setTotalPages(listing.pages || 1);
       lastSearch.current = search;
     }
 
@@ -69,7 +71,15 @@ function MyInstantsPanel(props) {
   }
 
   async function handlePlay(instant) {
-    const info = await getContent(instant.url);
+    let info;
+
+    try {
+      info = await getContent(instant.url);
+    } catch (err) {
+      openSnackbar({ message: err.message });
+      return;
+    }
+
     if (!info.exists) {
       showInstantNotFoundError("Parece que o instant não existe mais");
       return;
