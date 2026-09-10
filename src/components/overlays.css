@@ -1,0 +1,159 @@
+/* Dialogs, toasts, menus, tooltips. */
+
+.scrim {
+  position: fixed;
+  inset: 0;
+  background: color-mix(in oklch, oklch(0 0 0) 46%, transparent);
+}
+
+.dlg {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(380px, calc(100vw - 32px));
+  max-height: calc(100vh - 48px);
+  overflow: auto;
+  border-radius: 14px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  color: var(--fg);
+}
+.dlg .db { padding: 20px 22px 18px; }
+.dlg h2 {
+  margin: 0 0 5px;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.018em;
+}
+.dlg .lede {
+  margin: 0 0 16px;
+  font-size: 12.5px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+.dlg .df {
+  display: flex;
+  gap: 9px;
+  padding: 13px 22px 17px;
+  border-top: 1px solid var(--line);
+  justify-content: flex-end;
+}
+
+/* The whole reason a dialog footer is a component rather than a layout:
+ * primary sits right on macOS and Linux, left on Windows. Markup order is
+ * cancel-then-confirm everywhere; only the direction flips. */
+[data-os="win"] .dlg .df {
+  flex-direction: row-reverse;
+  justify-content: flex-start;
+}
+
+/* --- toast --------------------------------------------------------------- */
+.toast-viewport {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: min(460px, calc(100vw - 32px));
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  z-index: 60;
+  outline: none;
+}
+
+/* Inverts: --fg becomes the ground and --bg the ink. The only place --fg is
+ * ever used as a fill. */
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  background: var(--fg);
+  color: var(--bg);
+  border-radius: var(--rctl);
+  padding: 11px 12px 11px 16px;
+  font-size: 13px;
+}
+.toast .lead {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  flex: none;
+}
+.toast .tm { flex: 1; }
+.toast .ta {
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--accent);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  flex: none;
+}
+.toast .tx {
+  background: transparent;
+  border: 0;
+  color: inherit;
+  opacity: 0.6;
+  cursor: pointer;
+  display: inline-flex;
+  flex: none;
+}
+.toast .tx:hover { opacity: 1; }
+
+/* --- menu ---------------------------------------------------------------- */
+.menu {
+  min-width: 336px;
+  max-width: calc(100vw - 24px);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 6px;
+  color: var(--fg);
+  box-shadow: 0 18px 44px color-mix(in oklch, oklch(0 0 0) 26%, transparent);
+}
+.menu .mhead { padding: 8px 10px 10px; font-size: 12.5px; color: var(--muted); }
+.menu .mhead b { color: var(--fg); font-weight: 650; }
+.menu .mlabel {
+  display: block;
+  padding: 10px 10px 4px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.menu .msep { height: 1px; background: var(--line); margin: 5px 0; }
+.mitem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  cursor: pointer;
+  outline: none;
+  user-select: none;
+}
+.mitem[data-highlighted] { background: color-mix(in oklch, var(--fg) 8%, transparent); }
+.mitem[data-disabled] { color: var(--muted); cursor: default; }
+.mitem .mtick { width: 16px; flex: none; color: var(--accent); display: inline-flex; }
+.mitem .msub { display: block; font-size: 11.5px; color: var(--muted); }
+
+/* --- tooltip ------------------------------------------------------------- */
+.tip {
+  background: var(--fg);
+  color: var(--bg);
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 5px 9px;
+  border-radius: 6px;
+  user-select: none;
+}

@@ -103,6 +103,37 @@ the app opens. jsdom ships no `matchMedia`, so `src/setupTests.js` stubs it.
 The palette switch is fully wired and persisted but **deliberately not exposed**: there is no
 picker in the UI, so every install runs on `esmalte`.
 
+## Components and styleguide
+
+`src/components/` holds the primitives — Button/IconButton, Segmented, Field, SearchField, Switch,
+RadioGroup, ServerChip, Dialog, Toast, Menu, Tooltip, EmptyState, CardSkeleton, OfflineBanner,
+DropZone — styled by three plain global stylesheets (`controls.css`, `overlays.css`, `states.css`)
+whose class names match the design canvas one-to-one. Not CSS Modules, on purpose: `tokens.css`
+reaches into one component (`[data-theme="contraste"] .pad` gives Alto contraste's pale cards a
+border), and hashed class names would silently break that. Dialog, Menu, Toast, Tooltip, Tabs,
+Switch and RadioGroup sit on Radix Primitives for focus trapping, portals and ARIA; everything
+visible is CSS against the tokens. Icons live in `src/icons/`, lifted from the canvas markup.
+
+`IconButton` requires a `label` and puts it on the button itself as `aria-label`, so
+`getByRole("button", { name })` works — the thing MUI's tooltip wrapper made impossible.
+
+The dialog footer is cancel-then-confirm in the DOM everywhere; `[data-os="win"] .dlg .df` reverses
+it visually, because primary sits right on macOS and Linux and left on Windows. That reversal is the
+reason a dialog footer is a component rather than a layout.
+
+**Radix portals render into `document.body`, outside any themed subtree.** In the app that is fine,
+because the three data attributes live on `<html>` and everything inherits them. Anything that
+themes a *subtree* instead — Storybook's decorator is the one case — must also stamp `<html>`, or a
+portaled dialog resolves every token to nothing and `[data-os="win"]` never matches. The decorator
+does this in a `useLayoutEffect` so the portal never paints once unthemed.
+
+`pnpm storybook` runs Storybook 10 (`@storybook/react-vite`) on :6006. Three toolbar globals —
+Tema × Modo × Sistema — give every story 48 renderings, which is the only practical way to keep
+eight palettes honest. It is dev-only: there is deliberately no `build-storybook` script, and since
+`vite build` bundles only what `src/index.jsx` reaches and nothing imports a story, none of it can
+land in `build/`. Stories stay in `tsconfig.json`'s `include`, so a story that stops compiling
+fails `pnpm typecheck`.
+
 Archivo is self-hosted via `@fontsource-variable/archivo`. It must stay self-hosted (the packaged
 app loads over `file://` with no network) and must stay the **variable** cut (the type ramp uses
 weight 650, which the static 400/500/600/700 cut silently rounds to 700).

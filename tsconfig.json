@@ -25,5 +25,7 @@
     "forceConsistentCasingInFileNames": true,
     "types": ["vite/client", "node"]
   },
-  "include": ["src", "electron", "tsup.config.ts"]
+  // Stories stay in the type-check: a story that no longer compiles is a
+  // component that changed shape.
+  "include": ["src", "electron", ".storybook", "tsup.config.ts"]
 }
