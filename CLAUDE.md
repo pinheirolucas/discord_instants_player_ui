@@ -13,18 +13,29 @@ pnpm start          # runs the Vite dev server + Electron together (waits on :30
 pnpm react-start    # Vite dev server only, at http://localhost:3000
 pnpm react-build    # production build -> build/
 pnpm react-test     # Vitest (watch mode; `pnpm react-test run` for a single pass)
-pnpm build          # react-build then electron-build (electron-builder)
-pnpm release        # react-build then electron-builder --publish=always
+pnpm typecheck      # tsc --noEmit (the ONLY thing that type-checks)
+pnpm electron-compile # tsup: electron/*.ts -> build/electron.js + build/preload.js
+pnpm build          # react-build, then electron-compile, then electron-build
+pnpm release        # react-build, electron-compile, then electron-builder --publish=always
 ```
 
 Run a single test file with `pnpm react-test run src/SomeFile.test.jsx`. Tests live next to the code they cover, as `*.test.js`/`*.test.jsx`.
 
 ## Toolchain
 
+TypeScript is migrating in incrementally: `allowJs` is on, so `.jsx` files still compile and
+ship, they are just not type-checked. `tsc --noEmit` (`pnpm typecheck`) is the only thing that
+type-checks anything — Vite and tsup both emit through esbuild, which strips types without
+checking them, so a build succeeds happily on code that does not compile. Flipping `allowJs`
+to `false` is the completion signal.
+
 Node and pnpm are both pinned in `.tool-versions` (the asdf format, read by asdf and mise alike).
 pnpm blocks dependency build scripts by default; the allowlist lives in `pnpm-workspace.yaml`
-(pnpm 11 no longer reads settings from the `pnpm` key in `package.json`), and Electron's postinstall
-is the one entry that must stay enabled — it downloads the platform binary.
+(pnpm 11 no longer reads settings from the `pnpm` key in `package.json`). Every entry there is
+currently `false` and the file explains each one — Electron needs no entry at all (from v44 it
+ships no install script and fetches its binary lazily on first `electron .`), and esbuild's is a
+verification pass that both Vite and tsup work fine without. Naming them explicitly is what keeps
+`pnpm install` from ending in `ERR_PNPM_IGNORED_BUILDS`.
 
 `vite.config.mjs` pins `build.target` to the Chromium version the pinned Electron ships. Raise the
 two together: too new a target produces a bundle Electron cannot parse, and that failure appears
@@ -49,9 +60,10 @@ Both panels catch `getContent` and show `err.message`. Without that catch its re
 ## Architecture
 
 - **Build tool**: Vite (`vite.config.mjs`). `index.html` lives at the project root and is the build entry, loading `/src/index.jsx` as a module. Files containing JSX use the `.jsx` extension — Vite's parser will not accept JSX from `.js`. `base: "./"` keeps built asset URLs relative so the packaged app can load them over `file://`, `build.outDir` is `build/`, and `build.target` is pinned to the Chromium version the current Electron ships (see the comment there — getting it wrong shows up only in a packaged build, as a blank window).
-- **Electron shell**: `public/electron.js` is the Electron main process. `public/` is copied verbatim into `build/`, and the electron-builder config in `package.json` packages `build/` with `extraMetadata.main` pointing at `build/electron.js`. Dev is detected with `!app.isPackaged` — not `electron-is-dev`, which went ESM-only in v3 and cannot be required from this CommonJS file. In dev it loads `http://localhost:3000` with devtools open; in production the built `build/index.html`. The window sets one `webPreferences` override — `preload: path.join(__dirname, "preload.js")`, which resolves under `public/` in dev and `build/` when packaged — and keeps `contextIsolation: true` / `nodeIntegration: false`. Auto-update is wired via `update-electron-app` v3, whose config shape is `{ updateSource: { type, repo }, updateInterval }`.
-- **Discovery (main process)**: `public/preload.js` exposes `window.instantsDiscovery` with `onServers(listener)` — returns an unsubscribe function and replays the last list to a late subscriber — and `refresh()`, which asks the main process to re-query (the picker's "Procurar novamente"). The main process keeps discovered services in a `Map` keyed by fqdn, adding on `up` and removing on `down`, and publishes the sorted list on every change; distinct ports on one host are distinct entries, so two bots on one machine both appear. `public/electron.js` browses with `bonjour-service` for the life of the window — not a one-shot lookup — re-querying every 30s so a backend started later still turns up, and destroys the browser and bonjour instance on `closed`. `public/discovery.js` holds the pure URL building and is what `src/discovery.test.js` covers. Do not trust the parsed `name`/`type`/`host` fields: the advertised instance name embeds a dot (macOS `os.Hostname()` already ends in `.local`), which makes bonjour-service mis-split the fqdn — `type` comes back as `local-9001` and `host` doubles its suffix. Only `port`, `addresses` and `txt` are usable, so the URL is built from the first non-link-local IPv4 in `addresses` (falling back to a bracketed routable IPv6), gated on TXT `api=1`. The preload runs sandboxed and cannot require `./discovery`, so the channel names `discovery:servers` and `discovery:refresh` are spelled out in both files. `hostnameFromService` recovers the display hostname by parsing the fqdn rather than reading `name`, for the same reason.
-- **Persistence**: all app state is `localStorage`-backed via `use-persisted-state` hooks defined in `src/storage.js` — `useInstantsState` (favorited instants), `useTheme` and `useSelectedServer` (the picked backend address). There is no backend persistence; `src/state.js#exportToJSON` dumps all of `localStorage` to a downloaded JSON file, and `ImportForm.jsx` reads a JSON file back in (with a merge/replace choice for instants) — this import/export pair is the only "backup" mechanism, so when changing what's stored under these keys, keep both in sync.
+- **Two compile targets**: the renderer goes through Vite; `electron/main.ts` and `electron/preload.ts` do not, because Electron requires them as CommonJS. `tsup` (see `tsup.config.ts`) compiles those two to `build/electron.js` and `build/preload.js`. Order matters in `pnpm build`: `vite build` **empties** `build/`, so tsup runs after it and is configured `clean: false` — otherwise whichever ran second would delete the other's output. `public/` still exists and is still copied verbatim, but now holds only `favicon.ico`.
+- **Electron shell**: `electron/main.ts` is the Electron main process, compiled to `build/electron.js`; the electron-builder config in `package.json` packages `build/` with `extraMetadata.main` pointing at it. Dev is detected with `!app.isPackaged` — not `electron-is-dev`, which went ESM-only in v3 and cannot be required from this CommonJS file. In dev it loads `http://localhost:3000` with devtools open; in production the built `build/index.html`. The window sets one `webPreferences` override — `preload: path.join(__dirname, "preload.js")`, which now always resolves inside `build/` because both files are tsup output — and keeps `contextIsolation: true` / `nodeIntegration: false`. Auto-update is wired via `update-electron-app` v3, whose config shape is `{ updateSource: { type, repo }, updateInterval }`.
+- **Discovery (main process)**: `electron/preload.ts` exposes `window.instantsDiscovery` with `onServers(listener)` — returns an unsubscribe function and replays the last list to a late subscriber — and `refresh()`, which asks the main process to re-query (the picker's "Procurar novamente"). The main process keeps discovered services in a `Map` keyed by fqdn, adding on `up` and removing on `down`, and publishes the sorted list on every change; distinct ports on one host are distinct entries, so two bots on one machine both appear. `electron/main.ts` browses with `bonjour-service` for the life of the window — not a one-shot lookup — re-querying every 30s so a backend started later still turns up, and destroys the browser and bonjour instance on `closed`. `electron/discovery.ts` holds the pure URL building and is what `src/discovery.test.js` covers. Do not trust the parsed `name`/`type`/`host` fields: the advertised instance name embeds a dot (macOS `os.Hostname()` already ends in `.local`), which makes bonjour-service mis-split the fqdn — `type` comes back as `local-9001` and `host` doubles its suffix. Only `port`, `addresses` and `txt` are usable, so the URL is built from the first non-link-local IPv4 in `addresses` (falling back to a bracketed routable IPv6), gated on TXT `api=1`. The preload runs sandboxed and cannot `require` a sibling module at runtime — which is why the channel names used to be spelled out in both files. tsup **inlines** `./discovery` into `build/preload.js` at build time, so there is now one definition and no runtime require; the built preload requires nothing but `electron`. `hostnameFromService` recovers the display hostname by parsing the fqdn rather than reading `name`, for the same reason.
+- **Persistence**: all app state is `localStorage`-backed via hooks defined in `src/storage.ts` — `useInstantsState` (favorited instants), `useThemeState` (the palette), `useColorModeState` (auto/light/dark) and `useSelectedServer` (the picked backend address). These sit on `src/lib/persisted.ts`, a ~70-line typed replacement for `use-persisted-state` (unmaintained, untyped): same `[value, setValue]` shape, same JSON encoding so old backups stay readable, and the same `storage`-event sync so a second window does not show stale favourites. **The `theme` key changed meaning** — it held `"light"`/`"dark"` and now holds the palette id, with light/dark living in `colorMode`. `index.html`'s boot guard migrates the old shape, and `migrateStoredShape` in `storage.ts` does the same for an imported backup. There is no backend persistence; `src/state.js#exportToJSON` dumps all of `localStorage` to a downloaded JSON file, and `ImportForm.jsx` reads a JSON file back in (with a merge/replace choice for instants) — this import/export pair is the only "backup" mechanism, so when changing what's stored under these keys, keep both in sync.
 - **Two playback paths, kept as separate hooks** because they're mutually exclusive but independently stateful:
   - `useAudioPlayer` (`src/useAudioPlayer.js`) — plays a clip locally via an `HTMLAudioElement`, given the base64 data URI returned by `GET /play?url=` (`service.js#getContent`).
   - `useDiscordPlayer` (`src/useDiscordPlayer.js`) — tells the bot to play a clip via `POST /bot/play` (`service.js#playOnDiscord`), which blocks server-side until playback ends/is stopped and returns an `exitReason`; the hook only clears its "now playing" URL when `exitReason === "end"`.
@@ -59,6 +71,41 @@ Both panels catch `getContent` and show `err.message`. Without that catch its re
 - **Two main tabs** in `App.jsx`: `FavoritesPanel` (user's saved instants, plus add/remove via `SaveForm`) and `MyInstantsPanel` (paginated/searchable browse of `GET /instant/list`, scraped server-side from myinstants.com, with a star toggle to add/remove favorites). Both render their cards through the shared `src/InstantCard.jsx`, which owns the Paper/title layout and the play/send-to-discord/stop buttons; each panel passes its own trailing action as children (remove vs. favorite). Change the card there, not in the panels.
 - **Global UI chrome**: search box in the `AppBar` (`App.jsx`) debounces input (300ms) before updating `search` state passed down to both panels; theme toggle (light/dark, `src/theme.js`, persisted); a `SnackbarContext` (`src/SnackbarContext.js`) provider exposes `openSnackbar`/`closeSnackbar` app-wide (used e.g. to show "instant no longer exists" errors with a "REMOVE" action button).
 - UI copy/strings throughout are in Portuguese.
+
+## Design system
+
+`src/styles/tokens.css` is the single source of colour and control geometry. Nine semantic
+tokens (`--bg`, `--panel`, `--line`, `--fg`, `--muted`, `--accent`, `--onAccent`, `--ok`, and
+per-card `--fill`/`--ink`) resolved across eight palettes × light/dark, plus a four-value
+platform layer (`--rctl`, `--hctl`, `--rpad`, `--rbtn`) that resolves per OS. **Components never
+name a colour — they name a token.** That is what lets one component sheet cover eight themes
+and three platforms. Values are `oklch`.
+
+Selectors are bare attribute selectors (`[data-theme="esmalte"][data-mode="dark"]`) rather than
+`:root[...]` on purpose, so the same sheet can theme a subtree — which is what Storybook's
+decorator relies on.
+
+Three attributes on `<html>` drive everything, and all three are stamped **pre-paint** by the
+inline guard at the top of `index.html`, because React mounts too late and every launch would
+otherwise flash the wrong ground:
+- `data-os` — from the preload bridge (`window.instantsPlatform.os`) when there is one, else UA
+  sniffing. Runtime, not build-time: one renderer bundle serves all three Electron targets *and*
+  the plain web page, which has no OS to compile against. `?os=mac|win|linux` overrides in dev.
+- `data-mode` — `light`/`dark`, resolved from the persisted `colorMode` (`auto` by default).
+- `data-theme` — the palette, defaulting to `esmalte`.
+
+`auto` tracks the OS live through `matchMedia("(prefers-color-scheme: dark)")`, which is the
+single mechanism on both targets: Electron's renderer honours the OS setting exactly as a
+browser does **as long as nothing sets `nativeTheme.themeSource` away from `"system"`**. Nothing
+does, and nothing should — forcing it there takes `auto` away and restyles every native dialog
+the app opens. jsdom ships no `matchMedia`, so `src/setupTests.js` stubs it.
+
+The palette switch is fully wired and persisted but **deliberately not exposed**: there is no
+picker in the UI, so every install runs on `esmalte`.
+
+Archivo is self-hosted via `@fontsource-variable/archivo`. It must stay self-hosted (the packaged
+app loads over `file://` with no network) and must stay the **variable** cut (the type ramp uses
+weight 650, which the static 400/500/600/700 cut silently rounds to 700).
 
 ## Notes
 

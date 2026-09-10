@@ -1,30 +1,28 @@
-const { app, BrowserWindow, ipcMain } = require("electron");
-const os = require("os");
-const path = require("path");
-const { Bonjour } = require("bonjour-service");
-const {
-  updateElectronApp,
-  UpdateSourceType
-} = require("update-electron-app");
-const {
-  discoveryServersChannel,
-  discoveryRefreshChannel,
-  discoveryType,
+import { app, BrowserWindow, ipcMain } from "electron";
+import os from "node:os";
+import path from "node:path";
+import { Bonjour } from "bonjour-service";
+import { updateElectronApp, UpdateSourceType } from "update-electron-app";
+import {
+  buildServer,
   discoveryProtocol,
   discoveryQueryInterval,
-  buildServer,
+  discoveryRefreshChannel,
+  discoveryServersChannel,
+  discoveryType,
   sortServers
-} = require("./discovery");
+} from "./discovery";
+import type { DiscoveredService, Server } from "./discovery";
 
-// Dev is "not packaged". This used to be the electron-is-dev package, which went
-// ESM-only in v3 and so cannot be required from this CommonJS file at all.
+// Dev is "not packaged". This used to be the electron-is-dev package, which
+// went ESM-only in v3 and so cannot be required from a CommonJS bundle.
 const isDev = !app.isPackaged;
 
-let mainWindow;
-let bonjour = null;
-let browser = null;
-let discoveryTimer = null;
-let discovered = new Map();
+let mainWindow: BrowserWindow | null = null;
+let bonjour: Bonjour | null = null;
+let browser: ReturnType<Bonjour["find"]> | null = null;
+let discoveryTimer: NodeJS.Timeout | null = null;
+let discovered = new Map<string, Server>();
 
 updateElectronApp({
   updateSource: {
@@ -34,18 +32,18 @@ updateElectronApp({
   updateInterval: "1 hour"
 });
 
-function localAddresses() {
-  const found = new Set();
+function localAddresses(): Set<string> {
+  const found = new Set<string>();
   const interfaces = os.networkInterfaces();
 
-  Object.keys(interfaces).forEach(name => {
-    (interfaces[name] || []).forEach(entry => found.add(entry.address));
+  Object.keys(interfaces).forEach((name) => {
+    (interfaces[name] || []).forEach((entry) => found.add(entry.address));
   });
 
   return found;
 }
 
-function publishServers() {
+function publishServers(): void {
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send(
       discoveryServersChannel,
@@ -54,11 +52,11 @@ function publishServers() {
   }
 }
 
-function startDiscovery() {
+function startDiscovery(): void {
   bonjour = new Bonjour();
   browser = bonjour.find({ type: discoveryType, protocol: discoveryProtocol });
 
-  browser.on("up", service => {
+  browser.on("up", (service: DiscoveredService) => {
     const server = buildServer(service, localAddresses());
 
     if (server) {
@@ -67,7 +65,7 @@ function startDiscovery() {
     }
   });
 
-  browser.on("down", service => {
+  browser.on("down", (service: DiscoveredService) => {
     const id = service && service.fqdn;
 
     if (id && discovered.delete(id)) {
@@ -75,16 +73,15 @@ function startDiscovery() {
     }
   });
 
-  discoveryTimer = setInterval(() => browser.update(), discoveryQueryInterval);
+  // Not a one-shot lookup: a backend started after the app still turns up.
+  discoveryTimer = setInterval(() => browser?.update(), discoveryQueryInterval);
 }
 
-function refreshDiscovery() {
-  if (browser) {
-    browser.update();
-  }
+function refreshDiscovery(): void {
+  browser?.update();
 }
 
-function stopDiscovery() {
+function stopDiscovery(): void {
   if (discoveryTimer) {
     clearInterval(discoveryTimer);
     discoveryTimer = null;
@@ -103,7 +100,7 @@ function stopDiscovery() {
   discovered = new Map();
 }
 
-function createWindow() {
+function createWindow(): void {
   mainWindow = new BrowserWindow({
     width: isDev ? 1600 : 1280,
     height: 900,
@@ -125,7 +122,7 @@ function createWindow() {
     mainWindow.webContents.openDevTools();
   } else {
     mainWindow.setMenu(null);
-    mainWindow.loadURL(`file://${path.join(__dirname, "../build/index.html")}`);
+    mainWindow.loadURL(`file://${path.join(__dirname, "index.html")}`);
   }
 
   startDiscovery();

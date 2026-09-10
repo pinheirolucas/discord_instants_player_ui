@@ -1,14 +1,12 @@
-import { createRequire } from "node:module";
 import { describe, it, expect } from "vitest";
 
-const require = createRequire(import.meta.url);
-const {
+import {
   buildApiUrl,
   buildServer,
   hostnameFromService,
   pickHost,
   sortServers
-} = require("../public/discovery.js");
+} from "../electron/discovery";
 
 function realService(overrides = {}) {
   return {

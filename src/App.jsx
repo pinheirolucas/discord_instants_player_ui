@@ -39,10 +39,11 @@ import {
   setApiUrl
 } from "./service";
 import { exportToJSON } from "./state";
-import { useSelectedServer, useTheme } from "./storage";
+import { useSelectedServer } from "./storage";
+import { useColorMode } from "./hooks/useColorMode";
+import { useTheme } from "./hooks/useTheme";
+import { isFindShortcut, usePlatform } from "./hooks/usePlatform";
 import { darkTheme, lightTheme } from "./theme";
-
-import "./App.css";
 
 const defaultOnSnackbarClose = () => {};
 const defaultSnackAutoHideDuration = 6000;
@@ -97,12 +98,18 @@ const SearchInput = styled(FocusableInput)(({ theme }) => ({
 // Keeping the providers above the consuming tree is what lets styled() and sx
 // resolve theme.breakpoints / theme.spacing at render time.
 function App() {
-  const [themeName, setThemeName] = useTheme("light");
+  // auto by default: follows the OS until the user picks a side, and then
+  // stays put. The toggle below writes the explicit values.
+  const { resolved, setMode } = useColorMode();
+
+  // Stamps data-theme. The palette is fully wired and persisted but has no
+  // control in the UI yet, so every install runs on the default.
+  useTheme();
 
   return (
     <StyledEngineProvider injectFirst>
-      <ThemeProvider theme={themeName === "light" ? lightTheme : darkTheme}>
-        <AppContent themeName={themeName} setThemeName={setThemeName} />
+      <ThemeProvider theme={resolved === "light" ? lightTheme : darkTheme}>
+        <AppContent themeName={resolved} setThemeName={setMode} />
       </ThemeProvider>
     </StyledEngineProvider>
   );
@@ -110,6 +117,7 @@ function App() {
 
 function AppContent({ themeName, setThemeName }) {
 
+  const os = usePlatform();
   const timeout = useRef(null);
   const serverButtonRef = useRef(null);
   const healthyRef = useRef(isHealthy());
@@ -135,10 +143,13 @@ function AppContent({ themeName, setThemeName }) {
 
   useEffect(() => {
     function handleSearch(e) {
-      if (e.key !== "f" || !e.ctrlKey) {
+      // The modifier is per-platform: Ctrl everywhere, Cmd on macOS, where
+      // Ctrl+F is "move forward one character" and not a find at all.
+      if (!isFindShortcut(e, os)) {
         return;
       }
 
+      e.preventDefault();
       setSearchFocus(true);
     }
 
@@ -146,7 +157,7 @@ function AppContent({ themeName, setThemeName }) {
     return () => {
       window.removeEventListener("keydown", handleSearch);
     };
-  }, []);
+  }, [os]);
 
   useEffect(() => {
     const discovery = window.instantsDiscovery;
