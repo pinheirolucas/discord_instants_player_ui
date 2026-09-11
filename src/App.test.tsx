@@ -393,6 +393,12 @@ describe("shell", () => {
     expect(searchBox()).toHaveFocus();
   });
 
+  async function openAppearance(user: ReturnType<typeof userEvent.setup>) {
+    await user.click(screen.getByRole("button", { name: "Mais opções" }));
+    await user.click(screen.getByRole("menuitem", { name: "Aparência…" }));
+    return screen.findByRole("dialog", { name: "Aparência" });
+  }
+
   it("follows the OS by default and remembers an explicit mode", async () => {
     const user = userEvent.setup();
     render(<App />);
@@ -400,14 +406,80 @@ describe("shell", () => {
     // setupTests' matchMedia stub reports a light OS.
     await waitFor(() => expect(document.documentElement.dataset.mode).toBe("light"));
 
-    await user.click(screen.getByRole("button", { name: "Mais opções" }));
-    await user.click(screen.getByRole("menuitem", { name: "Escuro" }));
+    await openAppearance(user);
+    await user.click(screen.getByRole("radio", { name: "Escuro" }));
 
+    // Previewed at once, but not kept until Pronto.
     await waitFor(() => expect(document.documentElement.dataset.mode).toBe("dark"));
+    expect(localStorage.getItem("colorMode")).not.toBe(JSON.stringify("dark"));
+
+    await user.click(screen.getByRole("button", { name: "Pronto" }));
+
     expect(JSON.parse(localStorage.getItem("colorMode") ?? "null")).toBe("dark");
+    expect(document.documentElement.dataset.mode).toBe("dark");
+    expect(screen.queryByRole("dialog", { name: "Aparência" })).not.toBeInTheDocument();
   });
 
-  it("runs on the default palette, with no way to change it yet", async () => {
+  it("opens Aparência on what is in use, with focus on the palette", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await openAppearance(user);
+
+    expect(screen.getByRole("radio", { name: "Automático" })).toBeChecked();
+    expect(screen.getByRole("radio", { name: "Esmalte" })).toBeChecked();
+    expect(screen.getByRole("radio", { name: "Esmalte" })).toHaveFocus();
+  });
+
+  it("previews a palette on the whole window and keeps it only on Pronto", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await openAppearance(user);
+    await user.click(screen.getByRole("radio", { name: "Frevo" }));
+
+    await waitFor(() => expect(document.documentElement.dataset.theme).toBe("frevo"));
+    expect(localStorage.getItem("theme")).not.toBe(JSON.stringify("frevo"));
+
+    await user.click(screen.getByRole("button", { name: "Pronto" }));
+
+    expect(JSON.parse(localStorage.getItem("theme") ?? "null")).toBe("frevo");
+    expect(document.documentElement.dataset.theme).toBe("frevo");
+  });
+
+  it("puts palette and mode back on Cancelar", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await openAppearance(user);
+    await user.click(screen.getByRole("radio", { name: "Fliperama" }));
+    await user.click(screen.getByRole("radio", { name: "Escuro" }));
+    await waitFor(() => expect(document.documentElement.dataset.theme).toBe("fliperama"));
+    expect(document.documentElement.dataset.mode).toBe("dark");
+
+    await user.click(screen.getByRole("button", { name: "Cancelar" }));
+
+    await waitFor(() => expect(document.documentElement.dataset.theme).toBe("esmalte"));
+    expect(document.documentElement.dataset.mode).toBe("light");
+    expect(localStorage.getItem("theme")).not.toBe(JSON.stringify("fliperama"));
+    expect(screen.queryByRole("dialog", { name: "Aparência" })).not.toBeInTheDocument();
+  });
+
+  it("treats Escape as Cancelar", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await openAppearance(user);
+    await user.click(screen.getByRole("radio", { name: "OLED" }));
+    await waitFor(() => expect(document.documentElement.dataset.theme).toBe("oled"));
+
+    await user.keyboard("{Escape}");
+
+    await waitFor(() => expect(document.documentElement.dataset.theme).toBe("esmalte"));
+    expect(screen.queryByRole("dialog", { name: "Aparência" })).not.toBeInTheDocument();
+  });
+
+  it("runs on the default palette until another is picked", async () => {
     render(<App />);
 
     await waitFor(() => expect(document.documentElement.dataset.theme).toBe("esmalte"));

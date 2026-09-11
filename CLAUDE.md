@@ -77,7 +77,8 @@ Both panels catch `getContent` and show `err.message`. Without that catch its re
   - `useDiscordPlayer` (`src/useDiscordPlayer.ts`) — tells the bot to play a clip via `POST /bot/play` (`service.ts#playOnDiscord`), which blocks server-side until playback ends/is stopped and returns an `exitReason`; the hook only clears its "now playing" URL when `exitReason === "end"`.
   Both `FavoritesPanel` and `MyInstantsPanel` instantiate both hooks independently, so each panel's playback state is separate from the other's. Which footer controls are live is decided in one place, `cardState` in `src/components/InstantCard.tsx`, ported from the design canvas: the body plays locally and is inert while anything else plays or while this card plays on Discord, but stays live to replay a clip already playing here; send-to-Discord mirrors it; stop exists only on the playing card; a playing card locks its own trailing action; and every other card dims.
 - **Two main tabs** in `App.tsx`: `FavoritesPanel` (user's saved instants, plus add/remove via `SaveForm`) and `MyInstantsPanel` (paginated/searchable browse of `GET /instant/list`, scraped server-side from myinstants.com, with a star toggle to add/remove favorites). Both render their cards through the shared `src/components/InstantCard.tsx`; each panel passes its own trailing action as `trail` (remove, or a favourite toggle with `aria-pressed`). Change the card there, not in the panels. **The card body is the play control** — there is no play button. A button cannot sit inside a button, so the clip name is a real `<button>` whose `::after` stretches over the whole card, and the footer sits above it at `z-index: 1`. The card is `isolation: isolate` so that `1` stays inside it; without it the footer buttons of cards behind a dialog painted over the form. A card's colour comes from `slotFor(url)` (`src/lib/slot.ts`), keyed on the url so it never shifts when the list is filtered or paged; its waveform is a deterministic texture from `wavePath(name)`, not the audio.
-- **App shell** (`App.tsx`, `src/styles/shell.css`): a flex column — hero (page title, count line, the Favoritos/MyInstants pill tabs), tools row (search, Adicionar on Favoritos, server chip, overflow menu), and a scroller that owns its own overflow. The pills and the panels share one Radix Tabs root (`SegmentedRoot`), since the tab/tabpanel wiring only exists inside a single Root. Search is controlled and debounced 300ms. The find shortcut is per-platform — Cmd+F on macOS, Ctrl+F elsewhere — and so is the hint in the field. The overflow menu holds Importar, Exportar and the auto/light/dark choice; there is still no palette picker. Empty states always end on a next step: first launch offers to add; a Favoritos search with no match carries the query to MyInstants; MyInstants offers to clear the search or retry. `SnackbarContext` (`src/SnackbarContext.ts`) exposes `openSnackbar({ message, actionLabel?, onAction?, duration? })` / `closeSnackbar` over a Radix toast; both are `useCallback`-stable, which matters because `MyInstantsPanel`'s listing effect would otherwise refetch on every App render.
+- **App shell** (`App.tsx`, `src/styles/shell.css`): a flex column — hero (page title, count line, the Favoritos/MyInstants pill tabs), tools row (search, Adicionar on Favoritos, server chip, overflow menu), and a scroller that owns its own overflow. The pills and the panels share one Radix Tabs root (`SegmentedRoot`), since the tab/tabpanel wiring only exists inside a single Root. Search is controlled and debounced 300ms. The find shortcut is per-platform — Cmd+F on macOS, Ctrl+F elsewhere — and so is the hint in the field. The overflow menu holds Importar, Exportar and Aparência…, which opens the Aparência shell (next item). Empty states always end on a next step: first launch offers to add; a Favoritos search with no match carries the query to MyInstants; MyInstants offers to clear the search or retry. `SnackbarContext` (`src/SnackbarContext.ts`) exposes `openSnackbar({ message, actionLabel?, onAction?, duration? })` / `closeSnackbar` over a Radix toast; both are `useCallback`-stable, which matters because `MyInstantsPanel`'s listing effect would otherwise refetch on every App render.
+- **Aparência shell** (`src/hooks/useAppearance.ts`, `AppearanceStage`, `AppearanceDock`, `src/components/appearance.css`): where palette and colour mode are picked. It is not a dialog over the app — the whole window turns into the picker. The app shrinks onto a stage and a dock of the eight palettes rises under it; every pick is stamped on `<html>` at once, so the real app, the shell and the native window chrome all repaint live. Nothing is persisted until **Pronto**: `useAppearance` holds a draft that `useTheme`/`useColorMode` stamp in place of the stored values, and **Cancelar** or Escape just drop it — so an abandoned choice never reaches `localStorage` or another window. Three rules keep the app intact while staged. The hero, tools and scroller always render inside `AppearanceStage`'s frame, open or not, so opening never remounts them (a search, a loaded MyInstants page, a playing clip all survive). The frame keeps the pixel size the app had and is only *transformed* — measured in a layout effect, so the first open frame is already fitted and nothing reflows. And the dock is a Radix modal dialog rendered **in place, not portaled**: focus stays in it, and everything outside, the staged app included, is hidden from the pointer and assistive tech, so the preview cannot open a second dialog over the shell. A click on the stage deliberately does nothing. The find shortcut is off while the shell is open.
 - **MyInstants pagination**: the page count is learned from every response, so "Carregar mais" is offered from the first load, and a new search always restarts from page 1. Both used to be wrong — the count was only learned after a search, and the page number survived one — and the old tests asserted them as known bugs.
 - UI copy/strings throughout are in Portuguese.
 
@@ -92,7 +93,11 @@ and three platforms. Values are `oklch`.
 
 Selectors are bare attribute selectors (`[data-theme="esmalte"][data-mode="dark"]`) rather than
 `:root[...]` on purpose, so the same sheet can theme a subtree — which is what Storybook's
-decorator relies on.
+decorator and the Aparência swatches rely on. For a subtree to resolve to *its own* palette,
+every token has to be declared on the themed element itself, card slots included: each theme
+sets `--p0-fill` … `--p5-ink`, and `.p0`–`.p5` only read them. The old form,
+`[data-theme="x"] .p0 { --fill: … }`, matched a slot under *any* themed ancestor, so a swatch
+nested in a page of another palette got whichever theme came later in the file.
 
 Three attributes on `<html>` drive everything, and all three are stamped **pre-paint** by the
 inline guard at the top of `index.html`, because React mounts too late and every launch would
@@ -109,8 +114,8 @@ browser does **as long as nothing sets `nativeTheme.themeSource` away from `"sys
 does, and nothing should — forcing it there takes `auto` away and restyles every native dialog
 the app opens. jsdom ships no `matchMedia`, so `src/setupTests.ts` stubs it.
 
-The palette switch is fully wired and persisted but **deliberately not exposed**: there is no
-picker in the UI, so every install runs on `esmalte`.
+The palette is picked in the Aparência shell (⋯ › Aparência…), alongside the colour mode, and
+defaults to `esmalte` until someone picks another.
 
 ## Native window chrome
 
@@ -166,10 +171,13 @@ of `pnpm build`. macOS and Windows read the app icon from the bundle; a Linux wi
 
 ## Components and styleguide
 
-`src/components/` holds the primitives — Button/IconButton, Segmented, Field, SearchField, Switch,
-RadioGroup, ServerChip, Dialog, Toast, Menu, Tooltip, EmptyState, CardSkeleton, OfflineBanner,
-DropZone — styled by three plain global stylesheets (`controls.css`, `overlays.css`, `states.css`)
-whose class names match the design canvas one-to-one. Not CSS Modules, on purpose: `tokens.css`
+`src/components/` holds the primitives — Button/IconButton, Segmented (and SegmentedChoice, the same
+pills as a radio group for a setting), Field, SearchField, Switch, RadioGroup, ServerChip, Dialog,
+Toast, Menu, Tooltip, EmptyState, CardSkeleton, OfflineBanner, DropZone, and the Aparência set:
+ThemeSwatch (a palette as a tiny window, theming its own subtree), ThemePicker (the eight as one
+radio group), AppearanceStage and AppearanceDock — styled by plain global stylesheets
+(`controls.css`, `overlays.css`, `states.css`, `appearance.css`) whose class names match the design
+canvas one-to-one. Not CSS Modules, on purpose: `tokens.css`
 reaches into one component (`[data-theme="contraste"] .pad` gives Alto contraste's pale cards a
 border), and hashed class names would silently break that. Dialog, Menu, Toast, Tooltip, Tabs,
 Switch and RadioGroup sit on Radix Primitives for focus trapping, portals and ARIA; everything

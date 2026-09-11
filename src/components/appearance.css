@@ -1,0 +1,143 @@
+/* The Aparência shell: the app, still live, shrinks onto a stage and a dock
+ * of palettes rises under it. Every pick repaints the real app — and the
+ * shell with it — because the shell only ever re-stamps <html>.
+ *
+ * The frame is always there and always absolutely positioned, so opening the
+ * shell never remounts or reflows the app: it gets an explicit pixel size
+ * equal to what it had, and a transform. */
+
+.stage {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+}
+
+.frame {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  transform-origin: 0 0;
+  transition: transform 240ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.stage[data-open="true"] {
+  overflow: hidden;
+  background: color-mix(in oklch, var(--bg) 80%, oklch(0 0 0));
+}
+.stage[data-open="true"] .frame {
+  overflow: hidden;
+  background: var(--bg);
+  border-radius: 12px;
+  outline: 1px solid var(--line);
+  box-shadow: 0 18px 44px color-mix(in oklch, oklch(0 0 0) 26%, transparent);
+}
+
+/* --- dock ----------------------------------------------------------------- */
+.dock {
+  flex: none;
+  padding: 16px 24px;
+  background: var(--panel);
+  border-top: 1px solid var(--line);
+  color: var(--fg);
+  outline: none;
+  animation: dock-in 240ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+@keyframes dock-in {
+  from { transform: translateY(100%); }
+}
+
+.dock .dhead {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.dock h2 {
+  margin: 0 8px 0 0;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.018em;
+}
+.dock .dact {
+  display: flex;
+  gap: 9px;
+}
+/* Same rule as a dialog footer: cancel-then-confirm in the DOM, primary on
+ * the left on Windows. */
+[data-os="win"] .dock .dact {
+  flex-direction: row-reverse;
+}
+
+/* --- theme picker --------------------------------------------------------- */
+/* A filmstrip: eight columns while they fit, a sideways scroll when they do
+ * not. The padding is room for the selection ring, which the scroller would
+ * otherwise clip. */
+.tpick {
+  display: grid;
+  grid-template-columns: repeat(8, minmax(96px, 1fr));
+  gap: 12px;
+  margin: 10px -4px -4px;
+  padding: 4px;
+  overflow-x: auto;
+}
+
+.topt {
+  all: unset;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 0;
+  cursor: pointer;
+}
+
+/* The ring sits on a wrapper outside the swatch: inside it, --accent is the
+ * swatch's own palette's, not the app's. */
+.topt .tring {
+  display: block;
+  border-radius: 10px;
+  transition: transform 90ms ease;
+}
+.topt:hover .tring { transform: translateY(-2px); }
+.topt[data-state="checked"] .tring { outline: 2px solid var(--accent); outline-offset: 2px; }
+.topt:focus-visible .tring { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+.topt .tname {
+  font-size: 12.5px;
+  font-weight: 650;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* --- swatch --------------------------------------------------------------- */
+/* A palette as a tiny window: its ground and line, a title bar in --fg, the
+ * accent as a pill, and all six card slots. It themes its own subtree. */
+.tsw {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  height: 76px;
+  padding: 7px;
+  border-radius: 10px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+}
+.tsw-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.tsw-title { width: 30px; height: 5px; border-radius: 3px; background: var(--fg); }
+.tsw-pill { width: 16px; height: 7px; border-radius: 999px; background: var(--accent); }
+.tsw-slots {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+}
+.tsw-slots > span { border-radius: 5px; background: var(--fill); }

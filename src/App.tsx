@@ -1,19 +1,20 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Server } from "../electron/discovery";
+import { AppearanceDock } from "./components/AppearanceDock";
+import { AppearanceStage } from "./components/AppearanceStage";
 import { Button, IconButton } from "./components/Button";
-import { Menu, MenuItem, MenuLabel, MenuSeparator } from "./components/Menu";
+import { Menu, MenuItem, MenuSeparator } from "./components/Menu";
 import { SearchField } from "./components/SearchField";
 import { Segmented, SegmentedPanel, SegmentedRoot } from "./components/Segmented";
 import { TitleBar } from "./components/TitleBar";
 import { Toast, ToastProvider } from "./components/Toast";
 import { TooltipProvider } from "./components/Tooltip";
 import FavoritesPanel from "./FavoritesPanel";
-import { useColorMode } from "./hooks/useColorMode";
+import { useAppearance } from "./hooks/useAppearance";
 import { useNativeChrome } from "./hooks/useNativeChrome";
 import { findShortcutLabel, isFindShortcut, useChromeKind, usePlatform } from "./hooks/usePlatform";
 import { useStamp } from "./hooks/useStamp";
-import { useTheme } from "./hooks/useTheme";
-import { CheckIcon, MoreIcon, PlusIcon } from "./icons";
+import { MoreIcon, PlusIcon } from "./icons";
 import ImportForm from "./ImportForm";
 import MyInstantsPanel from "./MyInstantsPanel";
 import ServerMenu, { formatApiUrl } from "./ServerMenu";
@@ -29,7 +30,6 @@ import SnackbarContext from "./SnackbarContext";
 import type { SnackbarOptions } from "./SnackbarContext";
 import { exportToJSON } from "./state";
 import { useSelectedServer } from "./storage";
-import type { ColorMode } from "./themes";
 import "./styles/shell.css";
 
 type Tab = "favorites" | "myinstants";
@@ -37,12 +37,6 @@ type Tab = "favorites" | "myinstants";
 const TABS: { value: Tab; label: string }[] = [
   { value: "favorites", label: "Favoritos" },
   { value: "myinstants", label: "MyInstants" }
-];
-
-const MODES: { value: ColorMode; label: string }[] = [
-  { value: "auto", label: "Automático" },
-  { value: "light", label: "Claro" },
-  { value: "dark", label: "Escuro" }
 ];
 
 const SEARCH_DEBOUNCE = 300;
@@ -55,13 +49,11 @@ interface ToastState extends SnackbarOptions {
 }
 
 export default function App() {
-  // auto by default: follows the OS until the user picks a side in the
-  // overflow menu, and then stays put.
-  const { mode, setMode, resolved } = useColorMode();
-
-  // Stamps data-theme. The palette is wired and persisted but has no control
-  // in the UI yet, so every install runs on the default.
-  const { theme } = useTheme();
+  // Palette and colour mode, both stamped on <html>. Mode is auto by default
+  // and follows the OS until the user picks a side. Both are changed in the
+  // Aparência shell, which previews live and persists only on Pronto.
+  const appearance = useAppearance();
+  const { theme, resolved, editing } = appearance;
 
   const os = usePlatform();
   const chrome = useChromeKind();
@@ -96,8 +88,9 @@ export default function App() {
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
       // Per-platform: Cmd on macOS, where Ctrl+F moves the cursor forward a
-      // character and is not a find at all.
-      if (!isFindShortcut(event, os)) {
+      // character and is not a find at all. Not while Aparência is open: the
+      // search sits in the staged app, behind the dock's focus trap.
+      if (editing || !isFindShortcut(event, os)) {
         return;
       }
 
@@ -108,7 +101,7 @@ export default function App() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [os]);
+  }, [os, editing]);
 
   useEffect(() => () => clearTimeout(debounce.current), []);
 
@@ -221,89 +214,95 @@ export default function App() {
         <ToastProvider>
           <SegmentedRoot value={tab} onChange={setTab} className="app">
             {chrome === "custom" && <TitleBar os={os} />}
-            <header className="hero">
-              <h1>{tab === "favorites" ? "Favoritos" : "MyInstants"}</h1>
-              <span className="count" aria-live="polite">
-                {summary}
-              </span>
-              <span className="spacer" />
-              <Segmented aria-label="Seção" options={TABS} />
-            </header>
-
-            <div className="tools">
-              <SearchField
-                ref={searchRef}
-                aria-label="Procurar um som"
-                placeholder="Procurar um som…"
-                shortcut={findShortcutLabel(os)}
-                value={query}
-                onChange={(event) => handleSearchChange(event.target.value)}
-              />
-              {tab === "favorites" && (
-                <Button onClick={() => setAddOpen(true)}>
-                  <PlusIcon />
-                  Adicionar
-                </Button>
-              )}
-              <span className="spacer" />
-              <ServerMenu
-                servers={servers}
-                currentApiUrl={activeUrl}
-                healthy={healthy}
-                open={serverMenuOpen}
-                onOpenChange={setServerMenuOpen}
-                onSelect={(server) => {
-                  setSelectedServer(server.apiUrl);
-                  setServerMenuOpen(false);
-                }}
-                onRefresh={refreshDiscovery}
-              />
-              <Menu
-                trigger={
-                  <IconButton label="Mais opções">
-                    <MoreIcon />
-                  </IconButton>
-                }
-              >
-                <MenuItem primary="Importar" onSelect={() => setImportOpen(true)} />
-                <MenuItem primary="Exportar" onSelect={() => exportToJSON()} />
-                <MenuSeparator />
-                <MenuLabel>Aparência</MenuLabel>
-                {MODES.map((option) => (
-                  <MenuItem
-                    key={option.value}
-                    tick={mode === option.value ? <CheckIcon /> : null}
-                    primary={option.label}
-                    onSelect={() => setMode(option.value)}
+            <AppearanceStage open={editing}>
+              <header className="hero">
+                <h1>{tab === "favorites" ? "Favoritos" : "MyInstants"}</h1>
+                <span className="count" aria-live="polite">
+                  {summary}
+                </span>
+                <span className="spacer" />
+                <Segmented aria-label="Seção" options={TABS} />
+              </header>
+  
+              <div className="tools">
+                <SearchField
+                  ref={searchRef}
+                  aria-label="Procurar um som"
+                  placeholder="Procurar um som…"
+                  shortcut={findShortcutLabel(os)}
+                  value={query}
+                  onChange={(event) => handleSearchChange(event.target.value)}
+                />
+                {tab === "favorites" && (
+                  <Button onClick={() => setAddOpen(true)}>
+                    <PlusIcon />
+                    Adicionar
+                  </Button>
+                )}
+                <span className="spacer" />
+                <ServerMenu
+                  servers={servers}
+                  currentApiUrl={activeUrl}
+                  healthy={healthy}
+                  open={serverMenuOpen}
+                  onOpenChange={setServerMenuOpen}
+                  onSelect={(server) => {
+                    setSelectedServer(server.apiUrl);
+                    setServerMenuOpen(false);
+                  }}
+                  onRefresh={refreshDiscovery}
+                />
+                <Menu
+                  trigger={
+                    <IconButton label="Mais opções">
+                      <MoreIcon />
+                    </IconButton>
+                  }
+                >
+                  <MenuItem primary="Importar" onSelect={() => setImportOpen(true)} />
+                  <MenuItem primary="Exportar" onSelect={() => exportToJSON()} />
+                  <MenuSeparator />
+                  <MenuItem primary="Aparência…" onSelect={appearance.begin} />
+                </Menu>
+              </div>
+  
+              <main className="scroll">
+                <SegmentedPanel value="favorites">
+                  <FavoritesPanel
+                    search={search}
+                    healthy={healthy}
+                    serverAddress={serverAddress}
+                    onSwitchServer={openServerMenu}
+                    onSummary={setSummary}
+                    addOpen={addOpen}
+                    onAddOpenChange={setAddOpen}
+                    onSearchCatalog={() => setTab("myinstants")}
                   />
-                ))}
-              </Menu>
-            </div>
+                </SegmentedPanel>
+                <SegmentedPanel value="myinstants">
+                  <MyInstantsPanel
+                    search={search}
+                    healthy={healthy}
+                    serverAddress={serverAddress}
+                    onSwitchServer={openServerMenu}
+                    onSummary={setSummary}
+                    onClearSearch={clearSearch}
+                  />
+                </SegmentedPanel>
+              </main>
+            </AppearanceStage>
 
-            <main className="scroll">
-              <SegmentedPanel value="favorites">
-                <FavoritesPanel
-                  search={search}
-                  healthy={healthy}
-                  serverAddress={serverAddress}
-                  onSwitchServer={openServerMenu}
-                  onSummary={setSummary}
-                  addOpen={addOpen}
-                  onAddOpenChange={setAddOpen}
-                  onSearchCatalog={() => setTab("myinstants")}
-                />
-              </SegmentedPanel>
-              <SegmentedPanel value="myinstants">
-                <MyInstantsPanel
-                  search={search}
-                  healthy={healthy}
-                  serverAddress={serverAddress}
-                  onSwitchServer={openServerMenu}
-                  onSummary={setSummary}
-                  onClearSearch={clearSearch}
-                />
-              </SegmentedPanel>
-            </main>
+            {editing && (
+              <AppearanceDock
+                theme={appearance.theme}
+                mode={appearance.mode}
+                resolved={resolved}
+                onThemeChange={(next) => appearance.preview({ theme: next })}
+                onModeChange={(next) => appearance.preview({ mode: next })}
+                onCancel={appearance.cancel}
+                onConfirm={appearance.commit}
+              />
+            )}
           </SegmentedRoot>
 
           <ImportForm open={importOpen} onClose={() => setImportOpen(false)} />

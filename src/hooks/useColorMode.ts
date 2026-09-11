@@ -18,8 +18,12 @@ function systemMode(): ResolvedMode {
  * nothing sets nativeTheme.themeSource away from "system". Nothing does —
  * forcing it there would take auto away and would also restyle every native
  * dialog the app opens.
+ *
+ * `preview`, while set, is resolved and stamped in place of the stored mode
+ * — the Aparência shell's live, unsaved pick. `mode` stays the stored one;
+ * `resolved` is what is on screen.
  */
-export function useColorMode() {
+export function useColorMode(preview?: ColorMode | null) {
   const [stored, setStored] = useColorModeState("auto");
   const mode: ColorMode = isColorMode(stored) ? stored : "auto";
 
@@ -37,7 +41,8 @@ export function useColorMode() {
     return () => query.removeEventListener("change", onChange);
   }, []);
 
-  const resolved: ResolvedMode = mode === "auto" ? system : mode;
+  const shown = preview ?? mode;
+  const resolved: ResolvedMode = shown === "auto" ? system : shown;
 
   useStamp("mode", resolved);
 
