@@ -262,7 +262,7 @@ export default function App() {
                   <MenuItem primary="Importar" onSelect={() => setImportOpen(true)} />
                   <MenuItem primary="Exportar" onSelect={() => exportToJSON()} />
                   <MenuSeparator />
-                  <MenuItem primary="Aparência…" onSelect={appearance.begin} />
+                  <MenuItem primary="Aparência" onSelect={appearance.begin} />
                 </Menu>
               </div>
   

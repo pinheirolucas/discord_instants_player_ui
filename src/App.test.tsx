@@ -395,7 +395,7 @@ describe("shell", () => {
 
   async function openAppearance(user: ReturnType<typeof userEvent.setup>) {
     await user.click(screen.getByRole("button", { name: "Mais opções" }));
-    await user.click(screen.getByRole("menuitem", { name: "Aparência…" }));
+    await user.click(screen.getByRole("menuitem", { name: "Aparência" }));
     return screen.findByRole("dialog", { name: "Aparência" });
   }
 

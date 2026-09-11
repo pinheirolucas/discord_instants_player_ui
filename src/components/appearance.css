@@ -74,14 +74,16 @@
 
 /* --- theme picker --------------------------------------------------------- */
 /* A filmstrip: eight columns while they fit, a sideways scroll when they do
- * not. The padding is room for the selection ring, which the scroller would
- * otherwise clip. */
+ * not. overflow-x: auto clips the other axis too, so the padding is room
+ * for everything drawn outside a tile: the focus ring (3px at a 2px
+ * offset) plus, on top, the 2px hover lift. The negative margin gives it
+ * back, so the strip still sits 14px under the head row. */
 .tpick {
   display: grid;
   grid-template-columns: repeat(8, minmax(96px, 1fr));
   gap: 12px;
-  margin: 10px -4px -4px;
-  padding: 4px;
+  margin: 6px -6px -6px;
+  padding: 8px 6px 6px;
   overflow-x: auto;
 }
 

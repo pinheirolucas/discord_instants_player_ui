@@ -155,7 +155,7 @@ export const Shell: StoryObj = {
                 setOpen(true);
               }}
             >
-              Aparência…
+              Aparência
             </Button>
           </div>
         )}
