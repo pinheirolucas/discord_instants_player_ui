@@ -13,10 +13,12 @@ import FavoritesPanel from "./FavoritesPanel";
 import { useAppearance } from "./hooks/useAppearance";
 import { useNativeChrome } from "./hooks/useNativeChrome";
 import { findShortcutLabel, isFindShortcut, useChromeKind, usePlatform } from "./hooks/usePlatform";
+import { useRegion } from "./hooks/useRegion";
 import { useStamp } from "./hooks/useStamp";
 import { MoreIcon, PlusIcon } from "./icons";
 import ImportForm from "./ImportForm";
 import MyInstantsPanel from "./MyInstantsPanel";
+import RegionMenu from "./RegionMenu";
 import ServerMenu, { formatApiUrl } from "./ServerMenu";
 import {
   defaultApiUrl,
@@ -72,6 +74,8 @@ export default function App() {
   const [search, setSearch] = useState("");
   const debounce = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const searchRef = useRef<HTMLInputElement>(null);
+
+  const { region, setRegion } = useRegion();
 
   const [addOpen, setAddOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
@@ -239,6 +243,7 @@ export default function App() {
                     Adicionar
                   </Button>
                 )}
+                {tab === "myinstants" && <RegionMenu region={region} onSelect={setRegion} />}
                 <span className="spacer" />
                 <ServerMenu
                   servers={servers}
@@ -282,6 +287,7 @@ export default function App() {
                 <SegmentedPanel value="myinstants">
                   <MyInstantsPanel
                     search={search}
+                    region={region}
                     healthy={healthy}
                     serverAddress={serverAddress}
                     onSwitchServer={openServerMenu}

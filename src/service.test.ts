@@ -288,6 +288,24 @@ describe("getMyInstants", () => {
     expect(captured.search).toBe("?page=2");
   });
 
+  it("sends the region after page and search", async () => {
+    const captured = captureQuery();
+
+    await getMyInstants(2, "boo", "br");
+
+    expect(captured.search).toBe("?page=2&search=boo&region=br");
+  });
+
+  // The backend applies the region only to the listing with no search term,
+  // but that is its call: the client sends it either way.
+  it("sends the region without a search too", async () => {
+    const captured = captureQuery();
+
+    await getMyInstants(1, "", "pt");
+
+    expect(captured.search).toBe("?page=1&region=pt");
+  });
+
   // Pre-existing quirk, asserted as current behaviour rather than fixed. The
   // `page || 1` default is only used to decide *whether* to append the
   // parameter; the parameter itself is built from the raw `page`, so with no
@@ -330,6 +348,18 @@ describe("getMyInstants", () => {
     );
 
     await expect(getMyInstants(1)).rejects.toThrow("A página enviada é inválida");
+  });
+
+  // Like every backend error, a refused region arrives as HTTP 200 with a
+  // {label, message} body, so it goes through the envelope check.
+  it("throws the backend message when the region is refused", async () => {
+    server.use(
+      http.get(`${apiUrl}/instant/list`, () =>
+        errorAt200("invalid_region", "A região enviada é inválida")
+      )
+    );
+
+    await expect(getMyInstants(1, "", "zz")).rejects.toThrow("A região enviada é inválida");
   });
 
   it("falls back to the generic message when the error body carries none", async () => {

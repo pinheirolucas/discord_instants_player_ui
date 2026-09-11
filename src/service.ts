@@ -192,10 +192,18 @@ export async function getContent(url: string): Promise<ContentInfo> {
   return unwrapData(response);
 }
 
-export async function getMyInstants(page?: number, search?: string): Promise<Listing> {
+/** `region` is sent whenever it is given. Which requests it affects (today,
+ *  only the listing with no search term) is the backend's call, so the client
+ *  does not second-guess it. */
+export async function getMyInstants(
+  page?: number,
+  search?: string,
+  region?: string
+): Promise<Listing> {
   const params = [
     { value: page || 1, query: `page=${page}` },
-    { value: search, query: `&search=${search}` }
+    { value: search, query: `&search=${search}` },
+    { value: region, query: `&region=${encodeURIComponent(region ?? "")}` }
   ].reduce((acc, cur) => (cur.value ? acc + cur.query : acc), "");
 
   return axios

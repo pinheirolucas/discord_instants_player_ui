@@ -8,14 +8,20 @@ export interface MenuProps {
   onOpenChange?: (open: boolean) => void;
   children: ReactNode;
   align?: "start" | "center" | "end";
+  /** Added to `menu`, e.g. `menu--scroll` for a list too long to fit. */
+  className?: string;
 }
 
-export function Menu({ trigger, open, onOpenChange, children, align = "end" }: MenuProps) {
+export function Menu({ trigger, open, onOpenChange, children, align = "end", className }: MenuProps) {
   return (
     <RadixMenu.Root open={open} onOpenChange={onOpenChange}>
       <RadixMenu.Trigger asChild>{trigger}</RadixMenu.Trigger>
       <RadixMenu.Portal>
-        <RadixMenu.Content className="menu" align={align} sideOffset={6}>
+        <RadixMenu.Content
+          className={["menu", className].filter(Boolean).join(" ")}
+          align={align}
+          sideOffset={6}
+        >
           {children}
         </RadixMenu.Content>
       </RadixMenu.Portal>

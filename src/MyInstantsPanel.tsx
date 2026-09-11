@@ -7,6 +7,7 @@ import InstantCard from "./components/InstantCard";
 import type { Playback } from "./components/InstantCard";
 import { OfflineBanner } from "./components/OfflineBanner";
 import { StarIcon } from "./icons";
+import type { Region } from "./regions";
 import SnackbarContext from "./SnackbarContext";
 import { getContent, getMyInstants } from "./service";
 import { useInstantsState } from "./storage";
@@ -22,12 +23,14 @@ interface Listing {
 interface Request {
   page: number;
   search: string;
+  region: Region;
 }
 
 const SKELETONS = 8;
 
 export interface MyInstantsPanelProps {
   search: string;
+  region: Region;
   healthy: boolean;
   serverAddress: string;
   onSwitchServer: () => void;
@@ -37,6 +40,7 @@ export interface MyInstantsPanelProps {
 
 export default function MyInstantsPanel({
   search,
+  region,
   healthy,
   serverAddress,
   onSwitchServer,
@@ -53,24 +57,28 @@ export default function MyInstantsPanel({
   const snackbar = useRef(openSnackbar);
   snackbar.current = openSnackbar;
 
-  const [request, setRequest] = useState<Request>({ page: 1, search });
+  const [request, setRequest] = useState<Request>({ page: 1, search, region });
   const [instants, setInstants] = useState<Instant[]>([]);
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
 
-  // A new search starts over from page 1. Returning the same object when the
-  // search has not changed keeps the first mount from fetching twice.
+  // A new search or region starts over from page 1. Returning the same object
+  // when neither has changed keeps the first mount from fetching twice.
   useEffect(() => {
-    setRequest((current) => (current.search === search ? current : { page: 1, search }));
-  }, [search]);
+    setRequest((current) =>
+      current.search === search && current.region === region
+        ? current
+        : { page: 1, search, region }
+    );
+  }, [search, region]);
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
 
-    getMyInstants(request.page, request.search)
+    getMyInstants(request.page, request.search, request.region)
       .then((data: Listing | undefined) => {
         if (cancelled) return;
         // The backend answers most errors as HTTP 200 with no data; never

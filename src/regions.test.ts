@@ -1,0 +1,33 @@
+import { describe, it, expect } from "vitest";
+
+import { DEFAULT_REGION, REGIONS, isRegion, regionLabel } from "./regions";
+
+describe("regions", () => {
+  // The backend answers invalid_region for anything but ^[a-z]{2}$, so a code
+  // in any other shape would break the catalogue for whoever picked it.
+  it("only lists codes the backend accepts, each once", () => {
+    for (const region of REGIONS) {
+      expect(region).toMatch(/^[a-z]{2}$/);
+    }
+    expect(new Set(REGIONS).size).toBe(REGIONS.length);
+  });
+
+  it("defaults to Brazil, which is one of them", () => {
+    expect(DEFAULT_REGION).toBe("br");
+    expect(isRegion(DEFAULT_REGION)).toBe(true);
+  });
+
+  it("accepts only a listed code, exactly as stored", () => {
+    expect(isRegion("pt")).toBe(true);
+
+    for (const value of ["zz", "PT", " br", "", null, undefined, 42, ["br"]]) {
+      expect(isRegion(value)).toBe(false);
+    }
+  });
+
+  it("names each region in Portuguese", () => {
+    expect(regionLabel("br")).toBe("Brasil");
+    expect(regionLabel("us")).toBe("Estados Unidos");
+    expect(regionLabel("gb")).toBe("Reino Unido");
+  });
+});
