@@ -36,7 +36,7 @@
           "";
         r.dataset.os =
           (bridge && bridge.os) ||
-          (/mac|iphone|ipad/i.test(ua) ? "mac" : /win/i.test(ua) ? "win" : "linux");
+          (/mac|iphone|ipad/i.test(ua) ? "mac" : /windows|win32|win64/i.test(ua) ? "win" : "linux");
 
         // One-shot migration. "theme" used to hold "light" | "dark"; it now
         // holds the palette, and the light/dark choice lives in "colorMode".

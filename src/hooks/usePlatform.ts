@@ -36,7 +36,7 @@ function detect(): PlatformId {
     "";
 
   if (/mac|iphone|ipad/i.test(ua)) return "mac";
-  if (/win/i.test(ua)) return "win";
+  if (/windows|win32|win64/i.test(ua)) return "win";
   return "linux";
 }
 
@@ -51,7 +51,7 @@ export function usePlatform(): PlatformId {
 }
 
 export function findShortcutLabel(os: PlatformId): string {
-  return os === "mac" ? "⌘F" : "Ctrl+F";
+  return os === "mac" ? "⌘F" : "Ctrl F";
 }
 
 export function isFindShortcut(event: KeyboardEvent, os: PlatformId): boolean {

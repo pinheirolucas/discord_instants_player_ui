@@ -1,13 +1,18 @@
-/* Dialogs, toasts, menus, tooltips. */
+/* Dialogs, toasts, menus, tooltips. Radix portals all of them to the end
+ * of <body>; the explicit layers below keep that true even against a
+ * positioned element that forgets to contain its own z-index.
+ *   50 scrim + dialog · 55 menu · 60 toast · 70 tooltip */
 
 .scrim {
   position: fixed;
   inset: 0;
+  z-index: 50;
   background: color-mix(in oklch, oklch(0 0 0) 46%, transparent);
 }
 
 .dlg {
   position: fixed;
+  z-index: 50;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
@@ -109,7 +114,9 @@
 .toast .tx:hover { opacity: 1; }
 
 /* --- menu ---------------------------------------------------------------- */
+/* Radix copies the content's computed z-index onto its popper wrapper. */
 .menu {
+  z-index: 55;
   min-width: 336px;
   max-width: calc(100vw - 24px);
   background: var(--panel);
@@ -149,6 +156,7 @@
 
 /* --- tooltip ------------------------------------------------------------- */
 .tip {
+  z-index: 70;
   background: var(--fg);
   color: var(--bg);
   font-size: 11.5px;

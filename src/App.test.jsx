@@ -1,15 +1,9 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import {
-  act,
-  render,
-  screen,
-  waitFor,
-  within
-} from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import App from "./App";
-import { setApiUrl } from "./service";
+import { getMyInstants, setApiUrl } from "./service";
 
 let healthListener = null;
 let connectionErrorListener = null;
@@ -71,22 +65,41 @@ function installBridge({ unsubscribe = vi.fn() } = {}) {
   return bridge;
 }
 
-async function openServerMenu() {
-  await userEvent.click(screen.getByLabelText("Servidor"));
+// The server chip is named by the address it shows, plus "não está
+// respondendo" as screen-reader text while the server is silent.
+function serverChip(name = /^localhost:9001/) {
+  return screen.getByRole("button", { name });
 }
 
-describe("App discovery wiring", () => {
-  beforeEach(() => {
-    localStorage.clear();
-    healthListener = null;
-    connectionErrorListener = null;
-    vi.mocked(setApiUrl).mockClear();
-    vi.mocked(setApiUrl).mockReturnValue(true);
-  });
+async function openServerMenu() {
+  await userEvent.click(serverChip());
+}
 
-  afterEach(() => {
-    delete window.instantsDiscovery;
-  });
+function toasts() {
+  return within(screen.getByRole("region", { name: /Notificações/ }));
+}
+
+function searchBox() {
+  return screen.getByRole("searchbox", { name: "Procurar um som" });
+}
+
+function reset() {
+  localStorage.clear();
+  delete document.documentElement.dataset.mode;
+  delete document.documentElement.dataset.theme;
+  healthListener = null;
+  connectionErrorListener = null;
+  vi.mocked(setApiUrl).mockClear();
+  vi.mocked(setApiUrl).mockReturnValue(true);
+  vi.mocked(getMyInstants).mockClear();
+}
+
+afterEach(() => {
+  delete window.instantsDiscovery;
+});
+
+describe("App discovery wiring", () => {
+  beforeEach(reset);
 
   it("falls back to the default with no bridge at all", () => {
     expect(window.instantsDiscovery).toBeUndefined();
@@ -151,17 +164,7 @@ describe("App discovery wiring", () => {
 });
 
 describe("server picker", () => {
-  beforeEach(() => {
-    localStorage.clear();
-    healthListener = null;
-    connectionErrorListener = null;
-    vi.mocked(setApiUrl).mockClear();
-    vi.mocked(setApiUrl).mockReturnValue(true);
-  });
-
-  afterEach(() => {
-    delete window.instantsDiscovery;
-  });
+  beforeEach(reset);
 
   it("lists the discovered servers with the local one marked", async () => {
     const bridge = installBridge();
@@ -172,9 +175,7 @@ describe("server picker", () => {
 
     const menu = screen.getByRole("menu");
     expect(within(menu).getByText("10.0.0.133:9001")).toBeInTheDocument();
-    expect(
-      within(menu).getByText("MacBook-Pro-de-Lucas · este computador")
-    ).toBeInTheDocument();
+    expect(within(menu).getByText("MacBook-Pro-de-Lucas · este computador")).toBeInTheDocument();
     expect(within(menu).getByText("raspberrypi")).toBeInTheDocument();
     expect(within(menu).getByText(/Encontrados na rede · 2/)).toBeInTheDocument();
   });
@@ -188,16 +189,11 @@ describe("server picker", () => {
     await userEvent.click(screen.getByText("10.0.0.42:9001"));
 
     expect(setApiUrl).toHaveBeenLastCalledWith("http://10.0.0.42:9001");
-    expect(JSON.parse(localStorage.getItem("selectedServer"))).toBe(
-      "http://10.0.0.42:9001"
-    );
+    expect(JSON.parse(localStorage.getItem("selectedServer"))).toBe("http://10.0.0.42:9001");
   });
 
   it("keeps an explicit pick over the auto-adopted first server", () => {
-    localStorage.setItem(
-      "selectedServer",
-      JSON.stringify("http://10.0.0.42:9001")
-    );
+    localStorage.setItem("selectedServer", JSON.stringify("http://10.0.0.42:9001"));
 
     const bridge = installBridge();
     render(<App />);
@@ -223,9 +219,7 @@ describe("server picker", () => {
 
     await openServerMenu();
 
-    expect(
-      screen.getByText("Nenhum servidor encontrado")
-    ).toBeInTheDocument();
+    expect(screen.getByText("Nenhum servidor encontrado")).toBeInTheDocument();
   });
 
   it("asks the main process to browse again", async () => {
@@ -241,26 +235,16 @@ describe("server picker", () => {
 });
 
 describe("connection health", () => {
-  beforeEach(() => {
-    localStorage.clear();
-    healthListener = null;
-    connectionErrorListener = null;
-    vi.mocked(setApiUrl).mockClear();
-    vi.mocked(setApiUrl).mockReturnValue(true);
-  });
+  beforeEach(reset);
 
-  afterEach(() => {
-    delete window.instantsDiscovery;
-  });
-
-  it("shows no badge while the server answers", () => {
+  it("names the server on the chip while it answers", () => {
     installBridge();
     render(<App />);
 
-    expect(screen.getByLabelText("Servidor")).toBeInTheDocument();
+    expect(serverChip("localhost:9001")).toBeInTheDocument();
   });
 
-  it("badges the icon and toasts when the server stops answering", () => {
+  it("says so on the chip, and toasts, when the server stops answering", () => {
     installBridge();
     render(<App />);
 
@@ -269,13 +253,9 @@ describe("connection health", () => {
       connectionErrorListener();
     });
 
-    expect(
-      screen.getByLabelText("O servidor não está respondendo")
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText("Não foi possível falar com localhost:9001")
-    ).toBeInTheDocument();
-    expect(screen.getByText("Trocar")).toBeInTheDocument();
+    expect(serverChip("localhost:9001 não está respondendo")).toBeInTheDocument();
+    expect(toasts().getByText("Não foi possível falar com localhost:9001")).toBeInTheDocument();
+    expect(toasts().getByRole("button", { name: "Trocar" })).toBeInTheDocument();
   });
 
   it("opens the picker from the toast action", async () => {
@@ -287,37 +267,26 @@ describe("connection health", () => {
       healthListener(false);
       connectionErrorListener();
     });
-    await userEvent.click(screen.getByText("Trocar"));
+    await userEvent.click(toasts().getByRole("button", { name: "Trocar" }));
 
     expect(screen.getByRole("menu")).toBeInTheDocument();
   });
 
-  it("clears the badge when the server answers again", () => {
+  it("clears the flag when the server answers again", () => {
     installBridge();
     render(<App />);
 
     act(() => healthListener(false));
     act(() => healthListener(true));
 
-    expect(screen.getByLabelText("Servidor")).toBeInTheDocument();
+    expect(serverChip("localhost:9001")).toBeInTheDocument();
   });
 });
 
 describe("snackbar precedence while offline", () => {
-  beforeEach(() => {
-    localStorage.clear();
-    healthListener = null;
-    connectionErrorListener = null;
-    vi.mocked(setApiUrl).mockClear();
-    vi.mocked(setApiUrl).mockReturnValue(true);
-  });
-
-  afterEach(() => {
-    delete window.instantsDiscovery;
-  });
+  beforeEach(reset);
 
   it("keeps the connection toast when a panel reports its own error after it", async () => {
-    const { getMyInstants } = await import("./service");
     vi.mocked(getMyInstants).mockRejectedValueOnce(
       new Error("Erro desconhecido, tente novamente mais tarde")
     );
@@ -334,29 +303,15 @@ describe("snackbar precedence while offline", () => {
       await Promise.resolve();
     });
 
-    expect(
-      screen.getByText("Não foi possível falar com localhost:9001")
-    ).toBeInTheDocument();
-    expect(
-      screen.queryByText("Erro desconhecido, tente novamente mais tarde")
-    ).not.toBeInTheDocument();
+    expect(toasts().getByText("Não foi possível falar com localhost:9001")).toBeInTheDocument();
+    expect(screen.queryByText("Erro desconhecido, tente novamente mais tarde")).not.toBeInTheDocument();
 
     vi.mocked(getMyInstants).mockResolvedValue({ instants: [], pages: 0 });
   });
 });
 
 describe("repeated failures while already offline", () => {
-  beforeEach(() => {
-    localStorage.clear();
-    healthListener = null;
-    connectionErrorListener = null;
-    vi.mocked(setApiUrl).mockClear();
-    vi.mocked(setApiUrl).mockReturnValue(true);
-  });
-
-  afterEach(() => {
-    delete window.instantsDiscovery;
-  });
+  beforeEach(reset);
 
   it("re-shows the toast on a later failure, so a click is never silent", async () => {
     installBridge();
@@ -367,18 +322,90 @@ describe("repeated failures while already offline", () => {
       connectionErrorListener();
     });
 
-    await userEvent.click(screen.getByLabelText("close"));
+    await userEvent.click(toasts().getByRole("button", { name: "Fechar" }));
 
     await waitFor(() =>
-      expect(
-        screen.queryByText("Não foi possível falar com localhost:9001")
-      ).not.toBeInTheDocument()
+      expect(screen.queryByText("Não foi possível falar com localhost:9001")).not.toBeInTheDocument()
     );
 
     act(() => connectionErrorListener());
 
-    expect(
-      screen.getByText("Não foi possível falar com localhost:9001")
-    ).toBeInTheDocument();
+    expect(toasts().getByText("Não foi possível falar com localhost:9001")).toBeInTheDocument();
+  });
+});
+
+describe("shell", () => {
+  beforeEach(reset);
+
+  it("opens on Favoritos, with the section tabs and the search", () => {
+    render(<App />);
+
+    expect(screen.getByRole("heading", { level: 1, name: "Favoritos" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Favoritos" })).toHaveAttribute("aria-selected", "true");
+    expect(searchBox()).toBeInTheDocument();
+  });
+
+  it("switches to MyInstants from the segmented control", async () => {
+    render(<App />);
+
+    await userEvent.click(screen.getByRole("tab", { name: "MyInstants" }));
+
+    expect(screen.getByRole("heading", { level: 1, name: "MyInstants" })).toBeInTheDocument();
+    await waitFor(() => expect(getMyInstants).toHaveBeenCalledWith(1, ""));
+  });
+
+  it("opens the add form from the tools row", async () => {
+    render(<App />);
+
+    await userEvent.click(screen.getByRole("button", { name: "Adicionar" }));
+
+    expect(screen.getByRole("dialog", { name: "Adicionar instant" })).toBeInTheDocument();
+  });
+
+  it("carries a search with no favourite match over to MyInstants", async () => {
+    localStorage.setItem(
+      "instants",
+      JSON.stringify([{ name: "Vish", url: "https://www.myinstants.com/v/" }])
+    );
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.type(searchBox(), "xuxa");
+    await user.click(await screen.findByRole("button", { name: "Procurar “xuxa” no MyInstants" }));
+
+    expect(screen.getByRole("heading", { level: 1, name: "MyInstants" })).toBeInTheDocument();
+    await waitFor(() => expect(getMyInstants).toHaveBeenLastCalledWith(1, "xuxa"));
+    // The query survives the switch, rather than making them retype it.
+    expect(searchBox()).toHaveValue("xuxa");
+  });
+
+  it("focuses the search on the find shortcut", () => {
+    render(<App />);
+
+    // The modifier is per-platform (Cmd on macOS, Ctrl elsewhere). Press both
+    // so the test holds on whichever platform it runs on.
+    fireEvent.keyDown(window, { key: "f", ctrlKey: true, metaKey: true });
+
+    expect(searchBox()).toHaveFocus();
+  });
+
+  it("follows the OS by default and remembers an explicit mode", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    // setupTests' matchMedia stub reports a light OS.
+    await waitFor(() => expect(document.documentElement.dataset.mode).toBe("light"));
+
+    await user.click(screen.getByRole("button", { name: "Mais opções" }));
+    await user.click(screen.getByRole("menuitem", { name: "Escuro" }));
+
+    await waitFor(() => expect(document.documentElement.dataset.mode).toBe("dark"));
+    expect(JSON.parse(localStorage.getItem("colorMode"))).toBe("dark");
+  });
+
+  it("runs on the default palette, with no way to change it yet", async () => {
+    render(<App />);
+
+    await waitFor(() => expect(document.documentElement.dataset.theme).toBe("esmalte"));
   });
 });

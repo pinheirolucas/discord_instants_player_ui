@@ -33,9 +33,9 @@ function renderForm({ instants = existing } = {}) {
   return { ...result, onClose };
 }
 
-// react-dropzone's root has no accessible role, and its file input is
-// deliberately hidden, so there is nothing to query by role or label. Uploading
-// straight to the input is what react-dropzone's own docs suggest for tests.
+// react-dropzone's file input is deliberately hidden, so there is nothing to
+// query by role or label. Uploading straight to the input is what
+// react-dropzone's own docs suggest for tests.
 function fileInput() {
   return document.querySelector('input[type="file"]');
 }
@@ -44,93 +44,106 @@ async function upload(user, file) {
   await user.upload(fileInput(), file);
 }
 
-describe("ImportForm", () => {
-  beforeEach(() => {
-    localStorage.clear();
-  });
+// The options only appear once the file has actually been read and parsed,
+// so Importar is never offered against content that has not arrived.
+async function uploadParsed(user, file = jsonFile({ instants: incoming })) {
+  await upload(user, file);
+  await screen.findByText("O que você quer importar?");
+}
 
-  afterEach(() => {
-    localStorage.clear();
-  });
+// user-event replicates the file picker's own `accept` filtering, and
+// react-dropzone sets accept="application/json,.json" on its input — so by
+// default a .txt never reaches the component and the rejection path is
+// unreachable. Dragging a file onto the zone is not filtered like that in a
+// real browser, which is exactly how a user gets here, so the filter is
+// switched off rather than worked around.
+const draggingUser = () => userEvent.setup({ applyAccept: false });
+
+describe("ImportForm", () => {
+  beforeEach(() => localStorage.clear());
+  afterEach(() => localStorage.clear());
 
   it("asks for a file and offers nothing else until one arrives", () => {
     renderForm();
 
-    expect(
-      screen.getByText(/Arraste o arquivo que deseja importar para cá/)
-    ).toBeInTheDocument();
-    expect(screen.queryByText("O que você deseja importar?")).toBeNull();
-    expect(screen.getByRole("button", { name: "Salvar" })).toBeDisabled();
+    expect(screen.getByText("Arraste o arquivo para cá")).toBeInTheDocument();
+    expect(screen.getByText("ou clique para escolher um do computador")).toBeInTheDocument();
+    expect(screen.queryByText("O que você quer importar?")).toBeNull();
+    expect(screen.getByRole("button", { name: "Importar" })).toBeDisabled();
   });
 
-  it("confirms the file by name and reveals the import options", async () => {
+  it("names the file and counts what is in it once it is read", async () => {
     const user = userEvent.setup();
     renderForm();
 
     await upload(user, jsonFile({ instants: incoming }));
 
-    expect(await screen.findByText('Arquivo "config.json" carregado.')).toBeInTheDocument();
-    expect(screen.getByText("O que você deseja importar?")).toBeInTheDocument();
+    expect(await screen.findByText("config.json")).toBeInTheDocument();
+    expect(await screen.findByText("2 instants no arquivo")).toBeInTheDocument();
+    expect(screen.getByText("O que você quer importar?")).toBeInTheDocument();
   });
 
-  it("keeps Salvar disabled until both the switch and a strategy are chosen", async () => {
+  it("counts a single instant in the singular", async () => {
     const user = userEvent.setup();
     renderForm();
 
-    await upload(user, jsonFile({ instants: incoming }));
-    await screen.findByText('Arquivo "config.json" carregado.');
+    await upload(user, jsonFile({ instants: [incoming[1]] }));
 
-    const save = screen.getByRole("button", { name: "Salvar" });
-    expect(save).toBeDisabled();
+    expect(await screen.findByText("1 instant no arquivo")).toBeInTheDocument();
+  });
+
+  it("keeps Importar dead until both the switch and a strategy are chosen", async () => {
+    const user = userEvent.setup();
+    renderForm();
+    await uploadParsed(user);
+
+    const confirm = screen.getByRole("button", { name: "Importar" });
+    expect(confirm).toBeDisabled();
 
     await user.click(screen.getByRole("switch", { name: "Instants" }));
-    expect(save).toBeDisabled();
+    expect(confirm).toBeDisabled();
 
-    await user.click(screen.getByRole("radio", { name: "Substituí-los" }));
-    expect(save).toBeEnabled();
+    await user.click(screen.getByRole("radio", { name: "Substituir tudo" }));
+    expect(confirm).toBeEnabled();
   });
 
-  it('replaces the stored instants outright when "Substituí-los" is chosen', async () => {
+  it('replaces the stored instants outright with "Substituir tudo"', async () => {
     const user = userEvent.setup();
     const { onClose } = renderForm();
-
-    await upload(user, jsonFile({ instants: incoming }));
-    await screen.findByText('Arquivo "config.json" carregado.');
+    await uploadParsed(user);
 
     await user.click(screen.getByRole("switch", { name: "Instants" }));
-    await user.click(screen.getByRole("radio", { name: "Substituí-los" }));
-    await user.click(screen.getByRole("button", { name: "Salvar" }));
+    await user.click(screen.getByRole("radio", { name: "Substituir tudo" }));
+    await user.click(screen.getByRole("button", { name: "Importar" }));
 
     expect(storedInstants()).toEqual(incoming);
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
-  it('keeps the stored instants and adds only new urls when "Mantê-los" is chosen', async () => {
+  it('keeps the stored instants and adds only new urls with "Manter os meus"', async () => {
     const user = userEvent.setup();
     renderForm();
-
-    await upload(user, jsonFile({ instants: incoming }));
-    await screen.findByText('Arquivo "config.json" carregado.');
+    await uploadParsed(user);
 
     await user.click(screen.getByRole("switch", { name: "Instants" }));
-    await user.click(screen.getByRole("radio", { name: "Mantê-los" }));
-    await user.click(screen.getByRole("button", { name: "Salvar" }));
+    await user.click(screen.getByRole("radio", { name: "Manter os meus" }));
+    await user.click(screen.getByRole("button", { name: "Importar" }));
 
-    // The incoming "Primeiro renomeado" shares a url with the stored
-    // "Primeiro", so the stored name wins and only "Terceiro" is appended.
+    // "Primeiro renomeado" shares a url with the stored "Primeiro", so the
+    // stored name wins and only "Terceiro" is appended.
     expect(storedInstants()).toEqual([...existing, incoming[1]]);
   });
 
   it("treats a file with no instants key as an empty import", async () => {
     const user = userEvent.setup();
     renderForm();
+    await uploadParsed(user, jsonFile({ theme: "dark" }));
 
-    await upload(user, jsonFile({ theme: "dark" }));
-    await screen.findByText('Arquivo "config.json" carregado.');
+    expect(screen.getByText("0 instants no arquivo")).toBeInTheDocument();
 
     await user.click(screen.getByRole("switch", { name: "Instants" }));
-    await user.click(screen.getByRole("radio", { name: "Substituí-los" }));
-    await user.click(screen.getByRole("button", { name: "Salvar" }));
+    await user.click(screen.getByRole("radio", { name: "Substituir tudo" }));
+    await user.click(screen.getByRole("button", { name: "Importar" }));
 
     expect(storedInstants()).toEqual([]);
   });
@@ -138,11 +151,8 @@ describe("ImportForm", () => {
   it("leaves storage alone when the import switch is off", async () => {
     const user = userEvent.setup();
     const { onClose } = renderForm();
+    await uploadParsed(user);
 
-    await upload(user, jsonFile({ instants: incoming }));
-    await screen.findByText('Arquivo "config.json" carregado.');
-
-    // Salvar is disabled in this state, so close through Cancelar instead.
     await user.click(screen.getByRole("button", { name: "Cancelar" }));
 
     expect(storedInstants()).toEqual(existing);
@@ -150,93 +160,74 @@ describe("ImportForm", () => {
   });
 
   it("rejects a file that is not .json", async () => {
-    // user-event replicates the file picker's own `accept` filtering, and
-    // react-dropzone sets accept="application/json,.json" on its input — so with
-    // the default settings the .txt never reaches the component and the
-    // rejection path is unreachable. Dragging a file onto the dropzone is not
-    // filtered that way in a real browser, which is exactly how a user gets
-    // here, so the filter is switched off rather than worked around.
-    const user = userEvent.setup({ applyAccept: false });
+    const user = draggingUser();
     renderForm();
 
-    await upload(
-      user,
-      new File(["hello"], "notes.txt", { type: "text/plain" })
-    );
+    await upload(user, new File(["hello"], "notes.txt", { type: "text/plain" }));
 
-    expect(
-      await screen.findByText(/O tipo de arquivo inserido é inválido/)
-    ).toBeInTheDocument();
-    expect(screen.queryByText("O que você deseja importar?")).toBeNull();
+    expect(await screen.findByText("Esse arquivo não serve")).toBeInTheDocument();
+    expect(screen.getByText("Só arquivos .json são aceitos.")).toBeInTheDocument();
+    expect(screen.queryByText("O que você quer importar?")).toBeNull();
   });
 
   it("reports a .json file whose contents are not valid JSON", async () => {
     const user = userEvent.setup();
     renderForm();
 
-    await upload(
-      user,
-      new File(["{ not json"], "config.json", { type: "application/json" })
-    );
+    await upload(user, new File(["{ not json"], "config.json", { type: "application/json" }));
 
-    expect(
-      await screen.findByText("O conteúdo do arquivo inserido é inválido")
-    ).toBeInTheDocument();
+    expect(await screen.findByText("O conteúdo não é um JSON válido.")).toBeInTheDocument();
+    expect(screen.queryByText("O que você quer importar?")).toBeNull();
   });
 
-  // Worth pinning down because the source carries a comment explaining it:
-  // react-dropzone hands back a fresh acceptedFiles identity even on a
-  // rejection, so splitting acceptance and rejection into two effects made the
-  // acceptance one run second and clear the error that had just been set.
+  // Pinned because the source carries a comment explaining it: react-dropzone
+  // hands back a fresh acceptedFiles identity even on a rejection, so split
+  // into two effects the acceptance one ran second and cleared the error.
   it("keeps the rejection message visible instead of clearing it", async () => {
-    // user-event replicates the file picker's own `accept` filtering, and
-    // react-dropzone sets accept="application/json,.json" on its input — so with
-    // the default settings the .txt never reaches the component and the
-    // rejection path is unreachable. Dragging a file onto the dropzone is not
-    // filtered that way in a real browser, which is exactly how a user gets
-    // here, so the filter is switched off rather than worked around.
-    const user = userEvent.setup({ applyAccept: false });
+    const user = draggingUser();
     renderForm();
 
     await upload(user, new File(["hello"], "notes.txt", { type: "text/plain" }));
-    const message = await screen.findByText(/O tipo de arquivo inserido é inválido/);
+    const message = await screen.findByText("Só arquivos .json são aceitos.");
 
-    // Give any second effect pass a chance to wipe it.
     await waitFor(() => expect(message).toBeInTheDocument());
-    expect(screen.queryByText(/Arraste o arquivo que deseja importar/)).toBeNull();
+    expect(screen.queryByText("Arraste o arquivo para cá")).toBeNull();
   });
 
   it("recovers when a good file follows a rejected one", async () => {
-    // user-event replicates the file picker's own `accept` filtering, and
-    // react-dropzone sets accept="application/json,.json" on its input — so with
-    // the default settings the .txt never reaches the component and the
-    // rejection path is unreachable. Dragging a file onto the dropzone is not
-    // filtered that way in a real browser, which is exactly how a user gets
-    // here, so the filter is switched off rather than worked around.
-    const user = userEvent.setup({ applyAccept: false });
+    const user = draggingUser();
     renderForm();
 
     await upload(user, new File(["hello"], "notes.txt", { type: "text/plain" }));
-    await screen.findByText(/O tipo de arquivo inserido é inválido/);
+    await screen.findByText("Só arquivos .json são aceitos.");
 
     await upload(user, jsonFile({ instants: incoming }, "good.json"));
 
-    expect(await screen.findByText('Arquivo "good.json" carregado.')).toBeInTheDocument();
-    expect(screen.queryByText(/O tipo de arquivo inserido é inválido/)).toBeNull();
+    expect(await screen.findByText("good.json")).toBeInTheDocument();
+    expect(screen.queryByText("Só arquivos .json são aceitos.")).toBeNull();
   });
 
   it("offers exactly the two strategies, with neither preselected", async () => {
     const user = userEvent.setup();
     renderForm();
-
-    await upload(user, jsonFile({ instants: incoming }));
-    await screen.findByText('Arquivo "config.json" carregado.');
+    await uploadParsed(user);
     await user.click(screen.getByRole("switch", { name: "Instants" }));
 
-    const group = within(screen.getByRole("radiogroup"));
-    const radios = group.getAllByRole("radio");
+    const radios = within(screen.getByRole("radiogroup")).getAllByRole("radio");
 
     expect(radios).toHaveLength(2);
     radios.forEach(radio => expect(radio).not.toBeChecked());
+  });
+
+  // The platform flips the footer visually (primary sits left on Windows);
+  // the DOM keeps reading order everywhere, so keyboard and screen-reader
+  // order never depends on the OS.
+  it("keeps the footer in reading order: cancel, then confirm", () => {
+    renderForm();
+
+    const cancel = screen.getByRole("button", { name: "Cancelar" });
+    const confirm = screen.getByRole("button", { name: "Importar" });
+
+    expect(cancel.compareDocumentPosition(confirm) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 });

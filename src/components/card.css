@@ -1,0 +1,153 @@
+/* The instant card. Its fill and ink come from the palette slot (.p0–.p5,
+ * set by tokens.css), never from here; its radius from the platform layer.
+ * Class names match the design canvas, and tokens.css reaches in by name
+ * for Alto contraste's border — do not rename .pad or .pwave. */
+
+.pad {
+  position: relative;
+  height: 156px;
+  border-radius: var(--rpad);
+  padding: 16px 17px 14px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--fill);
+  color: var(--ink);
+  transition: transform 90ms ease, filter 90ms ease, box-shadow 90ms ease, opacity 120ms ease;
+
+  /* Every card is its own stacking context. The footer and the chip need
+   * z-index: 1 to sit above the stretched hit, and without this that 1
+   * competes at page level — where it beat the portaled dialog, and the
+   * footer buttons of the cards behind it painted over the form. */
+  isolation: isolate;
+}
+
+/* With no play button to point at, hover and press are the whole
+ * affordance, so they are deliberately not subtle. */
+.pad:hover:not([data-inert="true"]) {
+  filter: brightness(1.09);
+  transform: translateY(-2px);
+}
+.pad:hover:not([data-live="true"]):not([data-inert="true"]) {
+  box-shadow: inset 0 0 0 2px color-mix(in oklch, var(--ink) 32%, transparent);
+}
+.pad:active:not(:has(.pb:active)):not([data-inert="true"]) {
+  filter: brightness(0.93);
+  transform: translateY(1px) scale(0.985);
+  box-shadow: inset 0 0 0 3px color-mix(in oklch, var(--ink) 48%, transparent);
+}
+
+.pname {
+  margin: 0;
+  font-size: 23px;
+  font-weight: 700;
+  line-height: 1.02;
+  letter-spacing: -0.008em;
+  max-height: 50px;
+  overflow: hidden;
+  text-wrap: balance;
+}
+
+/* Stretched hit: the clip name is the real button, and its ::after covers
+ * the whole card. A button cannot sit inside another button, so this is how
+ * the body plays while the footer keeps buttons of its own — and it makes
+ * the card focusable, Enter/Space-playable, and named after the clip.
+ * The ::after escapes .pname's overflow because its containing block is
+ * .pad, an ancestor of the clipping element. */
+.phit {
+  all: unset;
+  cursor: pointer;
+}
+.phit::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+}
+.phit:disabled {
+  cursor: default;
+}
+.pad:has(.phit:focus-visible) {
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.pwave {
+  margin-top: auto;
+  height: 26px;
+  flex: none;
+  opacity: 0.44;
+}
+
+/* Above the stretched hit, so the footer buttons stay clickable. */
+.pfoot {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 11px;
+  height: 30px;
+}
+
+.pb {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: var(--rbtn);
+  cursor: pointer;
+  color: var(--ink);
+  background: color-mix(in oklch, var(--ink) 11%, transparent);
+}
+.pb:hover:not(:disabled) {
+  background: color-mix(in oklch, var(--ink) 22%, transparent);
+}
+.pb:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+.pb:disabled {
+  opacity: 0.26;
+  cursor: default;
+}
+.pb.trail {
+  margin-left: auto;
+}
+
+.pad[data-live="true"] {
+  outline: 3px solid var(--ink);
+  outline-offset: -3px;
+}
+.pad[data-live="true"] .pwave {
+  opacity: 1;
+  animation: pulse 1s ease-in-out infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.chip {
+  position: absolute;
+  z-index: 1;
+  top: 14px;
+  right: 14px;
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  background: var(--ink);
+  color: var(--fill);
+  padding: 4px 8px;
+  border-radius: var(--rbtn);
+  pointer-events: none;
+}
+
+/* Another clip is playing: this one steps back. */
+.pad[data-dim="true"] {
+  opacity: 0.45;
+}

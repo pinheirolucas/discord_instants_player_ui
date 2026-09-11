@@ -21,3 +21,23 @@ if (typeof window !== "undefined" && !window.matchMedia) {
     dispatchEvent: () => false
   });
 }
+
+// Radix measures, positions and captures pointers with browser APIs jsdom
+// does not implement: menus and tooltips observe their anchor's size,
+// focused items scroll into view, and triggers probe pointer capture on
+// whatever element received the pointerdown — which can be an <svg> inside
+// a button, hence Element rather than HTMLElement.
+if (typeof window !== "undefined") {
+  if (!window.ResizeObserver) {
+    window.ResizeObserver = class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    };
+  }
+  const proto = window.Element.prototype;
+  if (!proto.scrollIntoView) proto.scrollIntoView = () => {};
+  if (!proto.hasPointerCapture) proto.hasPointerCapture = () => false;
+  if (!proto.setPointerCapture) proto.setPointerCapture = () => {};
+  if (!proto.releasePointerCapture) proto.releasePointerCapture = () => {};
+}

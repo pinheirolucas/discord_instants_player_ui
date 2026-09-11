@@ -32,12 +32,10 @@ class FakeAudio extends EventTarget {
 
 FakeAudio.instances = [];
 
-// Deliberately the *first* instance, not the last. `useRef(new Audio())`
-// evaluates its argument on every render and throws away everything after the
-// first, so the hook keeps driving instance 0 while the constructor keeps
-// firing. See the "allocates a throwaway element on every render" test.
+// The hook creates its element lazily, once, and drives it for its whole
+// life — see "builds one element for the life of the hook".
 function currentPlayer() {
-  expect(FakeAudio.instances.length).toBeGreaterThan(0);
+  expect(FakeAudio.instances).toHaveLength(1);
   return FakeAudio.instances[0];
 }
 
@@ -137,29 +135,27 @@ describe("useAudioPlayer", () => {
       ["pause"],
       ["play", B.src]
     ]);
-    // Every other instance stays untouched — the ref pins the first one.
-    FakeAudio.instances.slice(1).forEach(other => {
-      expect(other.calls).toEqual([]);
-    });
+    expect(FakeAudio.instances).toHaveLength(1);
   });
 
-  // Pre-existing wart, asserted as current behaviour rather than fixed:
-  // `useRef(new Audio())` evaluates `new Audio()` on *every* render and
-  // discards the result on all but the first, so each state update allocates a
-  // media element that is never used. Harmless in practice (nothing is loaded
-  // or attached), but it is why currentPlayer() has to take instance 0.
-  it("allocates a throwaway element on every render", () => {
+  // Used to be asserted as a wart: `useRef(new Audio())` evaluated
+  // `new Audio()` on every render and threw all but the first away, so each
+  // state update allocated a media element nothing ever used. The element is
+  // created lazily now, exactly once.
+  it("builds one element for the life of the hook", () => {
     const { result, rerender } = renderHook(() => useAudioPlayer());
 
     expect(FakeAudio.instances).toHaveLength(1);
 
     rerender();
-    expect(FakeAudio.instances).toHaveLength(2);
-
     act(() => {
       result.current[2](A.url, A.src);
     });
-    expect(FakeAudio.instances.length).toBeGreaterThan(2);
+    act(() => {
+      result.current[3]();
+    });
+
+    expect(FakeAudio.instances).toHaveLength(1);
   });
 
   it("goes back to idle when the clip reaches its end on its own", () => {

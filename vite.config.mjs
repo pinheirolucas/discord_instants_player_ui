@@ -7,10 +7,10 @@ export default defineConfig({
   // declared for CRA.
   base: "./",
 
-  // JSX lives in .js files throughout src/, which esbuild will not parse on its
-  // own. Widening the plugin's include lets Babel handle them, so no file has to
-  // be renamed to .jsx.
-  plugins: [react({ include: "**/*.{js,jsx}" })],
+  // JSX lives in .jsx and .tsx. The include has to name .tsx explicitly:
+  // overriding it with only {js,jsx} would take every TypeScript component
+  // out of the React plugin's JSX transform and Fast Refresh.
+  plugins: [react({ include: "**/*.{js,jsx,ts,tsx}" })],
 
   // Some dependencies (file-selector, reached through react-dropzone) ship UMD
   // bundles that reference the Node `global`. webpack polyfilled it; Vite does

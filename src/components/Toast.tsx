@@ -18,7 +18,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <RadixToast.Provider swipeDirection="down" duration={6000}>
       {children}
-      <RadixToast.Viewport className="toast-viewport" />
+      <RadixToast.Viewport className="toast-viewport" label="Notificações ({hotkey})" />
     </RadixToast.Provider>
   );
 }

@@ -1,0 +1,93 @@
+/* The app shell: a flex column whose scroller owns its own overflow. This
+ * replaces the fixed AppBar and the panels' magic marginTop: 125px. */
+
+.app {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  color: var(--fg);
+}
+
+.hero {
+  flex: none;
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 18px;
+  padding: 26px 40px 20px;
+}
+.hero h1 {
+  margin: 0;
+  font-size: 42px;
+  font-weight: 700;
+  letter-spacing: -0.026em;
+  line-height: 1;
+}
+.hero .count {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--muted);
+  padding-bottom: 6px;
+  font-variant-numeric: tabular-nums;
+}
+
+.spacer {
+  flex: 1;
+}
+
+.tools {
+  flex: none;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 0 40px 18px;
+}
+.tools .search {
+  flex: 1;
+  min-width: 200px;
+  max-width: 380px;
+}
+
+.scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 0 40px 34px;
+}
+
+/* Four columns at the design's 1280px window, and it reflows below that
+ * rather than squeezing cards narrower than their 23px names can bear. */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 16px;
+}
+
+/* Offline, the grid steps back — but stays clickable. Health is passive:
+ * a click is the only probe that can find the server again, so disabling
+ * playback here would lock the user out of recovering. */
+.grid[data-offline="true"] .pad:not(:hover):not(:focus-within) {
+  opacity: 0.6;
+}
+
+.loadmore {
+  display: flex;
+  justify-content: center;
+  padding-top: 22px;
+}
+
+@media (max-width: 640px) {
+  .hero,
+  .tools {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+  .scroll {
+    padding: 0 16px 24px;
+  }
+  .hero h1 {
+    font-size: 32px;
+  }
+}

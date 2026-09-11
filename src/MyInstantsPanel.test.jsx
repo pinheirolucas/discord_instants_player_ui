@@ -27,12 +27,14 @@ class FakeAudio extends EventTarget {
 }
 FakeAudio.played = [];
 
-function action(title, scope = screen) {
-  return within(scope.getByLabelText(title)).getByRole("button");
-}
-
 function card(name) {
-  return screen.getByRole("heading", { name }).closest(".MuiPaper-root");
+  return screen.getByRole("article", { name });
+}
+function play(name) {
+  return within(card(name)).getByRole("button", { name });
+}
+function action(name, label) {
+  return within(card(name)).getByRole("button", { name: label });
 }
 
 function storedInstants() {
@@ -53,36 +55,40 @@ const page2 = {
   pages: 3
 };
 
-// The panel's effect depends on openSnackbar, so it has to keep the same
-// identity across renders or the effect refires forever.
-function renderPanel({ search = "", favorites = [] } = {}) {
+function renderPanel({ search = "", favorites = [], healthy = true } = {}) {
   localStorage.setItem("instants", JSON.stringify(favorites));
 
   const snackbar = { openSnackbar: vi.fn(), closeSnackbar: vi.fn() };
+  const props = { onSummary: vi.fn(), onClearSearch: vi.fn(), onSwitchServer: vi.fn() };
 
-  const result = render(
+  const ui = nextSearch => (
     <SnackbarContext.Provider value={snackbar}>
-      <MyInstantsPanel search={search} />
+      <MyInstantsPanel
+        search={nextSearch}
+        healthy={healthy}
+        serverAddress="localhost:9001"
+        {...props}
+      />
     </SnackbarContext.Provider>
   );
 
-  const rerenderWithSearch = nextSearch =>
-    result.rerender(
-      <SnackbarContext.Provider value={snackbar}>
-        <MyInstantsPanel search={nextSearch} />
-      </SnackbarContext.Provider>
-    );
-
-  return { ...result, snackbar, rerenderWithSearch };
+  const result = render(ui(search));
+  return {
+    ...result,
+    snackbar,
+    ...props,
+    rerenderWithSearch: nextSearch => result.rerender(ui(nextSearch))
+  };
 }
 
-describe("MyInstantsPanel", () => {
+function useFakes(listing = page1) {
   beforeEach(() => {
     localStorage.clear();
     FakeAudio.played = [];
     vi.stubGlobal("Audio", FakeAudio);
     vi.mocked(getContent).mockReset();
-    vi.mocked(getMyInstants).mockReset().mockResolvedValue(page1);
+    vi.mocked(getMyInstants).mockReset();
+    if (listing) vi.mocked(getMyInstants).mockResolvedValue(listing);
     vi.mocked(playOnDiscord).mockReset();
     vi.mocked(stopPlayingOnDiscord).mockReset().mockResolvedValue({});
   });
@@ -91,131 +97,135 @@ describe("MyInstantsPanel", () => {
     vi.unstubAllGlobals();
     localStorage.clear();
   });
+}
+
+describe("MyInstantsPanel", () => {
+  useFakes();
 
   it("loads the first page on mount and renders a card per result", async () => {
     renderPanel();
 
-    expect(await screen.findByRole("heading", { name: "Primeiro" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Segundo" })).toBeInTheDocument();
+    expect(await screen.findByRole("article", { name: "Primeiro" })).toBeInTheDocument();
+    expect(card("Segundo")).toBeInTheDocument();
     expect(getMyInstants).toHaveBeenCalledWith(1, "");
   });
 
-  it("refetches when the search term changes", async () => {
+  // The listing scrapes myinstants.com server-side and is slow; the skeleton
+  // has the card's exact footprint so nothing jumps when it lands.
+  it("shows card-shaped skeletons while the first page is in flight", () => {
+    vi.mocked(getMyInstants).mockReturnValue(new Promise(() => {}));
+    const { container, onSummary } = renderPanel();
+
+    expect(container.querySelectorAll(".skel")).toHaveLength(8);
+    expect(screen.queryByRole("article")).toBeNull();
+    expect(onSummary).toHaveBeenLastCalledWith("carregando…");
+  });
+
+  it("reports how many results are on screen", async () => {
+    const { onSummary } = renderPanel();
+    await screen.findByRole("article", { name: "Primeiro" });
+
+    expect(onSummary).toHaveBeenLastCalledWith("2 resultados");
+  });
+
+  it("refetches when the search term changes, replacing the list", async () => {
     const { rerenderWithSearch } = renderPanel();
-    await screen.findByRole("heading", { name: "Primeiro" });
+    await screen.findByRole("article", { name: "Primeiro" });
 
     vi.mocked(getMyInstants).mockResolvedValue(page2);
     rerenderWithSearch("terceiro");
 
-    expect(await screen.findByRole("heading", { name: "Terceiro" })).toBeInTheDocument();
-    // A new search replaces the list rather than appending to it.
-    expect(screen.queryByRole("heading", { name: "Primeiro" })).toBeNull();
+    expect(await screen.findByRole("article", { name: "Terceiro" })).toBeInTheDocument();
+    expect(screen.queryByRole("article", { name: "Primeiro" })).toBeNull();
     expect(getMyInstants).toHaveBeenLastCalledWith(1, "terceiro");
   });
 
-  it("appends the next page and keeps what is already on screen", async () => {
-    const { rerenderWithSearch } = renderPanel();
-    await screen.findByRole("heading", { name: "Primeiro" });
+  // Used to be asserted as a known bug: the page count was only ever learned
+  // after a search, so opening the tab offered no way to reach page 2.
+  it("offers to load more on the very first load when the backend has more pages", async () => {
+    renderPanel();
+    await screen.findByRole("article", { name: "Primeiro" });
 
-    // "Carregar mais" is only reachable after totalPages is known — see the
-    // "never offers to load more on a first load" test for why.
-    rerenderWithSearch("boo");
-    const loadMore = await screen.findByRole("button", { name: "Carregar mais" });
+    expect(screen.getByRole("button", { name: "Carregar mais" })).toBeInTheDocument();
+  });
+
+  it("appends the next page and keeps what is already on screen", async () => {
+    const user = userEvent.setup();
+    renderPanel();
+    await screen.findByRole("article", { name: "Primeiro" });
 
     vi.mocked(getMyInstants).mockResolvedValue(page2);
-    await userEvent.setup().click(loadMore);
+    await user.click(screen.getByRole("button", { name: "Carregar mais" }));
 
-    expect(await screen.findByRole("heading", { name: "Terceiro" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Primeiro" })).toBeInTheDocument();
-    expect(getMyInstants).toHaveBeenLastCalledWith(2, "boo");
+    expect(await screen.findByRole("article", { name: "Terceiro" })).toBeInTheDocument();
+    expect(card("Primeiro")).toBeInTheDocument();
+    expect(getMyInstants).toHaveBeenLastCalledWith(2, "");
   });
 
   it("drops duplicates when a page repeats an instant", async () => {
-    const { rerenderWithSearch } = renderPanel();
-    await screen.findByRole("heading", { name: "Primeiro" });
-
-    rerenderWithSearch("boo");
-    const loadMore = await screen.findByRole("button", { name: "Carregar mais" });
+    const user = userEvent.setup();
+    renderPanel();
+    await screen.findByRole("article", { name: "Primeiro" });
 
     vi.mocked(getMyInstants).mockResolvedValue({
       instants: [page1.instants[0], page2.instants[0]],
       pages: 3
     });
-    await userEvent.setup().click(loadMore);
+    await user.click(screen.getByRole("button", { name: "Carregar mais" }));
 
-    await screen.findByRole("heading", { name: "Terceiro" });
-    expect(screen.getAllByRole("heading", { name: "Primeiro" })).toHaveLength(1);
+    await screen.findByRole("article", { name: "Terceiro" });
+    expect(screen.getAllByRole("article", { name: "Primeiro" })).toHaveLength(1);
   });
 
   it("hides the load-more button on the last page", async () => {
     vi.mocked(getMyInstants).mockResolvedValue({ ...page1, pages: 1 });
-    const { rerenderWithSearch } = renderPanel();
-    await screen.findByRole("heading", { name: "Primeiro" });
-
-    rerenderWithSearch("boo");
-    await waitFor(() => expect(getMyInstants).toHaveBeenCalledTimes(2));
-
-    expect(screen.queryByRole("button", { name: "Carregar mais" })).toBeNull();
-  });
-
-  // Pre-existing bug, asserted as current behaviour rather than fixed.
-  // handleSuccess only calls setTotalPages in its "the search changed" branch,
-  // and lastSearch is initialised to the current search — so on the very first
-  // load the append branch runs, totalPages stays at its initial 1, page === 1,
-  // and the button is hidden. Opening the app and scrolling the browse tab
-  // therefore offers no way to reach page 2; the button only ever appears after
-  // the user has typed in the search box at least once.
-  it("never offers to load more on a first load, however many pages exist", async () => {
     renderPanel();
-    await screen.findByRole("heading", { name: "Primeiro" });
+    await screen.findByRole("article", { name: "Primeiro" });
 
-    // The backend said pages: 3, so there is genuinely more to fetch.
-    expect(getMyInstants).toHaveBeenCalledWith(1, "");
     expect(screen.queryByRole("button", { name: "Carregar mais" })).toBeNull();
   });
 
-  it("shows the load-more button once a search has taught it the page count", async () => {
+  // Also a bug before: the page number survived a new search, so after
+  // paging, typing fetched page 2 of the *new* query.
+  it("starts a new search from page 1 even after paging", async () => {
+    const user = userEvent.setup();
     const { rerenderWithSearch } = renderPanel();
-    await screen.findByRole("heading", { name: "Primeiro" });
+    await screen.findByRole("article", { name: "Primeiro" });
+
+    vi.mocked(getMyInstants).mockResolvedValue(page2);
+    await user.click(screen.getByRole("button", { name: "Carregar mais" }));
+    await screen.findByRole("article", { name: "Terceiro" });
 
     rerenderWithSearch("boo");
 
-    expect(
-      await screen.findByRole("button", { name: "Carregar mais" })
-    ).toBeInTheDocument();
+    await waitFor(() => expect(getMyInstants).toHaveBeenLastCalledWith(1, "boo"));
   });
 
-  it("adds an instant to the stored favourites", async () => {
+  it("favourites an instant, and says so", async () => {
     const user = userEvent.setup();
     renderPanel();
-    await screen.findByRole("heading", { name: "Primeiro" });
+    await screen.findByRole("article", { name: "Primeiro" });
 
-    await user.click(action("Adicionar aos favoritos", within(card("Primeiro"))));
+    expect(action("Primeiro", "Favoritar")).toHaveAttribute("aria-pressed", "false");
+    await user.click(action("Primeiro", "Favoritar"));
 
     expect(storedInstants()).toEqual([page1.instants[0]]);
+    expect(action("Primeiro", "Favoritar")).toHaveAttribute("aria-pressed", "true");
   });
 
-  it("removes it again on a second click", async () => {
+  // The old star kept the tooltip "Adicionar aos favoritos" even when a click
+  // would remove it; only the icon changed, which a screen reader never
+  // conveys. It is a toggle now, and its pressed state is announced.
+  it("unfavourites it again on a second click", async () => {
     const user = userEvent.setup();
     renderPanel({ favorites: [page1.instants[0]] });
-    await screen.findByRole("heading", { name: "Primeiro" });
+    await screen.findByRole("article", { name: "Primeiro" });
 
-    await user.click(action("Adicionar aos favoritos", within(card("Primeiro"))));
+    expect(action("Primeiro", "Favoritar")).toHaveAttribute("aria-pressed", "true");
+    await user.click(action("Primeiro", "Favoritar"));
 
     expect(storedInstants()).toEqual([]);
-  });
-
-  // Small wart, asserted as-is: the tooltip always reads "Adicionar aos
-  // favoritos" even when the click would remove it. Only the icon changes
-  // (filled star vs outline), which is exactly the cue a screen reader user
-  // does not get.
-  it("keeps the same tooltip whether or not the instant is a favourite", async () => {
-    renderPanel({ favorites: [page1.instants[0]] });
-    await screen.findByRole("heading", { name: "Primeiro" });
-
-    expect(
-      within(card("Primeiro")).getByLabelText("Adicionar aos favoritos")
-    ).toBeInTheDocument();
+    expect(action("Primeiro", "Favoritar")).toHaveAttribute("aria-pressed", "false");
   });
 
   it("plays a clip locally with the content the backend hands back", async () => {
@@ -226,9 +236,9 @@ describe("MyInstantsPanel", () => {
     });
 
     renderPanel();
-    await screen.findByRole("heading", { name: "Primeiro" });
+    await screen.findByRole("article", { name: "Primeiro" });
 
-    await user.click(action("Reproduzir", within(card("Primeiro"))));
+    await user.click(play("Primeiro"));
 
     await waitFor(() => expect(FakeAudio.played).toEqual(["data:audio/mp3;base64,AAAA"]));
   });
@@ -238,52 +248,64 @@ describe("MyInstantsPanel", () => {
     vi.mocked(getContent).mockResolvedValue({ exists: false });
 
     const { snackbar } = renderPanel();
-    await screen.findByRole("heading", { name: "Primeiro" });
+    await screen.findByRole("article", { name: "Primeiro" });
 
-    await user.click(action("Reproduzir", within(card("Primeiro"))));
+    await user.click(play("Primeiro"));
 
     await waitFor(() => {
-      // Unlike FavoritesPanel there is nothing to remove here, so the snackbar
-      // carries a message only.
+      // Unlike Favoritos there is nothing to remove here.
       expect(snackbar.openSnackbar).toHaveBeenCalledWith({
         message: "Parece que o instant não existe mais"
       });
     });
   });
 
-  it("shows the listing error in a snackbar", async () => {
-    vi.mocked(getMyInstants).mockRejectedValue(new Error("A página enviada é inválida"));
+  it("shows the listing error and offers to try again", async () => {
+    const user = userEvent.setup();
+    vi.mocked(getMyInstants).mockRejectedValueOnce(new Error("A página enviada é inválida"));
 
     const { snackbar } = renderPanel();
 
-    await waitFor(() => {
-      expect(snackbar.openSnackbar).toHaveBeenCalledWith({
-        message: "A página enviada é inválida"
-      });
-    });
+    await waitFor(() =>
+      expect(snackbar.openSnackbar).toHaveBeenCalledWith({ message: "A página enviada é inválida" })
+    );
+    expect(screen.getByRole("heading", { name: "O catálogo não carregou" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Tentar de novo" }));
+
+    expect(await screen.findByRole("article", { name: "Primeiro" })).toBeInTheDocument();
+    expect(getMyInstants).toHaveBeenCalledTimes(2);
+  });
+
+  it("offers to clear a search the catalogue has nothing for", async () => {
+    const user = userEvent.setup();
+    vi.mocked(getMyInstants).mockResolvedValue({ instants: [], pages: 1 });
+
+    const { onClearSearch } = renderPanel({ search: "xuxa" });
+
+    expect(await screen.findByRole("heading", { name: "Nada por aqui" })).toBeInTheDocument();
+    expect(screen.getByText("Nenhum som do MyInstants bate com “xuxa”.")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Limpar busca" }));
+
+    expect(onClearSearch).toHaveBeenCalledTimes(1);
+  });
+
+  it("names the silent server above the results", async () => {
+    renderPanel({ healthy: false });
+    await screen.findByRole("article", { name: "Primeiro" });
+
+    expect(screen.getByRole("status")).toHaveTextContent("localhost:9001 não está respondendo");
+    expect(play("Primeiro")).toBeEnabled();
   });
 });
 
 // The backend reports most errors as HTTP 200 with no `data`, which used to
-// reach this panel as `undefined`. Both `instants` reads sit inside setInstants
-// updater closures, so React evaluated them during state processing rather than
-// inside the promise chain: the TypeError escaped the effect's own catch and
-// unmounted the tree to a blank window. service.js now rejects instead, and
-// handleSuccess no longer dereferences whatever it is handed.
+// reach this panel as `undefined` and unmount the tree to a blank window.
+// service.js rejects instead now, and the panel never dereferences whatever
+// it is handed.
 describe("MyInstantsPanel when the listing does not arrive", () => {
-  beforeEach(() => {
-    localStorage.clear();
-    FakeAudio.played = [];
-    vi.stubGlobal("Audio", FakeAudio);
-    vi.mocked(getContent).mockReset();
-    vi.mocked(getMyInstants).mockReset();
-    vi.mocked(playOnDiscord).mockReset();
-    vi.mocked(stopPlayingOnDiscord).mockReset().mockResolvedValue({});
-  });
-
-  afterEach(() => {
-    vi.unstubAllGlobals();
-  });
+  useFakes(null);
 
   it("shows the backend message and stays mounted when the call rejects", async () => {
     vi.mocked(getMyInstants).mockRejectedValue(
@@ -299,17 +321,15 @@ describe("MyInstantsPanel when the listing does not arrive", () => {
     );
 
     expect(container.firstChild).not.toBeNull();
-    expect(screen.queryByRole("heading", { name: "Primeiro" })).toBeNull();
+    expect(screen.queryByRole("article")).toBeNull();
   });
 
-  it("renders empty rather than throwing if it is handed no listing at all", async () => {
+  it("renders an empty catalogue rather than throwing if it is handed no listing at all", async () => {
     vi.mocked(getMyInstants).mockResolvedValue(undefined);
 
-    const { container, snackbar } = renderPanel();
+    const { snackbar } = renderPanel();
 
-    await waitFor(() => expect(getMyInstants).toHaveBeenCalled());
-
-    expect(container.firstChild).not.toBeNull();
+    expect(await screen.findByRole("heading", { name: "Nada no catálogo" })).toBeInTheDocument();
     expect(snackbar.openSnackbar).not.toHaveBeenCalled();
   });
 
@@ -326,38 +346,23 @@ describe("MyInstantsPanel when the listing does not arrive", () => {
   });
 });
 
-// getContent used to have no error handling at all, so a backend error reached
-// this handler as `undefined` and `info.exists` threw inside an unawaited click
-// handler — the button did nothing and said nothing. It rejects with the
-// backend's message now, and the handler shows it.
+// getContent used to have no error handling at all, so a backend error
+// reached the click handler as `undefined` and the button did nothing and
+// said nothing. It rejects with the backend's message now, and that shows.
 describe("MyInstantsPanel when a clip cannot be fetched", () => {
-  beforeEach(() => {
-    localStorage.clear();
-    FakeAudio.played = [];
-    vi.stubGlobal("Audio", FakeAudio);
-    vi.mocked(getContent).mockReset();
-    vi.mocked(getMyInstants).mockReset().mockResolvedValue(page1);
-    vi.mocked(playOnDiscord).mockReset();
-    vi.mocked(stopPlayingOnDiscord).mockReset().mockResolvedValue({});
-  });
-
-  afterEach(() => {
-    vi.unstubAllGlobals();
-  });
+  useFakes();
 
   it("shows the backend message instead of failing silently", async () => {
     const user = userEvent.setup();
     vi.mocked(getContent).mockRejectedValue(new Error("Nenhuma URL enviada"));
 
     const { snackbar } = renderPanel();
-    await screen.findByRole("heading", { name: "Primeiro" });
+    await screen.findByRole("article", { name: "Primeiro" });
 
-    await user.click(action("Reproduzir", within(card("Primeiro"))));
+    await user.click(play("Primeiro"));
 
     await waitFor(() =>
-      expect(snackbar.openSnackbar).toHaveBeenCalledWith({
-        message: "Nenhuma URL enviada"
-      })
+      expect(snackbar.openSnackbar).toHaveBeenCalledWith({ message: "Nenhuma URL enviada" })
     );
     expect(FakeAudio.played).toEqual([]);
   });
@@ -367,17 +372,15 @@ describe("MyInstantsPanel when a clip cannot be fetched", () => {
     vi.mocked(getContent).mockRejectedValueOnce(new Error("Nenhuma URL enviada"));
 
     renderPanel();
-    await screen.findByRole("heading", { name: "Primeiro" });
-    await user.click(action("Reproduzir", within(card("Primeiro"))));
+    await screen.findByRole("article", { name: "Primeiro" });
+    await user.click(play("Primeiro"));
 
     vi.mocked(getContent).mockResolvedValue({
       exists: true,
       content: "data:audio/mp3;base64,BBBB"
     });
-    await user.click(action("Reproduzir", within(card("Primeiro"))));
+    await user.click(play("Primeiro"));
 
-    await waitFor(() =>
-      expect(FakeAudio.played).toEqual(["data:audio/mp3;base64,BBBB"])
-    );
+    await waitFor(() => expect(FakeAudio.played).toEqual(["data:audio/mp3;base64,BBBB"]));
   });
 });

@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { useState } from "react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import FavoritesPanel from "./FavoritesPanel";
@@ -28,17 +29,16 @@ class FakeAudio extends EventTarget {
 }
 FakeAudio.played = [];
 
-// Tooltip titles land as aria-label on the <span> MUI clones around each icon
-// button, not on the button. See InstantCard.test.jsx.
-function action(title, scope = screen) {
-  return within(scope.getByLabelText(title)).getByRole("button");
-}
-
-// The cards carry no landmark or test id, so scope by the one thing that is
-// user-visible and unique per card: its <h3>. .MuiPaper-root is the card
-// element itself.
+// Each card is an <article> named after its clip. The body's play control
+// is a button carrying the clip's name; the footer buttons carry their own.
 function card(name) {
-  return screen.getByRole("heading", { name }).closest(".MuiPaper-root");
+  return screen.getByRole("article", { name });
+}
+function play(name) {
+  return within(card(name)).getByRole("button", { name });
+}
+function action(name, label) {
+  return within(card(name)).getByRole("button", { name: label });
 }
 
 const seeded = [
@@ -50,24 +50,43 @@ function storedInstants() {
   return JSON.parse(localStorage.getItem("instants"));
 }
 
-function renderPanel({ search = "", instants = seeded } = {}) {
+// The add form opens from the tools row, which lives in App. A plain button
+// stands in for it so the panel can be driven on its own.
+function renderPanel({ search = "", instants = seeded, healthy = true } = {}) {
   localStorage.setItem("instants", JSON.stringify(instants));
 
-  const snackbar = {
-    openSnackbar: vi.fn(),
-    closeSnackbar: vi.fn()
-  };
+  const snackbar = { openSnackbar: vi.fn(), closeSnackbar: vi.fn() };
+  const props = { onSummary: vi.fn(), onSearchCatalog: vi.fn(), onSwitchServer: vi.fn() };
 
-  const result = render(
-    <SnackbarContext.Provider value={snackbar}>
-      <FavoritesPanel search={search} />
-    </SnackbarContext.Provider>
-  );
+  function Harness() {
+    const [addOpen, setAddOpen] = useState(false);
+    return (
+      <SnackbarContext.Provider value={snackbar}>
+        <button type="button" onClick={() => setAddOpen(true)}>
+          Adicionar
+        </button>
+        <FavoritesPanel
+          search={search}
+          healthy={healthy}
+          serverAddress="localhost:9001"
+          addOpen={addOpen}
+          onAddOpenChange={setAddOpen}
+          {...props}
+        />
+      </SnackbarContext.Provider>
+    );
+  }
 
-  return { ...result, snackbar };
+  const result = render(<Harness />);
+  return { ...result, snackbar, ...props };
 }
 
-describe("FavoritesPanel", () => {
+async function openForm(user) {
+  await user.click(screen.getByRole("button", { name: "Adicionar" }));
+  return within(screen.getByRole("dialog", { name: "Adicionar instant" }));
+}
+
+function useFakeAudio() {
   beforeEach(() => {
     localStorage.clear();
     FakeAudio.played = [];
@@ -81,105 +100,123 @@ describe("FavoritesPanel", () => {
     vi.unstubAllGlobals();
     localStorage.clear();
   });
+}
+
+describe("FavoritesPanel", () => {
+  useFakeAudio();
 
   it("renders a card per instant already in localStorage", () => {
     renderPanel();
 
-    expect(screen.getByRole("heading", { name: "Primeiro" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Segundo" })).toBeInTheDocument();
+    expect(card("Primeiro")).toBeInTheDocument();
+    expect(card("Segundo")).toBeInTheDocument();
   });
 
-  it("prompts for a first instant when nothing is stored", () => {
+  it("reports how many sounds are saved", () => {
+    const { onSummary } = renderPanel();
+
+    expect(onSummary).toHaveBeenLastCalledWith("2 sons salvos");
+  });
+
+  it("reports how many match while searching", () => {
+    const { onSummary } = renderPanel({ search: "prim" });
+
+    expect(onSummary).toHaveBeenLastCalledWith("1 de 2");
+  });
+
+  // First launch: the button is the only thing on screen.
+  it("offers to add a first instant when nothing is stored", async () => {
+    const user = userEvent.setup();
     renderPanel({ instants: [] });
 
-    expect(
-      screen.getByText(/Você não possui instants cadastrados/)
-    ).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Sem sons ainda" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Adicionar um instant" }));
+
+    expect(screen.getByRole("dialog", { name: "Adicionar instant" })).toBeInTheDocument();
   });
 
   it("filters by name, case-insensitively", () => {
     renderPanel({ search: "prim" });
 
-    expect(screen.getByRole("heading", { name: "Primeiro" })).toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: "Segundo" })).toBeNull();
+    expect(card("Primeiro")).toBeInTheDocument();
+    expect(screen.queryByRole("article", { name: "Segundo" })).toBeNull();
   });
 
-  it("echoes the query back when the search matches nothing", () => {
-    renderPanel({ search: "terceiro" });
+  it("carries a search that matches nothing over to the catalogue", async () => {
+    const user = userEvent.setup();
+    const { onSearchCatalog } = renderPanel({ search: "terceiro" });
 
-    expect(screen.getByText(/Nenhum resultado para a pesquisa/)).toHaveTextContent(
-      'Nenhum resultado para a pesquisa "terceiro"'
-    );
-    expect(screen.queryByRole("heading", { name: "Primeiro" })).toBeNull();
+    expect(screen.getByRole("heading", { name: "Nada por aqui" })).toBeInTheDocument();
+    expect(
+      screen.getByText("Nenhum dos seus 2 favoritos bate com “terceiro”. O catálogo do MyInstants é bem maior.")
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("article")).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "Procurar “terceiro” no MyInstants" }));
+
+    expect(onSearchCatalog).toHaveBeenCalledTimes(1);
   });
 
   it("removes an instant from the list and from storage", async () => {
     const user = userEvent.setup();
     renderPanel();
 
-    await user.click(action("Remover", within(card("Primeiro"))));
+    await user.click(action("Primeiro", "Remover"));
 
-    expect(screen.queryByRole("heading", { name: "Primeiro" })).toBeNull();
-    expect(screen.getByRole("heading", { name: "Segundo" })).toBeInTheDocument();
+    expect(screen.queryByRole("article", { name: "Primeiro" })).toBeNull();
+    expect(card("Segundo")).toBeInTheDocument();
     expect(storedInstants()).toEqual([seeded[1]]);
   });
 
   it("saves a new instant through the form and persists it", async () => {
     const user = userEvent.setup();
-    const { container } = renderPanel();
+    renderPanel();
 
-    // The floating add button is an unlabelled Fab, so there is nothing
-    // accessible to query it by — hence the structural selector.
-    await user.click(container.querySelector(".MuiFab-root"));
-
-    const dialog = within(screen.getByRole("dialog"));
+    const dialog = await openForm(user);
     await user.type(dialog.getByLabelText("Nome"), "Terceiro");
     await user.type(dialog.getByLabelText("Link"), "https://www.myinstants.com/c/");
     await user.click(dialog.getByRole("button", { name: "Salvar" }));
 
-    // The dialog fades out rather than unmounting immediately, and while it is
-    // open MUI marks the rest of the page aria-hidden — so the new card is not
-    // in the accessibility tree until the transition finishes.
-    await waitFor(() => {
-      expect(screen.getByRole("heading", { name: "Terceiro" })).toBeInTheDocument();
-    });
-    expect(storedInstants()).toHaveLength(3);
-    expect(storedInstants()[2]).toEqual({
-      name: "Terceiro",
-      url: "https://www.myinstants.com/c/"
-    });
+    await waitFor(() => expect(card("Terceiro")).toBeInTheDocument());
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(storedInstants()).toEqual([
+      ...seeded,
+      { name: "Terceiro", url: "https://www.myinstants.com/c/" }
+    ]);
   });
 
   it("refuses a duplicate url and names the instant that already holds it", async () => {
     const user = userEvent.setup();
-    const { container, snackbar } = renderPanel();
+    const { snackbar } = renderPanel();
 
-    await user.click(container.querySelector(".MuiFab-root"));
-
-    const dialog = within(screen.getByRole("dialog"));
+    const dialog = await openForm(user);
     await user.type(dialog.getByLabelText("Nome"), "Duplicado");
     await user.type(dialog.getByLabelText("Link"), seeded[0].url);
     await user.click(dialog.getByRole("button", { name: "Salvar" }));
 
     expect(snackbar.openSnackbar).toHaveBeenCalledWith({
-      message: "O instant inserido já está cadastrado como Primeiro"
+      message: "Esse instant já está salvo como “Primeiro”"
     });
     expect(storedInstants()).toHaveLength(2);
   });
 
-  it("will not save a name shorter than three characters", async () => {
+  it("keeps Salvar dead until the name has three characters and there is a link", async () => {
     const user = userEvent.setup();
-    const { container } = renderPanel();
+    renderPanel();
 
-    await user.click(container.querySelector(".MuiFab-root"));
+    const dialog = await openForm(user);
+    const save = dialog.getByRole("button", { name: "Salvar" });
 
-    const dialog = within(screen.getByRole("dialog"));
     await user.type(dialog.getByLabelText("Nome"), "ab");
-    await user.type(dialog.getByLabelText("Link"), "https://www.myinstants.com/c/");
-    await user.click(dialog.getByRole("button", { name: "Salvar" }));
+    expect(dialog.getByText("Mínimo 3 caracteres")).toBeInTheDocument();
+    expect(save).toBeDisabled();
 
-    expect(dialog.getAllByText("Mínimo 3 caracteres").length).toBeGreaterThan(0);
-    expect(storedInstants()).toHaveLength(2);
+    await user.type(dialog.getByLabelText("Link"), "https://www.myinstants.com/c/");
+    expect(save).toBeDisabled();
+
+    await user.type(dialog.getByLabelText("Nome"), "c");
+    expect(save).toBeEnabled();
+    expect(dialog.queryByText("Mínimo 3 caracteres")).toBeNull();
   });
 
   it("plays a clip locally with the content the backend hands back", async () => {
@@ -191,7 +228,7 @@ describe("FavoritesPanel", () => {
 
     renderPanel();
 
-    await user.click(action("Reproduzir", within(card("Primeiro"))));
+    await user.click(play("Primeiro"));
 
     await waitFor(() => {
       expect(FakeAudio.played).toEqual(["data:audio/mp3;base64,AAAA"]);
@@ -205,32 +242,27 @@ describe("FavoritesPanel", () => {
 
     const { snackbar } = renderPanel();
 
-    await user.click(action("Reproduzir", within(card("Primeiro"))));
-
+    await user.click(play("Primeiro"));
     await waitFor(() => expect(snackbar.openSnackbar).toHaveBeenCalled());
 
-    const [{ message, action: snackbarAction }] =
-      snackbar.openSnackbar.mock.calls[0];
+    const [{ message, actionLabel, onAction }] = snackbar.openSnackbar.mock.calls[0];
     expect(message).toBe("Parece que o instant não existe mais");
+    expect(actionLabel).toBe("Remover");
 
-    // The snackbar action is a React element the panel builds; render it and
-    // press it to check the removal path it is wired to.
-    render(<SnackbarContext.Provider value={snackbar}>{snackbarAction}</SnackbarContext.Provider>);
-    await user.click(screen.getByRole("button", { name: "REMOVER" }));
+    act(() => onAction());
 
     expect(snackbar.closeSnackbar).toHaveBeenCalled();
     expect(storedInstants()).toEqual([seeded[1]]);
+    await waitFor(() => expect(screen.queryByRole("article", { name: "Primeiro" })).toBeNull());
   });
 
   it("surfaces a Discord playback failure as a snackbar", async () => {
     const user = userEvent.setup();
-    vi.mocked(playOnDiscord).mockRejectedValue(
-      new Error("O instant enviado não foi encontrado")
-    );
+    vi.mocked(playOnDiscord).mockRejectedValue(new Error("O instant enviado não foi encontrado"));
 
     const { snackbar } = renderPanel();
 
-    await user.click(action("Enviar para o Discord", within(card("Primeiro"))));
+    await user.click(action("Primeiro", "Enviar para o Discord"));
 
     await waitFor(() => {
       expect(snackbar.openSnackbar).toHaveBeenCalledWith(
@@ -246,16 +278,38 @@ describe("FavoritesPanel", () => {
 
     renderPanel();
 
-    await user.click(action("Enviar para o Discord", within(card("Primeiro"))));
+    await user.click(action("Primeiro", "Enviar para o Discord"));
 
-    await waitFor(() => {
-      expect(action("Reproduzir", within(card("Primeiro")))).toBeDisabled();
-    });
-    // Every card is locked, not just the one playing.
-    expect(action("Reproduzir", within(card("Segundo")))).toBeDisabled();
+    await waitFor(() => expect(play("Primeiro")).toBeDisabled());
+    expect(within(card("Primeiro")).getByText("No Discord")).toBeInTheDocument();
+    // Every other card steps back, not just its play control.
+    expect(play("Segundo")).toBeDisabled();
+    expect(card("Segundo")).toHaveAttribute("data-dim", "true");
     // Only the playing card can be stopped.
-    expect(action("Parar reprodução", within(card("Primeiro")))).toBeEnabled();
-    expect(action("Parar reprodução", within(card("Segundo")))).toBeDisabled();
+    expect(action("Primeiro", "Parar")).toBeEnabled();
+    expect(action("Segundo", "Parar")).toBeDisabled();
+    // A playing card locks its own remove; the others keep theirs.
+    expect(action("Primeiro", "Remover")).toBeDisabled();
+    expect(action("Segundo", "Remover")).toBeEnabled();
+  });
+
+  it("steps the other cards back while a clip plays locally, but lets it replay", async () => {
+    const user = userEvent.setup();
+    vi.mocked(getContent).mockResolvedValue({
+      exists: true,
+      content: "data:audio/mp3;base64,AAAA"
+    });
+
+    renderPanel();
+
+    await user.click(play("Primeiro"));
+
+    await waitFor(() => expect(card("Primeiro")).toHaveAttribute("data-live", "true"));
+    expect(within(card("Primeiro")).getByText("Tocando")).toBeInTheDocument();
+    expect(play("Primeiro")).toBeEnabled();
+    expect(play("Segundo")).toBeDisabled();
+    expect(action("Primeiro", "Enviar para o Discord")).toBeDisabled();
+    expect(action("Segundo", "Enviar para o Discord")).toBeDisabled();
   });
 
   it("stops Discord playback through the backend", async () => {
@@ -264,33 +318,34 @@ describe("FavoritesPanel", () => {
 
     renderPanel();
 
-    await user.click(action("Enviar para o Discord", within(card("Primeiro"))));
-    await waitFor(() =>
-      expect(action("Parar reprodução", within(card("Primeiro")))).toBeEnabled()
-    );
+    await user.click(action("Primeiro", "Enviar para o Discord"));
+    await waitFor(() => expect(action("Primeiro", "Parar")).toBeEnabled());
 
-    await user.click(action("Parar reprodução", within(card("Primeiro"))));
+    await user.click(action("Primeiro", "Parar"));
 
     expect(stopPlayingOnDiscord).toHaveBeenCalledTimes(1);
-    await waitFor(() =>
-      expect(action("Reproduzir", within(card("Primeiro")))).toBeEnabled()
-    );
+    await waitFor(() => expect(play("Primeiro")).toBeEnabled());
+  });
+
+  // Health is passive: the app only learns the server is back when a click
+  // gets an answer. So offline the grid steps back visually but every button
+  // stays live — disabling playback here would lock the user out.
+  it("keeps playback clickable while the server is silent, with a way to switch", async () => {
+    const user = userEvent.setup();
+    const { onSwitchServer } = renderPanel({ healthy: false });
+
+    expect(screen.getByRole("status")).toHaveTextContent("localhost:9001 não está respondendo");
+    expect(play("Primeiro")).toBeEnabled();
+    expect(action("Primeiro", "Enviar para o Discord")).toBeEnabled();
+
+    await user.click(screen.getByRole("button", { name: "Trocar" }));
+
+    expect(onSwitchServer).toHaveBeenCalledTimes(1);
   });
 });
 
 describe("FavoritesPanel when a clip cannot be fetched", () => {
-  beforeEach(() => {
-    localStorage.clear();
-    FakeAudio.played = [];
-    vi.stubGlobal("Audio", FakeAudio);
-    vi.mocked(getContent).mockReset();
-    vi.mocked(playOnDiscord).mockReset();
-    vi.mocked(stopPlayingOnDiscord).mockReset().mockResolvedValue({});
-  });
-
-  afterEach(() => {
-    vi.unstubAllGlobals();
-  });
+  useFakeAudio();
 
   it("shows the backend message rather than failing silently", async () => {
     const user = userEvent.setup();
@@ -298,39 +353,35 @@ describe("FavoritesPanel when a clip cannot be fetched", () => {
 
     const { snackbar } = renderPanel();
 
-    await user.click(action("Reproduzir", within(card("Primeiro"))));
+    await user.click(play("Primeiro"));
 
     await waitFor(() =>
-      expect(snackbar.openSnackbar).toHaveBeenCalledWith({
-        message: "Nenhuma URL enviada"
-      })
+      expect(snackbar.openSnackbar).toHaveBeenCalledWith({ message: "Nenhuma URL enviada" })
     );
     expect(FakeAudio.played).toEqual([]);
   });
 
-  it("keeps the remove-action snackbar for an instant that is merely gone", async () => {
+  it("keeps the remove action for an instant that is merely gone", async () => {
     const user = userEvent.setup();
     vi.mocked(getContent).mockResolvedValue({ exists: false });
 
     const { snackbar } = renderPanel();
 
-    await user.click(action("Reproduzir", within(card("Primeiro"))));
+    await user.click(play("Primeiro"));
 
     await waitFor(() => expect(snackbar.openSnackbar).toHaveBeenCalled());
     const call = snackbar.openSnackbar.mock.calls[0][0];
     expect(call.message).toBe("Parece que o instant não existe mais");
-    expect(call.action).toBeTruthy();
+    expect(typeof call.onAction).toBe("function");
   });
 
   it("carries the backend message out of a failed discord send", async () => {
     const user = userEvent.setup();
-    vi.mocked(playOnDiscord).mockRejectedValue(
-      new Error("O instant enviado não foi encontrado")
-    );
+    vi.mocked(playOnDiscord).mockRejectedValue(new Error("O instant enviado não foi encontrado"));
 
     const { snackbar } = renderPanel();
 
-    await user.click(action("Enviar para o Discord", within(card("Primeiro"))));
+    await user.click(action("Primeiro", "Enviar para o Discord"));
 
     await waitFor(() => expect(snackbar.openSnackbar).toHaveBeenCalled());
     expect(snackbar.openSnackbar.mock.calls[0][0].message).toBe(
