@@ -1,0 +1,73 @@
+/* App-wide ground rules. Everything here reads tokens.css and names no
+ * colour of its own. */
+
+:root {
+  /* Tells the UA which palette native controls — scrollbars, form widgets,
+   * the overscroll gutter — should use. Without it a dark app still gets
+   * light scrollbars and a white rubber-band background on macOS. */
+  color-scheme: light;
+}
+:root[data-mode="dark"] {
+  color-scheme: dark;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: "Archivo Variable", "Archivo", ui-sans-serif, -apple-system,
+    BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 13.5px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  height: 100%;
+}
+
+/* The UA sets Arial on form controls and paints <button> with a grey face.
+ * Every control here supplies its own, so transparent is the only correct
+ * default. */
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+}
+
+button {
+  background-color: transparent;
+}
+
+/* useColorMode / useTheme set this on <html> for the frames around a
+ * data-mode or data-theme write, so the window repaints as one instead of
+ * shimmering at each element's own duration. */
+html[data-theme-switching] *,
+html[data-theme-switching] *::before,
+html[data-theme-switching] *::after {
+  transition: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

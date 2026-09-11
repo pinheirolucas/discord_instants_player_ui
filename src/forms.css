@@ -1,0 +1,24 @@
+.drop-root {
+  outline: none;
+  border-radius: 14px;
+}
+.drop-root:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.opts {
+  margin-top: 16px;
+  padding-top: 15px;
+  border-top: 1px solid var(--line);
+}
+
+.q {
+  font-size: 12.5px;
+  font-weight: 650;
+  margin: 0 0 10px;
+}
+.q + .opt,
+.opt + .q {
+  margin-top: 14px;
+}

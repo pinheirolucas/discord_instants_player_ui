@@ -7,8 +7,14 @@
 # Electron itself needs no entry: from v44 it ships no install script at all and
 # downloads its platform binary lazily, on the first `electron .`.
 #
+# esbuild reaches this tree twice, through Vite and through tsup. From 0.25 it
+# ships its platform binary as an optional dependency and its install script is
+# only a verification pass, so blocking it costs nothing: `esbuild --version`
+# and `tsup` both work with it off.
+#
 # msw's postinstall only copies its browser service worker into a public
 # directory; the tests here use msw/node (setupServer), which needs no worker.
 allowBuilds:
   electron-winstaller: false
+  esbuild: false
   msw: false
