@@ -6,6 +6,7 @@ import type { AxiosResponse } from "axios";
 import MyInstantsPanel from "./MyInstantsPanel";
 import SnackbarContext from "./SnackbarContext";
 import { getContent, getMyInstants, playOnDiscord, stopPlayingOnDiscord } from "./service";
+import type { Region } from "./regions";
 import type { Listing } from "./service";
 import type { Instant } from "./storage";
 
@@ -61,18 +62,20 @@ const page2 = {
 
 function renderPanel({
   search = "",
+  region = "br",
   favorites = [],
   healthy = true
-}: { search?: string; favorites?: Instant[]; healthy?: boolean } = {}) {
+}: { search?: string; region?: Region; favorites?: Instant[]; healthy?: boolean } = {}) {
   localStorage.setItem("instants", JSON.stringify(favorites));
 
   const snackbar = { openSnackbar: vi.fn(), closeSnackbar: vi.fn() };
   const props = { onSummary: vi.fn(), onClearSearch: vi.fn(), onSwitchServer: vi.fn() };
 
-  const ui = (nextSearch: string) => (
+  const ui = (next: { search: string; region: Region }) => (
     <SnackbarContext.Provider value={snackbar}>
       <MyInstantsPanel
-        search={nextSearch}
+        search={next.search}
+        region={next.region}
         healthy={healthy}
         serverAddress="localhost:9001"
         {...props}
@@ -80,12 +83,20 @@ function renderPanel({
     </SnackbarContext.Provider>
   );
 
-  const result = render(ui(search));
+  // Tracked so changing one of the two keeps the other.
+  let current = { search, region };
+  const result = render(ui(current));
+  const rerenderWith = (next: Partial<typeof current>) => {
+    current = { ...current, ...next };
+    result.rerender(ui(current));
+  };
+
   return {
     ...result,
     snackbar,
     ...props,
-    rerenderWithSearch: (nextSearch: string) => result.rerender(ui(nextSearch))
+    rerenderWithSearch: (nextSearch: string) => rerenderWith({ search: nextSearch }),
+    rerenderWithRegion: (nextRegion: Region) => rerenderWith({ region: nextRegion })
   };
 }
 
@@ -115,7 +126,7 @@ describe("MyInstantsPanel", () => {
 
     expect(await screen.findByRole("article", { name: "Primeiro" })).toBeInTheDocument();
     expect(card("Segundo")).toBeInTheDocument();
-    expect(getMyInstants).toHaveBeenCalledWith(1, "");
+    expect(getMyInstants).toHaveBeenCalledWith(1, "", "br");
   });
 
   // The listing scrapes myinstants.com server-side and is slow; the skeleton
@@ -145,7 +156,7 @@ describe("MyInstantsPanel", () => {
 
     expect(await screen.findByRole("article", { name: "Terceiro" })).toBeInTheDocument();
     expect(screen.queryByRole("article", { name: "Primeiro" })).toBeNull();
-    expect(getMyInstants).toHaveBeenLastCalledWith(1, "terceiro");
+    expect(getMyInstants).toHaveBeenLastCalledWith(1, "terceiro", "br");
   });
 
   // Used to be asserted as a known bug: the page count was only ever learned
@@ -167,7 +178,7 @@ describe("MyInstantsPanel", () => {
 
     expect(await screen.findByRole("article", { name: "Terceiro" })).toBeInTheDocument();
     expect(card("Primeiro")).toBeInTheDocument();
-    expect(getMyInstants).toHaveBeenLastCalledWith(2, "");
+    expect(getMyInstants).toHaveBeenLastCalledWith(2, "", "br");
   });
 
   it("drops duplicates when a page repeats an instant", async () => {
@@ -206,7 +217,46 @@ describe("MyInstantsPanel", () => {
 
     rerenderWithSearch("boo");
 
-    await waitFor(() => expect(getMyInstants).toHaveBeenLastCalledWith(1, "boo"));
+    await waitFor(() => expect(getMyInstants).toHaveBeenLastCalledWith(1, "boo", "br"));
+  });
+
+  it("refetches a new region from page 1 even after paging, replacing the list", async () => {
+    const user = userEvent.setup();
+    const { rerenderWithRegion } = renderPanel();
+    await screen.findByRole("article", { name: "Primeiro" });
+
+    vi.mocked(getMyInstants).mockResolvedValue(page2);
+    await user.click(screen.getByRole("button", { name: "Carregar mais" }));
+    await screen.findByRole("article", { name: "Terceiro" });
+
+    vi.mocked(getMyInstants).mockResolvedValue({
+      instants: [{ name: "Quarto", url: "https://www.myinstants.com/d/" }],
+      pages: 2
+    });
+    rerenderWithRegion("pt");
+
+    expect(await screen.findByRole("article", { name: "Quarto" })).toBeInTheDocument();
+    expect(getMyInstants).toHaveBeenLastCalledWith(1, "", "pt");
+    expect(screen.queryByRole("article", { name: "Primeiro" })).toBeNull();
+    expect(screen.queryByRole("article", { name: "Terceiro" })).toBeNull();
+  });
+
+  it("keeps the search when only the region changes", async () => {
+    const { rerenderWithRegion } = renderPanel({ search: "vine" });
+    await screen.findByRole("article", { name: "Primeiro" });
+
+    rerenderWithRegion("us");
+
+    await waitFor(() => expect(getMyInstants).toHaveBeenLastCalledWith(1, "vine", "us"));
+  });
+
+  it("does not refetch when rerendered with the same region", async () => {
+    const { rerenderWithRegion } = renderPanel();
+    await screen.findByRole("article", { name: "Primeiro" });
+
+    rerenderWithRegion("br");
+
+    expect(getMyInstants).toHaveBeenCalledTimes(1);
   });
 
   it("favourites an instant, and says so", async () => {

@@ -355,7 +355,7 @@ describe("shell", () => {
     await userEvent.click(screen.getByRole("tab", { name: "MyInstants" }));
 
     expect(screen.getByRole("heading", { level: 1, name: "MyInstants" })).toBeInTheDocument();
-    await waitFor(() => expect(getMyInstants).toHaveBeenCalledWith(1, ""));
+    await waitFor(() => expect(getMyInstants).toHaveBeenCalledWith(1, "", "br"));
   });
 
   it("opens the add form from the tools row", async () => {
@@ -378,7 +378,7 @@ describe("shell", () => {
     await user.click(await screen.findByRole("button", { name: "Procurar “xuxa” no MyInstants" }));
 
     expect(screen.getByRole("heading", { level: 1, name: "MyInstants" })).toBeInTheDocument();
-    await waitFor(() => expect(getMyInstants).toHaveBeenLastCalledWith(1, "xuxa"));
+    await waitFor(() => expect(getMyInstants).toHaveBeenLastCalledWith(1, "xuxa", "br"));
     // The query survives the switch, rather than making them retype it.
     expect(searchBox()).toHaveValue("xuxa");
   });
@@ -483,6 +483,63 @@ describe("shell", () => {
     render(<App />);
 
     await waitFor(() => expect(document.documentElement.dataset.theme).toBe("esmalte"));
+  });
+});
+
+describe("catalogue region", () => {
+  beforeEach(reset);
+
+  async function openMyInstants() {
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("tab", { name: "MyInstants" }));
+    return user;
+  }
+
+  it("browses Brazil by default, and offers the region only on MyInstants", async () => {
+    render(<App />);
+    expect(screen.queryByRole("button", { name: "Brasil" })).toBeNull();
+
+    await openMyInstants();
+
+    expect(screen.getByRole("button", { name: "Brasil" })).toBeInTheDocument();
+    await waitFor(() => expect(getMyInstants).toHaveBeenCalledWith(1, "", "br"));
+  });
+
+  it("refetches the catalogue for a picked region and remembers it", async () => {
+    render(<App />);
+    const user = await openMyInstants();
+
+    await user.click(screen.getByRole("button", { name: "Brasil" }));
+    await user.click(screen.getByRole("menuitem", { name: "Portugal" }));
+
+    await waitFor(() => expect(getMyInstants).toHaveBeenLastCalledWith(1, "", "pt"));
+    expect(screen.getByRole("button", { name: "Portugal" })).toBeInTheDocument();
+    expect(JSON.parse(localStorage.getItem("region") ?? "null")).toBe("pt");
+  });
+
+  it("restores the stored region on the next launch", async () => {
+    localStorage.setItem("region", JSON.stringify("us"));
+    render(<App />);
+
+    await openMyInstants();
+
+    expect(screen.getByRole("button", { name: "Estados Unidos" })).toBeInTheDocument();
+    await waitFor(() => expect(getMyInstants).toHaveBeenCalledWith(1, "", "us"));
+  });
+
+  it.each([
+    ["an unknown code", JSON.stringify("zz")],
+    ["an uppercase code", JSON.stringify("PT")],
+    ["not a string", JSON.stringify(42)],
+    ["corrupt JSON", "{not json"]
+  ])("falls back to Brazil when the stored region is %s", async (_, raw) => {
+    localStorage.setItem("region", raw);
+    render(<App />);
+
+    await openMyInstants();
+
+    expect(screen.getByRole("button", { name: "Brasil" })).toBeInTheDocument();
+    await waitFor(() => expect(getMyInstants).toHaveBeenCalledWith(1, "", "br"));
   });
 });
 

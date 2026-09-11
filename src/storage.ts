@@ -1,4 +1,5 @@
 import { createPersistedState } from "./lib/persisted";
+import type { Region } from "./regions";
 import type { ColorMode, ThemeId } from "./themes";
 
 export interface Instant {
@@ -17,3 +18,7 @@ export const useThemeState = createPersistedState<ThemeId>("theme");
 export const useColorModeState = createPersistedState<ColorMode>("colorMode");
 
 export const useSelectedServer = createPersistedState<string | null>("selectedServer");
+
+/** The MyInstants catalogue's country. Read it through useRegion, which
+ *  falls back to the default when the stored value is not a known region. */
+export const useRegionState = createPersistedState<Region>("region");
