@@ -38,6 +38,10 @@
           (bridge && bridge.os) ||
           (/mac|iphone|ipad/i.test(ua) ? "mac" : /windows|win32|win64/i.test(ua) ? "win" : "linux");
 
+        // Whether Electron merged the window into the OS bar. Stamped here
+        // too, so the hero's spacing is right from the first frame.
+        r.dataset.chrome = bridge && bridge.chrome === "custom" ? "custom" : "native";
+
         // One-shot migration. "theme" used to hold "light" | "dark"; it now
         // holds the palette, and the light/dark choice lives in "colorMode".
         // Without this an existing install boots with a palette named "dark",

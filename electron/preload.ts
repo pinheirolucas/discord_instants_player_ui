@@ -1,6 +1,8 @@
 import { contextBridge, ipcRenderer } from "electron";
 import { discoveryRefreshChannel, discoveryServersChannel } from "./discovery";
 import type { Server } from "./discovery";
+import { chromeChannel, chromeKind } from "./chrome";
+import type { ChromeColors } from "./chrome";
 
 // The preload runs sandboxed, so it cannot require a sibling module at
 // runtime — which is why these channel names used to be spelled out here
@@ -43,4 +45,11 @@ contextBridge.exposeInMainWorld("instantsDiscovery", {
 const os =
   process.platform === "darwin" ? "mac" : process.platform === "win32" ? "win" : "linux";
 
-contextBridge.exposeInMainWorld("instantsPlatform", { os });
+contextBridge.exposeInMainWorld("instantsPlatform", {
+  os,
+  // Whether the window is merged into the OS title bar, so the renderer
+  // knows to draw its own drag row. Read synchronously by index.html's guard.
+  chrome: chromeKind(process.platform),
+  // Validated again in the main process; the renderer is not trusted.
+  setChrome: (colors: ChromeColors) => ipcRenderer.send(chromeChannel, colors)
+});

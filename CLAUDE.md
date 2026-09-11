@@ -104,6 +104,31 @@ the app opens. jsdom ships no `matchMedia`, so `src/setupTests.js` stubs it.
 The palette switch is fully wired and persisted but **deliberately not exposed**: there is no
 picker in the UI, so every install runs on `esmalte`.
 
+## Native window chrome
+
+On macOS and Windows the window merges into the OS title bar; Linux keeps the window manager's bar,
+which is what the design draws there. The per-platform `BrowserWindow` options live in the pure
+`electron/chrome.ts` — unit-tested from `src/chrome.test.ts`, inlined into the preload like
+`discovery.ts`: macOS `hiddenInset` with the real traffic lights at `{ x: 18, y: 15 }` (12px lights
+centred in the 42px row), Windows `hidden` with a 40px `titleBarOverlay` so the OS draws the real
+caption buttons. The renderer draws only a drag row, `TitleBar`, beneath them, and only when the
+preload reports `chrome: "custom"`. `data-chrome` is stamped pre-paint so the hero's spacing is right
+from the first frame. The design canvas draws fake traffic lights and caption buttons because a static
+artboard has no OS to ask — do not bring them back.
+
+Windows' caption buttons do not follow CSS. `useNativeChrome` sends the resolved `--bg`/`--fg` over
+`chrome:set` whenever the palette or mode changes, and the main process calls `setTitleBarOverlay` and
+`setBackgroundColor` — after checking the sender is the main window and the payload is exactly two
+opaque hex colours (`isChromeColors`), since the renderer is untrusted. Those OS APIs will not parse
+oklch, so `toHex` paints one pixel and reads it back, rather than keeping a second hex table that could
+drift from `tokens.css`. The window is created `show: false` and revealed on `ready-to-show`, after
+the boot guard has stamped the palette; `defaultChromeColors` covers the frames before that, and
+`did-fail-load` shows it too, because `ready-to-show` never fires for a page that failed to load.
+
+`pnpm start` runs under the same userData directory as an installed release — both are named after
+`package.json`'s `name` — so a dev run reads and writes the real favourites, and the boot guard's
+theme migration rewrites the real stored `theme` key.
+
 ## Components and styleguide
 
 `src/components/` holds the primitives — Button/IconButton, Segmented, Field, SearchField, Switch,

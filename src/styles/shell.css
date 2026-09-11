@@ -24,6 +24,12 @@
   letter-spacing: -0.026em;
   line-height: 1;
 }
+/* Under a merged title bar the hero sits right beneath the drag row; on
+ * Linux and in a browser tab it needs room of its own. */
+[data-chrome="custom"] .hero {
+  padding-top: 4px;
+}
+
 .hero .count {
   font-size: 12.5px;
   font-weight: 600;

@@ -4,11 +4,14 @@ import { Button, IconButton } from "./components/Button";
 import { Menu, MenuItem, MenuLabel, MenuSeparator } from "./components/Menu";
 import { SearchField } from "./components/SearchField";
 import { Segmented, SegmentedPanel, SegmentedRoot } from "./components/Segmented";
+import { TitleBar } from "./components/TitleBar";
 import { Toast, ToastProvider } from "./components/Toast";
 import { TooltipProvider } from "./components/Tooltip";
 import FavoritesPanel from "./FavoritesPanel";
 import { useColorMode } from "./hooks/useColorMode";
-import { findShortcutLabel, isFindShortcut, usePlatform } from "./hooks/usePlatform";
+import { useNativeChrome } from "./hooks/useNativeChrome";
+import { findShortcutLabel, isFindShortcut, useChromeKind, usePlatform } from "./hooks/usePlatform";
+import { useStamp } from "./hooks/useStamp";
 import { useTheme } from "./hooks/useTheme";
 import { CheckIcon, MoreIcon, PlusIcon } from "./icons";
 import ImportForm from "./ImportForm";
@@ -54,13 +57,22 @@ interface ToastState extends SnackbarOptions {
 export default function App() {
   // auto by default: follows the OS until the user picks a side in the
   // overflow menu, and then stays put.
-  const { mode, setMode } = useColorMode();
+  const { mode, setMode, resolved } = useColorMode();
 
   // Stamps data-theme. The palette is wired and persisted but has no control
   // in the UI yet, so every install runs on the default.
-  useTheme();
+  const { theme } = useTheme();
 
   const os = usePlatform();
+  const chrome = useChromeKind();
+
+  // index.html stamps both pre-paint from the bridge; these keep them in
+  // step with the dev overrides (?os=, ?chrome=), which it does not read.
+  useStamp("os", os);
+  useStamp("chrome", chrome);
+
+  // After the mode and theme stamps above, so it reads the new palette.
+  useNativeChrome(resolved, theme);
 
   const [tab, setTab] = useState<Tab>("favorites");
   const [summary, setSummary] = useState("");
@@ -208,6 +220,7 @@ export default function App() {
       <TooltipProvider>
         <ToastProvider>
           <SegmentedRoot value={tab} onChange={setTab} className="app">
+            {chrome === "custom" && <TitleBar os={os} />}
             <header className="hero">
               <h1>{tab === "favorites" ? "Favoritos" : "MyInstants"}</h1>
               <span className="count" aria-live="polite">

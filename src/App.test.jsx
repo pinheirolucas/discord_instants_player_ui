@@ -409,3 +409,48 @@ describe("shell", () => {
     await waitFor(() => expect(document.documentElement.dataset.theme).toBe("esmalte"));
   });
 });
+
+describe("native window chrome", () => {
+  beforeEach(() => {
+    reset();
+    delete document.documentElement.dataset.os;
+    delete document.documentElement.dataset.chrome;
+  });
+
+  afterEach(() => {
+    delete window.instantsPlatform;
+  });
+
+  it("draws its drag row when Electron merged the window into the macOS bar", () => {
+    window.instantsPlatform = { os: "mac", chrome: "custom", setChrome: vi.fn() };
+
+    const { container } = render(<App />);
+
+    expect(container.querySelector(".tb")).not.toBeNull();
+    expect(document.documentElement.dataset.os).toBe("mac");
+    expect(document.documentElement.dataset.chrome).toBe("custom");
+  });
+
+  it("names the app in the Windows bar, beside the OS caption buttons", () => {
+    window.instantsPlatform = { os: "win", chrome: "custom", setChrome: vi.fn() };
+
+    const { container } = render(<App />);
+
+    expect(container.querySelector(".tb")).toHaveTextContent("Discord Instants Player");
+  });
+
+  it("leaves the bar to the window manager on Linux", () => {
+    window.instantsPlatform = { os: "linux", chrome: "native", setChrome: vi.fn() };
+
+    const { container } = render(<App />);
+
+    expect(container.querySelector(".tb")).toBeNull();
+    expect(document.documentElement.dataset.chrome).toBe("native");
+  });
+
+  it("draws no title bar in a plain browser tab", () => {
+    const { container } = render(<App />);
+
+    expect(container.querySelector(".tb")).toBeNull();
+  });
+});
