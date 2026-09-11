@@ -1,0 +1,13 @@
+<!-- The browser tab, for the plain web build. The design canvas's own tile:
+     22.4% corner, full bleed. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs><clipPath id="tile"><rect width="128" height="128" rx="28.67"/></clipPath></defs>
+  <g clip-path="url(#tile)">
+    <rect width="128" height="128" fill="#0d66b4"/>
+    <rect x="24" y="38" width="80" height="52" rx="12" fill="#13181d"/>
+    <circle cx="50" cy="64" r="12" fill="#d89e09"/>
+    <circle cx="50" cy="64" r="4" fill="#13181d"/>
+    <circle cx="78" cy="64" r="12" fill="#d89e09"/>
+    <circle cx="78" cy="64" r="4" fill="#13181d"/>
+  </g>
+</svg>

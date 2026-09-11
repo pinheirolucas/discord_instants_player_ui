@@ -122,6 +122,11 @@ function createWindow(): void {
     show: false,
     backgroundColor: colors.color,
     ...windowChromeFor(process.platform, colors),
+    // Linux only. macOS and Windows take the app icon from the bundle
+    // (resources/icon.icns, icon.ico); a Linux window has no bundle to read
+    // one from, so the running window is handed it here. public/icon.png is
+    // copied verbatim into build/, next to this file.
+    ...(process.platform === "linux" ? { icon: path.join(__dirname, "icon.png") } : {}),
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,

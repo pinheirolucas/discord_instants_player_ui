@@ -1,0 +1,18 @@
+<!-- macOS. Big Sur and later do not mask app icons, so the squircle is baked
+     in, and the art is inset to Apple's grid: an 824px body at 100px on a
+     1024px canvas, corner radius 185. Feeds resources/icon.icns. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <clipPath id="squircle"><rect x="100" y="100" width="824" height="824" rx="185"/></clipPath>
+  </defs>
+  <g clip-path="url(#squircle)">
+    <g transform="translate(100 100) scale(6.4375)">
+    <rect width="128" height="128" fill="#0d66b4"/>
+    <rect x="24" y="38" width="80" height="52" rx="12" fill="#13181d"/>
+    <circle cx="50" cy="64" r="12" fill="#d89e09"/>
+    <circle cx="50" cy="64" r="4" fill="#13181d"/>
+    <circle cx="78" cy="64" r="12" fill="#d89e09"/>
+    <circle cx="78" cy="64" r="4" fill="#13181d"/>
+    </g>
+  </g>
+</svg>

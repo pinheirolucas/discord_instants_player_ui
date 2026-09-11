@@ -129,6 +129,33 @@ the boot guard has stamped the palette; `defaultChromeColors` covers the frames 
 `package.json`'s `name` — so a dev run reads and writes the real favourites, and the boot guard's
 theme migration rewrites the real stored `theme` key.
 
+## App icon
+
+Fita, the design canvas's default mark: an ink cassette with mustard reels on enamel blue, drawn from
+Esmalte's exact values. It deliberately does not follow the palette picker — it is the app's identity in
+a dock, not a surface inside it. The masters are SVGs in `assets/icon/`, one per frame, because the
+platforms disagree about it: `fita-mac.svg` bakes in the squircle and Apple's 824-on-1024 inset (macOS
+no longer masks app icons), `fita-win.svg` is an 8% tile, full bleed, `fita-linux.svg` a circle, and
+`favicon.svg` the canvas's 22.4% tile. `fita-mono.svg` is a single-ink cut for a future menu-bar
+template image and is wired to nothing.
+
+`pnpm icons` (`scripts/build-icons.mjs`) renders every size from the vector *at that size* with sharp
+and packs them with the two small writers in `scripts/icon-formats.mjs`. There is no packing library on
+purpose: those resample every size from one big bitmap, and Fita is weakest at 16px, where its reels
+close up. The output is committed, so `pnpm build` never needs sharp — rerun `pnpm icons` after touching
+a master. The `.icns` chunk types are exactly the set Apple's own `iconutil` writes: raw ARGB (`ic04`, `ic05`)
+at 16 and 32, PNG above. Under `iconutil`, PNG stored as the older `icp4`/`icp5` types reads back at the
+right *size* but decodes as pixel noise, and `icp6` reads back as 48px. To verify a change to the packer,
+compare pixels, not sizes — and pick the right tool per rung. The PNG rungs round-trip losslessly through
+`iconutil -c iconset`. The ARGB rungs do not: `iconutil`'s PNG export of `ic04`/`ic05` is lossy even for
+Apple's own files, so decode those planes directly (the PackBits decoder in
+`scripts/icon-formats.test.mjs`) and compare them with a fresh render of the master.
+
+electron-builder's `directories.buildResources` is `resources/`, not its default `build/`: `build/` is
+Vite's `outDir` and is emptied by every `react-build`, so icons there would vanish between the two halves
+of `pnpm build`. macOS and Windows read the app icon from the bundle; a Linux window has none, so
+`main.ts` passes `public/icon.png` (copied into `build/`) as the window icon on Linux only.
+
 ## Components and styleguide
 
 `src/components/` holds the primitives — Button/IconButton, Segmented, Field, SearchField, Switch,

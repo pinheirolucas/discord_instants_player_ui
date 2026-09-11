@@ -8,6 +8,9 @@
     "publish": {
       "provider": "github"
     },
+    "directories": {
+      "buildResources": "resources"
+    },
     "files": [
       "build/**/*",
       "node_modules/**/*",
@@ -15,6 +18,15 @@
     ],
     "extraMetadata": {
       "main": "build/electron.js"
+    },
+    "mac": {
+      "icon": "resources/icon.icns"
+    },
+    "win": {
+      "icon": "resources/icon.ico"
+    },
+    "linux": {
+      "icon": "resources/icons"
     }
   },
   "private": true,
@@ -46,7 +58,8 @@
     "release": "pnpm react-build && pnpm electron-compile && electron-builder --publish=always",
     "build": "pnpm react-build && pnpm electron-compile && pnpm electron-build",
     "start": "concurrently \"pnpm react-start\" \"pnpm electron-watch\" \"wait-on http://localhost:3000 build/electron.js && electron .\"",
-    "storybook": "storybook dev -p 6006 --no-open"
+    "storybook": "storybook dev -p 6006 --no-open",
+    "icons": "node scripts/build-icons.mjs"
   },
   "browserslist": {
     "production": [
@@ -78,6 +91,7 @@
     "electron-builder": "^26.15.3",
     "jsdom": "^30.0.1",
     "msw": "2.15.0",
+    "sharp": "^0.35.4",
     "storybook": "^10.6.0",
     "tsup": "^8.5.0",
     "typescript": "^5.9.3",
