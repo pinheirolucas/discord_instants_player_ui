@@ -1,7 +1,7 @@
-// The eight palettes. The mechanism to switch between them is built and
-// persisted; nothing in the UI exposes it yet, so every install runs on
-// DEFAULT_THEME. Adding a ninth means answering it twice over in
-// tokens.css — once light, once dark — plus six palette slots.
+// The eight palettes, picked in the Aparência shell; an install that never
+// picks runs on DEFAULT_THEME. Adding a ninth means answering it twice over
+// in tokens.css — once light, once dark — plus six palette slots, and the
+// dock's filmstrip grows a column.
 
 export const THEMES = [
   { id: "esmalte", name: "Esmalte", desc: "Azul profundo e mostarda de placa antiga" },

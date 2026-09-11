@@ -59,7 +59,9 @@
   border-radius: var(--rctl);
   cursor: pointer;
 }
-.seg button[data-state="active"] { background: var(--accent); color: var(--onAccent); }
+/* active: a tab (Segmented). checked: a radio (SegmentedChoice). */
+.seg button[data-state="active"],
+.seg button[data-state="checked"] { background: var(--accent); color: var(--onAccent); }
 
 /* --- icon button --------------------------------------------------------- */
 .ibtn {

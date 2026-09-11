@@ -10,14 +10,29 @@
  * [data-theme] and [data-mode] are stamped on <html> pre-paint by the
  * guard in index.html and kept in sync by hooks/useTheme.ts. They are
  * written as bare attribute selectors rather than :root[...] so the same
- * sheet can theme a subtree — which is what Storybook's decorator and
- * the swatch wall in the plan both rely on.
+ * sheet can theme a subtree — which is what Storybook's decorator and the
+ * Aparência dock's swatches rely on.
+ *
+ * Every token is declared ON the themed element, slot fills included
+ * (--p0-fill … --p5-ink), and .p0–.p5 only read them. That is what makes a
+ * nested theme resolve to its own palette: inheritance picks the nearest
+ * themed ancestor. Written as [data-theme="x"] .p0 { --fill: … } instead,
+ * every theme's rule would match a card inside a swatch inside a page of
+ * another theme, and the one later in this file would win.
  */
 
 /* ---- platform layer: control geometry, per OS ---------------------- */
 [data-os="mac"]   { --rctl: 999px; --hctl: 40px; --rpad: 20px; --rbtn: 999px; }
 [data-os="win"]   { --rctl: 4px;   --hctl: 32px; --rpad: 8px;  --rbtn: 4px; }
 [data-os="linux"] { --rctl: 6px;   --hctl: 34px; --rpad: 12px; --rbtn: 8px; }
+
+/* ---- card slots: read from the nearest themed element --------------- */
+.p0 { --fill: var(--p0-fill); --ink: var(--p0-ink); }
+.p1 { --fill: var(--p1-fill); --ink: var(--p1-ink); }
+.p2 { --fill: var(--p2-fill); --ink: var(--p2-ink); }
+.p3 { --fill: var(--p3-fill); --ink: var(--p3-ink); }
+.p4 { --fill: var(--p4-fill); --ink: var(--p4-ink); }
+.p5 { --fill: var(--p5-fill); --ink: var(--p5-ink); }
 
 /* ---- esmalte — azul profundo e mostarda de placa antiga (default) --- */
 [data-theme="esmalte"][data-mode="dark"] {
@@ -32,12 +47,14 @@
   --muted: oklch(0.478 0.016 250); --accent: oklch(0.505 0.145 252);
   --onAccent: oklch(0.985 0.008 252); --ok: oklch(0.52 0.11 145);
 }
-[data-theme="esmalte"] .p0 { --fill: oklch(0.505 0.145 252); --ink: oklch(0.980 0.010 252); }
-[data-theme="esmalte"] .p1 { --fill: oklch(0.495 0.155 25);  --ink: oklch(0.980 0.010 25); }
-[data-theme="esmalte"] .p2 { --fill: oklch(0.520 0.105 158); --ink: oklch(0.980 0.010 158); }
-[data-theme="esmalte"] .p3 { --fill: oklch(0.735 0.150 82);  --ink: oklch(0.195 0.045 82); }
-[data-theme="esmalte"] .p4 { --fill: oklch(0.575 0.100 200); --ink: oklch(0.980 0.010 200); }
-[data-theme="esmalte"] .p5 { --fill: oklch(0.495 0.135 332); --ink: oklch(0.980 0.010 332); }
+[data-theme="esmalte"] {
+  --p0-fill: oklch(0.505 0.145 252); --p0-ink: oklch(0.980 0.010 252);
+  --p1-fill: oklch(0.495 0.155 25); --p1-ink: oklch(0.980 0.010 25);
+  --p2-fill: oklch(0.520 0.105 158); --p2-ink: oklch(0.980 0.010 158);
+  --p3-fill: oklch(0.735 0.150 82); --p3-ink: oklch(0.195 0.045 82);
+  --p4-fill: oklch(0.575 0.100 200); --p4-ink: oklch(0.980 0.010 200);
+  --p5-fill: oklch(0.495 0.135 332); --p5-ink: oklch(0.980 0.010 332);
+}
 
 /* ---- frevo — fluorescentes de sombrinha de frevo -------------------- */
 [data-theme="frevo"][data-mode="dark"] {
@@ -52,12 +69,14 @@
   --muted: oklch(0.482 0.016 60); --accent: oklch(0.582 0.200 8);
   --onAccent: oklch(0.985 0.010 8); --ok: oklch(0.52 0.11 145);
 }
-[data-theme="frevo"] .p0 { --fill: oklch(0.680 0.230 5);   --ink: oklch(0.985 0.010 5); }
-[data-theme="frevo"] .p1 { --fill: oklch(0.712 0.192 45);  --ink: oklch(0.200 0.045 45); }
-[data-theme="frevo"] .p2 { --fill: oklch(0.560 0.170 258); --ink: oklch(0.985 0.010 258); }
-[data-theme="frevo"] .p3 { --fill: oklch(0.480 0.160 300); --ink: oklch(0.985 0.010 300); }
-[data-theme="frevo"] .p4 { --fill: oklch(0.745 0.155 88);  --ink: oklch(0.200 0.045 88); }
-[data-theme="frevo"] .p5 { --fill: oklch(0.640 0.140 155); --ink: oklch(0.180 0.040 155); }
+[data-theme="frevo"] {
+  --p0-fill: oklch(0.680 0.230 5); --p0-ink: oklch(0.985 0.010 5);
+  --p1-fill: oklch(0.712 0.192 45); --p1-ink: oklch(0.200 0.045 45);
+  --p2-fill: oklch(0.560 0.170 258); --p2-ink: oklch(0.985 0.010 258);
+  --p3-fill: oklch(0.480 0.160 300); --p3-ink: oklch(0.985 0.010 300);
+  --p4-fill: oklch(0.745 0.155 88); --p4-ink: oklch(0.200 0.045 88);
+  --p5-fill: oklch(0.640 0.140 155); --p5-ink: oklch(0.180 0.040 155);
+}
 
 /* ---- cerrado — ocre, musgo e terracota ------------------------------ */
 [data-theme="cerrado"][data-mode="dark"] {
@@ -72,12 +91,14 @@
   --muted: oklch(0.482 0.022 126); --accent: oklch(0.508 0.132 145);
   --onAccent: oklch(0.985 0.010 145); --ok: oklch(0.52 0.11 145);
 }
-[data-theme="cerrado"] .p0 { --fill: oklch(0.560 0.135 145); --ink: oklch(0.978 0.012 145); }
-[data-theme="cerrado"] .p1 { --fill: oklch(0.585 0.150 42);  --ink: oklch(0.978 0.012 42); }
-[data-theme="cerrado"] .p2 { --fill: oklch(0.720 0.150 88);  --ink: oklch(0.192 0.045 88); }
-[data-theme="cerrado"] .p3 { --fill: oklch(0.665 0.115 225); --ink: oklch(0.180 0.038 225); }
-[data-theme="cerrado"] .p4 { --fill: oklch(0.520 0.145 355); --ink: oklch(0.978 0.012 355); }
-[data-theme="cerrado"] .p5 { --fill: oklch(0.655 0.105 128); --ink: oklch(0.180 0.038 128); }
+[data-theme="cerrado"] {
+  --p0-fill: oklch(0.560 0.135 145); --p0-ink: oklch(0.978 0.012 145);
+  --p1-fill: oklch(0.585 0.150 42); --p1-ink: oklch(0.978 0.012 42);
+  --p2-fill: oklch(0.720 0.150 88); --p2-ink: oklch(0.192 0.045 88);
+  --p3-fill: oklch(0.665 0.115 225); --p3-ink: oklch(0.180 0.038 225);
+  --p4-fill: oklch(0.520 0.145 355); --p4-ink: oklch(0.978 0.012 355);
+  --p5-fill: oklch(0.655 0.105 128); --p5-ink: oklch(0.180 0.038 128);
+}
 
 /* ---- brasa — só tons quentes, do tijolo ao ouro ---------------------- */
 [data-theme="brasa"][data-mode="dark"] {
@@ -92,12 +113,14 @@
   --muted: oklch(0.486 0.026 48); --accent: oklch(0.532 0.160 38);
   --onAccent: oklch(0.985 0.010 70); --ok: oklch(0.52 0.11 145);
 }
-[data-theme="brasa"] .p0 { --fill: oklch(0.520 0.155 28); --ink: oklch(0.980 0.012 28); }
-[data-theme="brasa"] .p1 { --fill: oklch(0.605 0.170 45); --ink: oklch(0.185 0.045 45); }
-[data-theme="brasa"] .p2 { --fill: oklch(0.700 0.175 58); --ink: oklch(0.185 0.045 58); }
-[data-theme="brasa"] .p3 { --fill: oklch(0.748 0.160 78); --ink: oklch(0.190 0.045 78); }
-[data-theme="brasa"] .p4 { --fill: oklch(0.575 0.130 12); --ink: oklch(0.980 0.012 12); }
-[data-theme="brasa"] .p5 { --fill: oklch(0.672 0.145 32); --ink: oklch(0.185 0.045 32); }
+[data-theme="brasa"] {
+  --p0-fill: oklch(0.520 0.155 28); --p0-ink: oklch(0.980 0.012 28);
+  --p1-fill: oklch(0.605 0.170 45); --p1-ink: oklch(0.185 0.045 45);
+  --p2-fill: oklch(0.700 0.175 58); --p2-ink: oklch(0.185 0.045 58);
+  --p3-fill: oklch(0.748 0.160 78); --p3-ink: oklch(0.190 0.045 78);
+  --p4-fill: oklch(0.575 0.130 12); --p4-ink: oklch(0.980 0.012 12);
+  --p5-fill: oklch(0.672 0.145 32); --p5-ink: oklch(0.185 0.045 32);
+}
 
 /* ---- fliperama — cor no talo sobre quase preto ----------------------- */
 [data-theme="fliperama"][data-mode="dark"] {
@@ -112,12 +135,14 @@
   --muted: oklch(0.470 0.022 300); --accent: oklch(0.560 0.230 292);
   --onAccent: oklch(0.988 0.010 292); --ok: oklch(0.52 0.12 145);
 }
-[data-theme="fliperama"] .p0 { --fill: oklch(0.680 0.245 340); --ink: oklch(0.140 0.030 340); }
-[data-theme="fliperama"] .p1 { --fill: oklch(0.735 0.165 195); --ink: oklch(0.150 0.035 195); }
-[data-theme="fliperama"] .p2 { --fill: oklch(0.750 0.200 130); --ink: oklch(0.150 0.040 130); }
-[data-theme="fliperama"] .p3 { --fill: oklch(0.560 0.230 292); --ink: oklch(0.985 0.012 292); }
-[data-theme="fliperama"] .p4 { --fill: oklch(0.740 0.185 62);  --ink: oklch(0.150 0.040 62); }
-[data-theme="fliperama"] .p5 { --fill: oklch(0.620 0.235 20);  --ink: oklch(0.985 0.012 20); }
+[data-theme="fliperama"] {
+  --p0-fill: oklch(0.680 0.245 340); --p0-ink: oklch(0.140 0.030 340);
+  --p1-fill: oklch(0.735 0.165 195); --p1-ink: oklch(0.150 0.035 195);
+  --p2-fill: oklch(0.750 0.200 130); --p2-ink: oklch(0.150 0.040 130);
+  --p3-fill: oklch(0.560 0.230 292); --p3-ink: oklch(0.985 0.012 292);
+  --p4-fill: oklch(0.740 0.185 62); --p4-ink: oklch(0.150 0.040 62);
+  --p5-fill: oklch(0.620 0.235 20); --p5-ink: oklch(0.985 0.012 20);
+}
 
 /* ---- discord — índigo e as cores de status do Discord ---------------- */
 [data-theme="discord"][data-mode="dark"] {
@@ -132,12 +157,14 @@
   --muted: oklch(0.478 0.016 278); --accent: oklch(0.545 0.200 274);
   --onAccent: oklch(0.988 0.008 274); --ok: oklch(0.50 0.13 150);
 }
-[data-theme="discord"] .p0 { --fill: oklch(0.585 0.200 274); --ink: oklch(0.988 0.008 274); }
-[data-theme="discord"] .p1 { --fill: oklch(0.700 0.155 150); --ink: oklch(0.165 0.035 150); }
-[data-theme="discord"] .p2 { --fill: oklch(0.745 0.150 88);  --ink: oklch(0.185 0.040 88); }
-[data-theme="discord"] .p3 { --fill: oklch(0.600 0.190 24);  --ink: oklch(0.988 0.008 24); }
-[data-theme="discord"] .p4 { --fill: oklch(0.635 0.215 348); --ink: oklch(0.988 0.008 348); }
-[data-theme="discord"] .p5 { --fill: oklch(0.575 0.215 302); --ink: oklch(0.988 0.008 302); }
+[data-theme="discord"] {
+  --p0-fill: oklch(0.585 0.200 274); --p0-ink: oklch(0.988 0.008 274);
+  --p1-fill: oklch(0.700 0.155 150); --p1-ink: oklch(0.165 0.035 150);
+  --p2-fill: oklch(0.745 0.150 88); --p2-ink: oklch(0.185 0.040 88);
+  --p3-fill: oklch(0.600 0.190 24); --p3-ink: oklch(0.988 0.008 24);
+  --p4-fill: oklch(0.635 0.215 348); --p4-ink: oklch(0.988 0.008 348);
+  --p5-fill: oklch(0.575 0.215 302); --p5-ink: oklch(0.988 0.008 302);
+}
 
 /* ---- contraste — máxima legibilidade, cor contida -------------------- */
 [data-theme="contraste"][data-mode="dark"] {
@@ -152,18 +179,24 @@
   --muted: oklch(0.330 0 0); --accent: oklch(0.400 0.180 262);
   --onAccent: oklch(0.995 0 0); --ok: oklch(0.42 0.14 145);
 }
-[data-theme="contraste"] .p0 { --fill: oklch(0.420 0.170 262); --ink: oklch(0.995 0 0); }
-[data-theme="contraste"] .p1 { --fill: oklch(0.440 0.185 28);  --ink: oklch(0.995 0 0); }
-[data-theme="contraste"] .p2 { --fill: oklch(0.420 0.130 158); --ink: oklch(0.995 0 0); }
-[data-theme="contraste"] .p3 { --fill: oklch(0.880 0.140 92);  --ink: oklch(0.125 0 0); }
-[data-theme="contraste"] .p4 { --fill: oklch(0.868 0.100 200); --ink: oklch(0.125 0 0); }
-[data-theme="contraste"] .p5 { --fill: oklch(0.450 0.190 318); --ink: oklch(0.995 0 0); }
+[data-theme="contraste"] {
+  --p0-fill: oklch(0.420 0.170 262); --p0-ink: oklch(0.995 0 0);
+  --p1-fill: oklch(0.440 0.185 28); --p1-ink: oklch(0.995 0 0);
+  --p2-fill: oklch(0.420 0.130 158); --p2-ink: oklch(0.995 0 0);
+  --p3-fill: oklch(0.880 0.140 92); --p3-ink: oklch(0.125 0 0);
+  --p4-fill: oklch(0.868 0.100 200); --p4-ink: oklch(0.125 0 0);
+  --p5-fill: oklch(0.450 0.190 318); --p5-ink: oklch(0.995 0 0);
+}
 
 /* Alto contraste is the one theme that needs a component rule of its own:
  * its pale cards cannot clear a near-white ground by fill, so they carry
  * a border instead, and the waveform is pushed up to stay legible. */
 [data-theme="contraste"] .pad   { border: 2px solid var(--fg); }
 [data-theme="contraste"] .pwave { opacity: 0.72; }
+/* The same answer in miniature for its swatch. Keyed on the swatch's own
+ * attribute, so it never outlines another palette's swatch on a
+ * contraste page. */
+.tsw[data-theme="contraste"] .tsw-slots > span { box-shadow: inset 0 0 0 1px var(--fg); }
 
 /* ---- oled — preto absoluto e branco puro ---------------------------- */
 [data-theme="oled"][data-mode="dark"] {
@@ -178,10 +211,12 @@
   --muted: oklch(0.462 0.012 280); --accent: oklch(0.580 0.245 288);
   --onAccent: oklch(0.995 0.005 288); --ok: oklch(0.50 0.14 145);
 }
-[data-theme="oled"] .p0 { --fill: oklch(0.640 0.240 352); --ink: oklch(0.995 0.005 352); }
-[data-theme="oled"] .p1 { --fill: oklch(0.700 0.185 195); --ink: oklch(0.135 0.030 195); }
-[data-theme="oled"] .p2 { --fill: oklch(0.720 0.205 138); --ink: oklch(0.135 0.035 138); }
-[data-theme="oled"] .p3 { --fill: oklch(0.580 0.245 288); --ink: oklch(0.995 0.005 288); }
-[data-theme="oled"] .p4 { --fill: oklch(0.715 0.190 68);  --ink: oklch(0.135 0.035 68); }
-[data-theme="oled"] .p5 { --fill: oklch(0.600 0.235 25);  --ink: oklch(0.995 0.005 25); }
+[data-theme="oled"] {
+  --p0-fill: oklch(0.640 0.240 352); --p0-ink: oklch(0.995 0.005 352);
+  --p1-fill: oklch(0.700 0.185 195); --p1-ink: oklch(0.135 0.030 195);
+  --p2-fill: oklch(0.720 0.205 138); --p2-ink: oklch(0.135 0.035 138);
+  --p3-fill: oklch(0.580 0.245 288); --p3-ink: oklch(0.995 0.005 288);
+  --p4-fill: oklch(0.715 0.190 68); --p4-ink: oklch(0.135 0.035 68);
+  --p5-fill: oklch(0.600 0.235 25); --p5-ink: oklch(0.995 0.005 25);
+}
 

@@ -1,3 +1,4 @@
+import * as RadixRadio from "@radix-ui/react-radio-group";
 import * as Tabs from "@radix-ui/react-tabs";
 import type { ReactNode } from "react";
 import "./controls.css";
@@ -57,3 +58,38 @@ export function Segmented<T extends string>({
 }
 
 export const SegmentedPanel = Tabs.Content;
+
+export interface SegmentedChoiceProps<T extends string> {
+  value: T;
+  onChange: (value: T) => void;
+  options: SegmentedOption<T>[];
+  "aria-label": string;
+}
+
+/**
+ * The same pills as a single choice rather than a tablist — for a setting,
+ * such as the colour mode, that switches no panel. A radio group, so arrow
+ * keys move and pick, and each pill reports role="radio".
+ */
+export function SegmentedChoice<T extends string>({
+  value,
+  onChange,
+  options,
+  "aria-label": ariaLabel
+}: SegmentedChoiceProps<T>) {
+  return (
+    <RadixRadio.Root
+      className="seg"
+      aria-label={ariaLabel}
+      orientation="horizontal"
+      value={value}
+      onValueChange={(next) => onChange(next as T)}
+    >
+      {options.map((option) => (
+        <RadixRadio.Item key={option.value} value={option.value}>
+          {option.label}
+        </RadixRadio.Item>
+      ))}
+    </RadixRadio.Root>
+  );
+}
