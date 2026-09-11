@@ -1,3 +1,4 @@
+/// <reference types="vitest/config" />
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 
@@ -7,10 +8,10 @@ export default defineConfig({
   // declared for CRA.
   base: "./",
 
-  // JSX lives in .jsx and .tsx. The include has to name .tsx explicitly:
-  // overriding it with only {js,jsx} would take every TypeScript component
-  // out of the React plugin's JSX transform and Fast Refresh.
-  plugins: [react({ include: "**/*.{js,jsx,ts,tsx}" })],
+  // Everything under src/ is TypeScript now, which is the plugin's default
+  // include. Narrowing it would silently take components out of its JSX
+  // transform and Fast Refresh.
+  plugins: [react()],
 
   // Some dependencies (file-selector, reached through react-dropzone) ship UMD
   // bundles that reference the Node `global`. webpack polyfilled it; Vite does
@@ -42,6 +43,6 @@ export default defineConfig({
   test: {
     environment: "jsdom",
     globals: true,
-    setupFiles: "./src/setupTests.js"
+    setupFiles: "./src/setupTests.ts"
   }
 });

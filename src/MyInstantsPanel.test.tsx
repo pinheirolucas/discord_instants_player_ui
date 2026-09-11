@@ -1,10 +1,13 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import type { AxiosResponse } from "axios";
 
 import MyInstantsPanel from "./MyInstantsPanel";
 import SnackbarContext from "./SnackbarContext";
 import { getContent, getMyInstants, playOnDiscord, stopPlayingOnDiscord } from "./service";
+import type { Listing } from "./service";
+import type { Instant } from "./storage";
 
 vi.mock("./service", () => ({
   getContent: vi.fn(),
@@ -14,26 +17,23 @@ vi.mock("./service", () => ({
 }));
 
 class FakeAudio extends EventTarget {
-  constructor() {
-    super();
-    this.src = "";
-    this.currentTime = 0;
-  }
+  static played: string[] = [];
+  src = "";
+  currentTime = 0;
   play() {
     FakeAudio.played.push(this.src);
     return Promise.resolve();
   }
   pause() {}
 }
-FakeAudio.played = [];
 
-function card(name) {
+function card(name: string) {
   return screen.getByRole("article", { name });
 }
-function play(name) {
+function play(name: string) {
   return within(card(name)).getByRole("button", { name });
 }
-function action(name, label) {
+function action(name: string, label: string) {
   return within(card(name)).getByRole("button", { name: label });
 }
 
@@ -41,6 +41,10 @@ function storedInstants() {
   const raw = localStorage.getItem("instants");
   return raw === null ? null : JSON.parse(raw);
 }
+
+// The backend's contract says a listing always arrives. Two tests break it
+// on purpose, because a missing one used to unmount the tree to a blank window.
+const noListing = undefined as unknown as Listing;
 
 const page1 = {
   instants: [
@@ -55,13 +59,17 @@ const page2 = {
   pages: 3
 };
 
-function renderPanel({ search = "", favorites = [], healthy = true } = {}) {
+function renderPanel({
+  search = "",
+  favorites = [],
+  healthy = true
+}: { search?: string; favorites?: Instant[]; healthy?: boolean } = {}) {
   localStorage.setItem("instants", JSON.stringify(favorites));
 
   const snackbar = { openSnackbar: vi.fn(), closeSnackbar: vi.fn() };
   const props = { onSummary: vi.fn(), onClearSearch: vi.fn(), onSwitchServer: vi.fn() };
 
-  const ui = nextSearch => (
+  const ui = (nextSearch: string) => (
     <SnackbarContext.Provider value={snackbar}>
       <MyInstantsPanel
         search={nextSearch}
@@ -77,11 +85,11 @@ function renderPanel({ search = "", favorites = [], healthy = true } = {}) {
     ...result,
     snackbar,
     ...props,
-    rerenderWithSearch: nextSearch => result.rerender(ui(nextSearch))
+    rerenderWithSearch: (nextSearch: string) => result.rerender(ui(nextSearch))
   };
 }
 
-function useFakes(listing = page1) {
+function useFakes(listing: Listing | null = page1) {
   beforeEach(() => {
     localStorage.clear();
     FakeAudio.played = [];
@@ -90,7 +98,7 @@ function useFakes(listing = page1) {
     vi.mocked(getMyInstants).mockReset();
     if (listing) vi.mocked(getMyInstants).mockResolvedValue(listing);
     vi.mocked(playOnDiscord).mockReset();
-    vi.mocked(stopPlayingOnDiscord).mockReset().mockResolvedValue({});
+    vi.mocked(stopPlayingOnDiscord).mockReset().mockResolvedValue({} as AxiosResponse);
   });
 
   afterEach(() => {
@@ -325,7 +333,7 @@ describe("MyInstantsPanel when the listing does not arrive", () => {
   });
 
   it("renders an empty catalogue rather than throwing if it is handed no listing at all", async () => {
-    vi.mocked(getMyInstants).mockResolvedValue(undefined);
+    vi.mocked(getMyInstants).mockResolvedValue(noListing);
 
     const { snackbar } = renderPanel();
 
@@ -334,7 +342,7 @@ describe("MyInstantsPanel when the listing does not arrive", () => {
   });
 
   it("survives an undefined listing on the search path too", async () => {
-    vi.mocked(getMyInstants).mockResolvedValue(undefined);
+    vi.mocked(getMyInstants).mockResolvedValue(noListing);
 
     const { rerenderWithSearch, container } = renderPanel({ search: "" });
 

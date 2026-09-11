@@ -1,10 +1,11 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { act, renderHook } from "@testing-library/react";
+import type { AxiosResponse } from "axios";
 
 import useDiscordPlayer from "./useDiscordPlayer";
 import { playOnDiscord, stopPlayingOnDiscord } from "./service";
 
-// service.js is the network boundary; it gets its own MSW-backed tests. Here it
+// service.ts is the network boundary; it gets its own MSW-backed tests. Here it
 // is mocked so the hook's state machine can be driven directly, including the
 // case that matters most: POST /bot/play does not resolve until the backend
 // finishes or is stopped, so the "already playing" window is arbitrarily long.
@@ -18,19 +19,21 @@ const B = "https://www.myinstants.com/b/";
 
 // A promise the test resolves by hand, standing in for a clip that is still
 // playing on the server.
-function deferred() {
-  let settle;
-  const promise = new Promise((resolve, reject) => {
-    settle = { resolve, reject };
+function deferred<T = string>() {
+  let resolve!: (value: T) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((settle, fail) => {
+    resolve = settle;
+    reject = fail;
   });
-  return { promise, ...settle };
+  return { promise, resolve, reject };
 }
 
 describe("useDiscordPlayer", () => {
   beforeEach(() => {
     vi.mocked(playOnDiscord).mockReset();
     vi.mocked(stopPlayingOnDiscord).mockReset();
-    vi.mocked(stopPlayingOnDiscord).mockResolvedValue({});
+    vi.mocked(stopPlayingOnDiscord).mockResolvedValue({} as AxiosResponse);
   });
 
   it("starts idle", () => {
@@ -46,7 +49,7 @@ describe("useDiscordPlayer", () => {
 
     const { result } = renderHook(() => useDiscordPlayer());
 
-    let playCall;
+    let playCall: Promise<string | undefined> | undefined;
     act(() => {
       playCall = result.current[2](A);
     });

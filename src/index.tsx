@@ -1,4 +1,3 @@
-import React from "react";
 import { createRoot } from "react-dom/client";
 
 // Self-hosted: the packaged app loads over file:// with no network
@@ -12,4 +11,10 @@ import "./styles/tokens.css";
 import "./styles/base.css";
 import App from "./App";
 
-createRoot(document.getElementById("root")).render(<App />);
+const root = document.getElementById("root");
+
+if (!root) {
+  throw new Error("index.html has no #root to mount the app into");
+}
+
+createRoot(root).render(<App />);

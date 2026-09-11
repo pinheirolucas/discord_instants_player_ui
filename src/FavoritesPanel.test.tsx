@@ -2,6 +2,8 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { useState } from "react";
 import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import type { UserEvent } from "@testing-library/user-event";
+import type { AxiosResponse } from "axios";
 
 import FavoritesPanel from "./FavoritesPanel";
 import SnackbarContext from "./SnackbarContext";
@@ -16,28 +18,25 @@ vi.mock("./service", () => ({
 // useAudioPlayer builds a detached `new Audio()`; jsdom implements neither
 // play() nor pause() and would spray "Not implemented" across every run.
 class FakeAudio extends EventTarget {
-  constructor() {
-    super();
-    this.src = "";
-    this.currentTime = 0;
-  }
+  static played: string[] = [];
+  src = "";
+  currentTime = 0;
   play() {
     FakeAudio.played.push(this.src);
     return Promise.resolve();
   }
   pause() {}
 }
-FakeAudio.played = [];
 
 // Each card is an <article> named after its clip. The body's play control
 // is a button carrying the clip's name; the footer buttons carry their own.
-function card(name) {
+function card(name: string) {
   return screen.getByRole("article", { name });
 }
-function play(name) {
+function play(name: string) {
   return within(card(name)).getByRole("button", { name });
 }
-function action(name, label) {
+function action(name: string, label: string) {
   return within(card(name)).getByRole("button", { name: label });
 }
 
@@ -47,7 +46,7 @@ const seeded = [
 ];
 
 function storedInstants() {
-  return JSON.parse(localStorage.getItem("instants"));
+  return JSON.parse(localStorage.getItem("instants") ?? "null");
 }
 
 // The add form opens from the tools row, which lives in App. A plain button
@@ -81,7 +80,7 @@ function renderPanel({ search = "", instants = seeded, healthy = true } = {}) {
   return { ...result, snackbar, ...props };
 }
 
-async function openForm(user) {
+async function openForm(user: UserEvent) {
   await user.click(screen.getByRole("button", { name: "Adicionar" }));
   return within(screen.getByRole("dialog", { name: "Adicionar instant" }));
 }
@@ -93,7 +92,7 @@ function useFakeAudio() {
     vi.stubGlobal("Audio", FakeAudio);
     vi.mocked(getContent).mockReset();
     vi.mocked(playOnDiscord).mockReset();
-    vi.mocked(stopPlayingOnDiscord).mockReset().mockResolvedValue({});
+    vi.mocked(stopPlayingOnDiscord).mockReset().mockResolvedValue({} as AxiosResponse);
   });
 
   afterEach(() => {

@@ -6,11 +6,11 @@ import { exportToJSON } from "./state";
 // a data: URI and clicks it. jsdom builds the anchor for real, so the assertion
 // point is that click: capture the element it fires on and decode its href.
 function captureDownload() {
-  const clicks = [];
+  const clicks: { href: string | null; download: string | null }[] = [];
 
   const spy = vi
     .spyOn(HTMLAnchorElement.prototype, "click")
-    .mockImplementation(function mockClick() {
+    .mockImplementation(function mockClick(this: HTMLAnchorElement) {
       clicks.push({
         href: this.getAttribute("href"),
         download: this.getAttribute("download")
@@ -25,16 +25,16 @@ function captureDownload() {
   };
 }
 
-function decode(href) {
+function decode(href: string | null) {
   const prefix = "data:application/json;charset=utf-8,";
-  expect(href.startsWith(prefix)).toBe(true);
-  return decodeURIComponent(href.slice(prefix.length));
+  expect(href?.startsWith(prefix)).toBe(true);
+  return decodeURIComponent(href!.slice(prefix.length));
 }
 
 describe("exportToJSON", () => {
   beforeEach(() => {
     localStorage.clear();
-    // state.js still carries two console.log calls from development. They are
+    // state.ts still carries two console.log calls from development. They are
     // noise here; silencing them keeps a failing run readable.
     vi.spyOn(console, "log").mockImplementation(() => {});
   });

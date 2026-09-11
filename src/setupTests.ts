@@ -10,7 +10,7 @@ import "@testing-library/jest-dom/vitest";
 // Defaults to light. A test that needs the dark branch can replace the
 // implementation with one whose `matches` is true.
 if (typeof window !== "undefined" && !window.matchMedia) {
-  window.matchMedia = (query) => ({
+  window.matchMedia = ((query: string) => ({
     matches: false,
     media: query,
     onchange: null,
@@ -19,7 +19,7 @@ if (typeof window !== "undefined" && !window.matchMedia) {
     addListener: () => {},
     removeListener: () => {},
     dispatchEvent: () => false
-  });
+  })) as typeof window.matchMedia;
 }
 
 // Radix measures, positions and captures pointers with browser APIs jsdom
@@ -28,16 +28,25 @@ if (typeof window !== "undefined" && !window.matchMedia) {
 // whatever element received the pointerdown — which can be an <svg> inside
 // a button, hence Element rather than HTMLElement.
 if (typeof window !== "undefined") {
-  if (!window.ResizeObserver) {
-    window.ResizeObserver = class {
+  if (!("ResizeObserver" in window)) {
+    (window as { ResizeObserver?: unknown }).ResizeObserver = class {
       observe() {}
       unobserve() {}
       disconnect() {}
     };
   }
-  const proto = window.Element.prototype;
-  if (!proto.scrollIntoView) proto.scrollIntoView = () => {};
-  if (!proto.hasPointerCapture) proto.hasPointerCapture = () => false;
-  if (!proto.setPointerCapture) proto.setPointerCapture = () => {};
-  if (!proto.releasePointerCapture) proto.releasePointerCapture = () => {};
+
+  const proto = window.Element.prototype as unknown as Record<string, unknown>;
+  const stubs: Record<string, () => unknown> = {
+    scrollIntoView: () => {},
+    hasPointerCapture: () => false,
+    setPointerCapture: () => {},
+    releasePointerCapture: () => {}
+  };
+
+  for (const [name, stub] of Object.entries(stubs)) {
+    if (typeof proto[name] !== "function") {
+      proto[name] = stub;
+    }
+  }
 }

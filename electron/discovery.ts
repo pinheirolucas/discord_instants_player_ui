@@ -41,7 +41,7 @@ function isLinkLocalIPv6(address: string): boolean {
   return /^fe[89ab]/i.test(address);
 }
 
-export function pickAddress(service?: DiscoveredService): string | null {
+export function pickAddress(service?: DiscoveredService | null): string | null {
   const addresses = service?.addresses || [];
 
   const ipv4 = addresses.find(
@@ -67,11 +67,11 @@ function formatAddress(address: string | null): string | null {
   return address.includes(".") ? address : `[${address}]`;
 }
 
-export function pickHost(service?: DiscoveredService): string | null {
+export function pickHost(service?: DiscoveredService | null): string | null {
   return formatAddress(pickAddress(service));
 }
 
-export function hostnameFromService(service?: DiscoveredService): string | null {
+export function hostnameFromService(service?: DiscoveredService | null): string | null {
   const fqdn = service?.fqdn || "";
 
   const instance = fqdn.endsWith(fqdnSuffix)
@@ -84,7 +84,7 @@ export function hostnameFromService(service?: DiscoveredService): string | null 
   return withoutDomain || null;
 }
 
-export function buildApiUrl(service?: DiscoveredService): string | null {
+export function buildApiUrl(service?: DiscoveredService | null): string | null {
   if (!service || !Number.isInteger(service.port) || (service.port as number) <= 0) {
     return null;
   }

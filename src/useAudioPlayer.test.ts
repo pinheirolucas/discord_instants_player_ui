@@ -12,11 +12,13 @@ import useAudioPlayer from "./useAudioPlayer";
 // never fires "ended" on its own. This fake records the calls instead and
 // extends EventTarget so tests can dispatch "ended" themselves.
 class FakeAudio extends EventTarget {
+  static instances: FakeAudio[] = [];
+  src = "";
+  currentTime = 0;
+  calls: (string | undefined)[][] = [];
+
   constructor() {
     super();
-    this.src = "";
-    this.currentTime = 0;
-    this.calls = [];
     FakeAudio.instances.push(this);
   }
 
@@ -30,7 +32,6 @@ class FakeAudio extends EventTarget {
   }
 }
 
-FakeAudio.instances = [];
 
 // The hook creates its element lazily, once, and drives it for its whole
 // life — see "builds one element for the life of the hook".

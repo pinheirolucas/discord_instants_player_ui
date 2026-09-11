@@ -6,11 +6,9 @@
     "moduleResolution": "bundler",
     "jsx": "react-jsx",
 
-    // The migration is incremental: .jsx files still compile and ship, they
-    // are just not type-checked. Flipping allowJs to false is the completion
-    // signal for the TypeScript work.
-    "allowJs": true,
-    "checkJs": false,
+    // No JavaScript left to compile. Kept false so a stray .js file is a
+    // build error rather than something that slips through unchecked.
+    "allowJs": false,
 
     "strict": true,
     "noUnusedLocals": true,
@@ -18,6 +16,9 @@
 
     // esbuild (Vite) and tsup do the emitting; tsc only ever type-checks.
     "noEmit": true,
+    // scripts/ runs under Node's native type stripping, which needs the
+    // real ".ts" extension on relative imports.
+    "allowImportingTsExtensions": true,
     "isolatedModules": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
@@ -27,5 +28,5 @@
   },
   // Stories stay in the type-check: a story that no longer compiles is a
   // component that changed shape.
-  "include": ["src", "electron", ".storybook", "tsup.config.ts"]
+  "include": ["src", "electron", "scripts", ".storybook", "tsup.config.ts", "vite.config.ts"]
 }

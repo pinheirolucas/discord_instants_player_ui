@@ -3,11 +3,12 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import InstantCard, { cardState } from "./InstantCard";
+import type { InstantCardProps, Playback } from "./InstantCard";
 import { slotFor } from "../lib/slot";
 
 const instant = { name: "Primeiro", url: "https://www.myinstants.com/a/" };
 
-function renderCard(props = {}) {
+function renderCard(props: Partial<InstantCardProps> = {}) {
   const handlers = {
     onPlay: vi.fn(),
     onPlayOnDiscord: vi.fn(),
@@ -29,7 +30,7 @@ function renderCard(props = {}) {
   );
 
   const card = screen.getByRole("article", { name: "Primeiro" });
-  const button = name => within(card).getByRole("button", { name });
+  const button = (name: string) => within(card).getByRole("button", { name });
 
   return { ...handlers, card, button };
 }
@@ -101,7 +102,19 @@ describe("InstantCard", () => {
 // The footer matrix from the design canvas. The two playback paths are
 // mutually exclusive, so while one runs the other leaves every card.
 describe("InstantCard state matrix", () => {
-  const cases = [
+  interface Case {
+    when: string;
+    props: { playback: Playback; otherPlaying: boolean };
+    play: boolean;
+    discord: boolean;
+    stop: boolean;
+    trail: boolean;
+    live: boolean;
+    dim: boolean;
+    chip?: string;
+  }
+
+  const cases: Case[] = [
     {
       when: "nothing is playing",
       props: { playback: "idle", otherPlaying: false },
@@ -127,7 +140,7 @@ describe("InstantCard state matrix", () => {
   it.each(cases)("when $when", ({ props, play, discord, stop, trail, live, dim, chip }) => {
     const { card, button } = renderCard(props);
 
-    const expectEnabled = (el, enabled) =>
+    const expectEnabled = (el: HTMLElement, enabled: boolean) =>
       enabled ? expect(el).toBeEnabled() : expect(el).toBeDisabled();
 
     expectEnabled(button("Primeiro"), play);

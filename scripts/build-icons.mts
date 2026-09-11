@@ -11,30 +11,30 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import sharp from "sharp";
-import { ICNS_TYPES, packIcns, packIco } from "./icon-formats.mjs";
+import { ICNS_TYPES, packIcns, packIco } from "./icon-formats.mts";
 
 const root = path.resolve(import.meta.dirname, "..");
-const master = (name) => path.join(root, "assets/icon", name);
-const out = (...parts) => path.join(root, ...parts);
+const master = (name: string) => path.join(root, "assets/icon", name);
+const out = (...parts: string[]) => path.join(root, ...parts);
 
 /** Rasterises the vector at exactly `size` — density scales the SVG's own
  *  width to it — rather than rendering once large and shrinking. */
-async function raster(svgFile, size) {
+async function raster(svgFile: string, size: number) {
   const svg = await fs.readFile(svgFile);
   const { width = 1024 } = await sharp(svg).metadata();
   return sharp(svg, { density: (72 * size) / width }).resize(size, size);
 }
 
-async function render(svgFile, size) {
+async function render(svgFile: string, size: number): Promise<Buffer> {
   return (await raster(svgFile, size)).png({ compressionLevel: 9 }).toBuffer();
 }
 
 /** Straight RGBA pixels, for the icns types that store raw ARGB. */
-async function renderRgba(svgFile, size) {
+async function renderRgba(svgFile: string, size: number): Promise<Buffer> {
   return (await raster(svgFile, size)).ensureAlpha().raw().toBuffer();
 }
 
-async function write(file, bytes) {
+async function write(file: string, bytes: Buffer): Promise<void> {
   await fs.mkdir(path.dirname(file), { recursive: true });
   await fs.writeFile(file, bytes);
   console.log(`  ${path.relative(root, file).padEnd(30)} ${bytes.length.toLocaleString("en")} B`);
@@ -42,7 +42,7 @@ async function write(file, bytes) {
 
 console.log("Fita:");
 
-const mac = new Map();
+const mac = new Map<number, { png?: Buffer; rgba?: Buffer }>();
 for (const [, size, kind] of ICNS_TYPES) {
   const image = mac.get(size) ?? {};
   if (kind === "argb") image.rgba = await renderRgba(master("fita-mac.svg"), size);

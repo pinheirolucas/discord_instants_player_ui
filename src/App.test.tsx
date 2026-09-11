@@ -5,8 +5,11 @@ import userEvent from "@testing-library/user-event";
 import App from "./App";
 import { getMyInstants, setApiUrl } from "./service";
 
-let healthListener = null;
-let connectionErrorListener = null;
+// The listeners App registers with the mocked service. Reset to no-ops
+// rather than null, so a test can call them without a null check each time.
+const noop = () => {};
+let healthListener: (healthy: boolean) => void = noop;
+let connectionErrorListener: () => void = noop;
 
 vi.mock("./service", () => ({
   defaultApiUrl: "http://localhost:9001",
@@ -17,13 +20,13 @@ vi.mock("./service", () => ({
   onHealthChange: vi.fn(listener => {
     healthListener = listener;
     return () => {
-      healthListener = null;
+      healthListener = noop;
     };
   }),
   onConnectionError: vi.fn(listener => {
     connectionErrorListener = listener;
     return () => {
-      connectionErrorListener = null;
+      connectionErrorListener = noop;
     };
   }),
   getContent: vi.fn(),
@@ -50,9 +53,9 @@ const raspberry = {
   isLocal: false
 };
 
-function installBridge({ unsubscribe = vi.fn() } = {}) {
+function installBridge({ unsubscribe = vi.fn() }: { unsubscribe?: (() => void) | undefined } = {}) {
   const bridge = {
-    push: null,
+    push: (_servers: unknown[]): void => {},
     unsubscribe,
     refresh: vi.fn(),
     onServers: vi.fn(listener => {
@@ -67,7 +70,7 @@ function installBridge({ unsubscribe = vi.fn() } = {}) {
 
 // The server chip is named by the address it shows, plus "não está
 // respondendo" as screen-reader text while the server is silent.
-function serverChip(name = /^localhost:9001/) {
+function serverChip(name: string | RegExp = /^localhost:9001/) {
   return screen.getByRole("button", { name });
 }
 
@@ -87,8 +90,8 @@ function reset() {
   localStorage.clear();
   delete document.documentElement.dataset.mode;
   delete document.documentElement.dataset.theme;
-  healthListener = null;
-  connectionErrorListener = null;
+  healthListener = noop;
+  connectionErrorListener = noop;
   vi.mocked(setApiUrl).mockClear();
   vi.mocked(setApiUrl).mockReturnValue(true);
   vi.mocked(getMyInstants).mockClear();
@@ -138,7 +141,8 @@ describe("App discovery wiring", () => {
   });
 
   it("ignores a bridge that exposes no onServers", () => {
-    window.instantsDiscovery = {};
+    // Deliberately malformed: the absence of onServers has to be a no-op.
+    window.instantsDiscovery = {} as unknown as Window["instantsDiscovery"];
 
     expect(() => render(<App />)).not.toThrow();
     expect(setApiUrl).toHaveBeenCalledWith("http://localhost:9001");
@@ -189,7 +193,7 @@ describe("server picker", () => {
     await userEvent.click(screen.getByText("10.0.0.42:9001"));
 
     expect(setApiUrl).toHaveBeenLastCalledWith("http://10.0.0.42:9001");
-    expect(JSON.parse(localStorage.getItem("selectedServer"))).toBe("http://10.0.0.42:9001");
+    expect(JSON.parse(localStorage.getItem("selectedServer") ?? "null")).toBe("http://10.0.0.42:9001");
   });
 
   it("keeps an explicit pick over the auto-adopted first server", () => {
@@ -400,7 +404,7 @@ describe("shell", () => {
     await user.click(screen.getByRole("menuitem", { name: "Escuro" }));
 
     await waitFor(() => expect(document.documentElement.dataset.mode).toBe("dark"));
-    expect(JSON.parse(localStorage.getItem("colorMode"))).toBe("dark");
+    expect(JSON.parse(localStorage.getItem("colorMode") ?? "null")).toBe("dark");
   });
 
   it("runs on the default palette, with no way to change it yet", async () => {

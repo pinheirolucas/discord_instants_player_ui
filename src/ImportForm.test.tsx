@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import type { UserEvent } from "@testing-library/user-event";
 
 import ImportForm from "./ImportForm";
 
@@ -17,10 +18,10 @@ const incoming = [
 ];
 
 function storedInstants() {
-  return JSON.parse(localStorage.getItem("instants"));
+  return JSON.parse(localStorage.getItem("instants") ?? "null");
 }
 
-function jsonFile(content, name = "config.json") {
+function jsonFile(content: unknown, name = "config.json") {
   return new File([JSON.stringify(content)], name, { type: "application/json" });
 }
 
@@ -36,17 +37,17 @@ function renderForm({ instants = existing } = {}) {
 // react-dropzone's file input is deliberately hidden, so there is nothing to
 // query by role or label. Uploading straight to the input is what
 // react-dropzone's own docs suggest for tests.
-function fileInput() {
-  return document.querySelector('input[type="file"]');
+function fileInput(): HTMLInputElement {
+  return document.querySelector<HTMLInputElement>('input[type="file"]')!;
 }
 
-async function upload(user, file) {
+async function upload(user: UserEvent, file: File) {
   await user.upload(fileInput(), file);
 }
 
 // The options only appear once the file has actually been read and parsed,
 // so Importar is never offered against content that has not arrived.
-async function uploadParsed(user, file = jsonFile({ instants: incoming })) {
+async function uploadParsed(user: UserEvent, file = jsonFile({ instants: incoming })) {
   await upload(user, file);
   await screen.findByText("O que você quer importar?");
 }

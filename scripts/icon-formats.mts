@@ -8,7 +8,7 @@
 
 const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 
-function assertPng(bytes, label) {
+function assertPng(bytes: unknown, label: string): asserts bytes is Buffer {
   if (!Buffer.isBuffer(bytes) || !bytes.subarray(0, 8).equals(PNG_SIGNATURE)) {
     throw new TypeError(`${label}: expected PNG bytes`);
   }
@@ -17,9 +17,8 @@ function assertPng(bytes, label) {
 /**
  * .ico: ICONDIR, one ICONDIRENTRY per image, then the images. PNG payloads
  * are valid at every size from Windows Vista on; 256 is written as 0.
- * @param {{ size: number, png: Buffer }[]} images
  */
-export function packIco(images) {
+export function packIco(images: { size: number; png: Buffer }[]): Buffer {
   const header = Buffer.alloc(6);
   header.writeUInt16LE(0, 0); // reserved
   header.writeUInt16LE(1, 2); // type: icon
@@ -54,10 +53,9 @@ export function packIco(images) {
  * The icns flavour of PackBits, applied to one colour channel. A control
  * byte below 0x80 is followed by (n + 1) literal bytes; 0x80 and above
  * repeats the next byte (n - 0x80 + 3) times, so runs are 3–130 long.
- * @param {Uint8Array} channel
  */
-export function packBits(channel) {
-  const out = [];
+export function packBits(channel: Uint8Array): Buffer {
+  const out: number[] = [];
   let i = 0;
 
   while (i < channel.length) {
@@ -91,9 +89,10 @@ export function packBits(channel) {
  * An ic04/ic05 payload: "ARGB", then each channel of the straight
  * (unpremultiplied) pixels packed separately — all alpha, all red, all
  * green, all blue.
- * @param {Buffer} rgba raw RGBA, 4 bytes per pixel
+ *
+ * @param rgba raw RGBA, 4 bytes per pixel
  */
-export function argbPayload(rgba) {
+export function argbPayload(rgba: Buffer): Buffer {
   const pixels = rgba.length / 4;
   const planes = [3, 0, 1, 2].map((channel) => {
     const plane = new Uint8Array(pixels);
@@ -110,7 +109,9 @@ export function argbPayload(rgba) {
  * but decoded as noise. No icp6 either: iconutil reads it back as 48px, and
  * 64px is ic12 (32@2x). The @2x types reuse the next rung up the ladder.
  */
-export const ICNS_TYPES = [
+export type IcnsKind = "png" | "argb";
+
+export const ICNS_TYPES: readonly (readonly [type: string, size: number, kind: IcnsKind])[] = [
   ["ic04", 16, "argb"],
   ["ic05", 32, "argb"],
   ["ic07", 128, "png"],
@@ -127,12 +128,11 @@ export const ICNS_TYPES = [
  * .icns: an "icns" header with the total length, then one
  * (OSType, length, payload) chunk per type. Lengths are big-endian and
  * include their own 8-byte headers.
- * @param {Map<number, { png?: Buffer, rgba?: Buffer }>} imagesBySize
  */
-export function packIcns(imagesBySize) {
+export function packIcns(imagesBySize: Map<number, { png?: Buffer; rgba?: Buffer }>): Buffer {
   const chunks = ICNS_TYPES.map(([type, size, kind]) => {
     const image = imagesBySize.get(size);
-    let payload;
+    let payload: Buffer;
 
     if (kind === "argb") {
       if (!image?.rgba || image.rgba.length !== size * size * 4) {

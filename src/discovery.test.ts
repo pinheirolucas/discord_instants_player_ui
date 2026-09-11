@@ -7,6 +7,7 @@ import {
   pickHost,
   sortServers
 } from "../electron/discovery";
+import type { Server } from "../electron/discovery";
 
 function realService(overrides = {}) {
   return {
@@ -159,14 +160,14 @@ describe("buildServer", () => {
   it("marks a server whose address belongs to this machine", () => {
     const server = buildServer(realService(), new Set(["10.0.0.133"]));
 
-    expect(server.isLocal).toBe(true);
+    expect(server!.isLocal).toBe(true);
   });
 
   it("does not mark a server on another machine", () => {
     const service = realService({ addresses: ["10.0.0.42"] });
     const server = buildServer(service, new Set(["10.0.0.133"]));
 
-    expect(server.isLocal).toBe(false);
+    expect(server!.isLocal).toBe(false);
   });
 
   it("keys distinct ports on the same host as distinct servers", () => {
@@ -179,8 +180,8 @@ describe("buildServer", () => {
       new Set()
     );
 
-    expect(a.id).not.toBe(b.id);
-    expect(a.apiUrl).not.toBe(b.apiUrl);
+    expect(a!.id).not.toBe(b!.id);
+    expect(a!.apiUrl).not.toBe(b!.apiUrl);
   });
 
   it("refuses a service the api gate rejects", () => {
@@ -188,15 +189,22 @@ describe("buildServer", () => {
   });
 
   it("tolerates a missing local-address set", () => {
-    expect(buildServer(realService()).isLocal).toBe(false);
+    expect(buildServer(realService())!.isLocal).toBe(false);
   });
 });
 
 describe("sortServers", () => {
-  const local9002 = { apiUrl: "b", address: "10.0.0.133", port: 9002, isLocal: true };
-  const local9001 = { apiUrl: "a", address: "10.0.0.133", port: 9001, isLocal: true };
-  const remote9001 = { apiUrl: "c", address: "10.0.0.42", port: 9001, isLocal: false };
-  const remote8080 = { apiUrl: "d", address: "10.0.0.87", port: 8080, isLocal: false };
+  // Only the fields the sort reads matter; id and hostname are filled in.
+  const server = (fields: Pick<Server, "apiUrl" | "address" | "port" | "isLocal">): Server => ({
+    id: fields.apiUrl,
+    hostname: null,
+    ...fields
+  });
+
+  const local9002 = server({ apiUrl: "b", address: "10.0.0.133", port: 9002, isLocal: true });
+  const local9001 = server({ apiUrl: "a", address: "10.0.0.133", port: 9001, isLocal: true });
+  const remote9001 = server({ apiUrl: "c", address: "10.0.0.42", port: 9001, isLocal: false });
+  const remote8080 = server({ apiUrl: "d", address: "10.0.0.87", port: 8080, isLocal: false });
 
   it("puts servers on this machine first", () => {
     const sorted = sortServers([remote9001, local9002]);
@@ -211,7 +219,7 @@ describe("sortServers", () => {
   });
 
   it("breaks a port tie on the address", () => {
-    const other = { apiUrl: "e", address: "10.0.0.10", port: 9001, isLocal: false };
+    const other = server({ apiUrl: "e", address: "10.0.0.10", port: 9001, isLocal: false });
     const sorted = sortServers([remote9001, other]);
 
     expect(sorted.map(s => s.apiUrl)).toEqual(["e", "c"]);

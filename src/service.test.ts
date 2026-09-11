@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll, afterEach } from "vitest";
 import { setupServer } from "msw/node";
 import { http, HttpResponse } from "msw";
+import type { JsonBodyType } from "msw";
 
 import {
   playOnDiscord,
@@ -18,14 +19,14 @@ import {
 
 // Mocking at the request level rather than stubbing axios keeps these tests
 // honest about the two things that actually bite here: the exact query strings
-// service.js builds, and the response envelope the Go backend really sends.
+// service.ts builds, and the response envelope the Go backend really sends.
 const apiUrl = "http://localhost:9001";
 
 const server = setupServer();
 
 // Every response goes through the backend's `response` struct:
 // {label, message, data}, with empty fields omitted.
-function success(data) {
+function success(data: JsonBodyType) {
   return HttpResponse.json({ data });
 }
 
@@ -34,14 +35,14 @@ function success(data) {
 // body carrying only {label, message}. That is not a hypothetical: it is what
 // /bot/play and /instant/list do for an unknown instant, a bad URL, and an
 // unsupported audio format.
-function errorAt200(label, message) {
+function errorAt200(label: string, message: string) {
   return HttpResponse.json({ label, message });
 }
 
 // The one genuine non-200 the backend can produce is the http.Error fallback
 // when encoding the body itself fails; a dead or misbehaving proxy in front of
 // it would do the same. This is the only shape axios rejects on.
-function errorAtStatus(status, body) {
+function errorAtStatus(status: number, body: JsonBodyType) {
   return HttpResponse.json(body, { status });
 }
 
@@ -255,7 +256,7 @@ describe("getMyInstants", () => {
   };
 
   function captureQuery(respond = () => success(listing)) {
-    const captured = {};
+    const captured: { search?: string } = {};
     server.use(
       http.get(`${apiUrl}/instant/list`, ({ request }) => {
         captured.search = new URL(request.url).search;
@@ -408,7 +409,7 @@ describe("api base url", () => {
     expect(setApiUrl(discovered)).toBe(true);
     expect(getApiUrl()).toBe(discovered);
 
-    const seen = [];
+    const seen: string[] = [];
     server.use(
       http.post(`${discovered}/bot/play`, ({ request }) => {
         seen.push(new URL(request.url).origin);
@@ -588,7 +589,7 @@ describe("connection health", () => {
   });
 
   it("notifies listeners on each transition, not on every request", async () => {
-    const seen = [];
+    const seen: boolean[] = [];
     const unsubscribe = onHealthChange(next => seen.push(next));
 
     server.use(http.post(`${apiUrl}/bot/stop`, () => HttpResponse.error()));
@@ -604,7 +605,7 @@ describe("connection health", () => {
   });
 
   it("stops notifying after unsubscribe", async () => {
-    const seen = [];
+    const seen: boolean[] = [];
     onHealthChange(next => seen.push(next))();
 
     server.use(http.get(`${apiUrl}/play`, () => HttpResponse.error()));
@@ -615,7 +616,8 @@ describe("connection health", () => {
   });
 
   it("ignores a listener that is not a function", () => {
-    expect(() => onHealthChange(null)()).not.toThrow();
+    // Deliberately wrong: the guard exists for untyped callers.
+    expect(() => onHealthChange(null as never)()).not.toThrow();
   });
 
   it("assumes a newly selected server is healthy until proven otherwise", async () => {
@@ -673,7 +675,8 @@ describe("connection error notifications", () => {
   });
 
   it("ignores a listener that is not a function", () => {
-    expect(() => onConnectionError(undefined)()).not.toThrow();
+    // Deliberately wrong: the guard exists for untyped callers.
+    expect(() => onConnectionError(undefined as never)()).not.toThrow();
   });
 });
 

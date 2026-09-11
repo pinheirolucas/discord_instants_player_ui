@@ -59,7 +59,7 @@
     "build": "pnpm react-build && pnpm electron-compile && pnpm electron-build",
     "start": "concurrently \"pnpm react-start\" \"pnpm electron-watch\" \"wait-on http://localhost:3000 build/electron.js && electron .\"",
     "storybook": "storybook dev -p 6006 --no-open",
-    "icons": "node scripts/build-icons.mjs"
+    "icons": "node scripts/build-icons.mts"
   },
   "browserslist": {
     "production": [

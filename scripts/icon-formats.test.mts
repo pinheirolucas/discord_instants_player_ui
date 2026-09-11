@@ -1,18 +1,18 @@
 import { describe, expect, it } from "vitest";
-import { ICNS_TYPES, argbPayload, packBits, packIcns, packIco } from "./icon-formats.mjs";
+import { ICNS_TYPES, argbPayload, packBits, packIcns, packIco } from "./icon-formats.mts";
 
 const SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 
 // Stand-in payloads: valid PNG signatures with a distinct tail, so each
 // directory entry can be traced to the bytes it points at.
-function png(tag) {
+function png(tag: string | number): Buffer {
   return Buffer.concat([SIGNATURE, Buffer.from(String(tag))]);
 }
 
 // The reference decoder for the icns PackBits variant, written from the
 // format rather than from the encoder, so a round trip actually checks it.
-function unpackBits(bytes, expectedLength) {
-  const out = [];
+function unpackBits(bytes: Uint8Array, expectedLength: number) {
+  const out: number[] = [];
   let i = 0;
   while (out.length < expectedLength) {
     const control = bytes[i++];
@@ -92,7 +92,7 @@ describe("argbPayload", () => {
 
   it("stores all alpha, then all red, green and blue, each packed on its own", () => {
     let at = 4;
-    const planes = [];
+    const planes: number[][] = [];
     for (let p = 0; p < 4; p++) {
       const { data, consumed } = unpackBits(payload.subarray(at), 2);
       planes.push(Array.from(data));
@@ -109,7 +109,7 @@ describe("argbPayload", () => {
 });
 
 describe("packIcns", () => {
-  const bySize = new Map();
+  const bySize = new Map<number, { png?: Buffer; rgba?: Buffer }>();
   for (const [, size, kind] of ICNS_TYPES) {
     const image = bySize.get(size) ?? {};
     if (kind === "argb") image.rgba = Buffer.alloc(size * size * 4, 0x80);
@@ -132,7 +132,7 @@ describe("packIcns", () => {
       if (kind === "argb") {
         expect(payload.subarray(0, 4).toString("ascii")).toBe("ARGB");
       } else {
-        expect(payload.equals(bySize.get(size).png)).toBe(true);
+        expect(payload.equals(bySize.get(size)!.png!)).toBe(true);
       }
       at += length;
     }
