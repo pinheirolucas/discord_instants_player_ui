@@ -1,0 +1,9 @@
+{
+  "card": {
+    "play": "Reproduzir",
+    "sendToDiscord": "Enviar para o Discord",
+    "stop": "Parar",
+    "playingLocal": "Tocando",
+    "playingDiscord": "No Discord"
+  }
+}

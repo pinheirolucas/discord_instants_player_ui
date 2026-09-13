@@ -9,6 +9,7 @@ import "@fontsource-variable/archivo";
 
 import "./styles/tokens.css";
 import "./styles/base.css";
+import "./i18n";
 import App from "./App";
 
 const root = document.getElementById("root");

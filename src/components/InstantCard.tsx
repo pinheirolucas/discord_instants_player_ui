@@ -1,5 +1,6 @@
 import { useId } from "react";
 import type { ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import { SendIcon, StopIcon } from "../icons";
 import { slotFor } from "../lib/slot";
 import { wavePath } from "../lib/wave";
@@ -63,6 +64,7 @@ export default function InstantCard({
   onStop,
   trail
 }: InstantCardProps) {
+  const { t } = useTranslation();
   const headingId = useId();
   const state = cardState(playback, otherPlaying);
 
@@ -75,14 +77,16 @@ export default function InstantCard({
       data-inert={state.playDisabled}
     >
       {state.live && (
-        <span className="chip">{playback === "discord" ? "No Discord" : "Tocando"}</span>
+        <span className="chip">
+          {playback === "discord" ? t("card.playingDiscord") : t("card.playingLocal")}
+        </span>
       )}
 
       <h3 className="pname" id={headingId}>
         <button
           type="button"
           className="phit"
-          title="Reproduzir"
+          title={t("card.play")}
           disabled={state.playDisabled}
           onClick={() => onPlay(instant)}
         >
@@ -107,8 +111,8 @@ export default function InstantCard({
         <button
           type="button"
           className="pb"
-          aria-label="Enviar para o Discord"
-          title="Enviar para o Discord"
+          aria-label={t("card.sendToDiscord")}
+          title={t("card.sendToDiscord")}
           disabled={state.discordDisabled}
           onClick={() => onPlayOnDiscord(instant)}
         >
@@ -117,8 +121,8 @@ export default function InstantCard({
         <button
           type="button"
           className="pb"
-          aria-label="Parar"
-          title="Parar"
+          aria-label={t("card.stop")}
+          title={t("card.stop")}
           disabled={state.stopDisabled}
           onClick={onStop}
         >
