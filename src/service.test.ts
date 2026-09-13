@@ -4,6 +4,7 @@ import { http, HttpResponse } from "msw";
 import type { JsonBodyType } from "msw";
 
 import {
+  ApiError,
   playOnDiscord,
   stopPlayingOnDiscord,
   getContent,
@@ -125,6 +126,35 @@ describe("playOnDiscord", () => {
     await expect(playOnDiscord("https://www.myinstants.com/a/")).rejects.toThrow(
       "Erro desconhecido, tente novamente mais tarde"
     );
+  });
+});
+
+describe("ApiError", () => {
+  it("carries the backend's label alongside its message", async () => {
+    server.use(
+      http.post(`${apiUrl}/bot/play`, () =>
+        errorAt200("instant_not_found", "O instant enviado não foi encontrado")
+      )
+    );
+
+    await expect(playOnDiscord("x")).rejects.toBeInstanceOf(ApiError);
+    await expect(playOnDiscord("x")).rejects.toMatchObject({
+      label: "instant_not_found",
+      message: "O instant enviado não foi encontrado"
+    });
+  });
+
+  it("has a null label when the error body carries none", async () => {
+    server.use(http.post(`${apiUrl}/bot/play`, () => errorAtStatus(500, {})));
+
+    await expect(playOnDiscord("x")).rejects.toMatchObject({ label: null });
+  });
+
+  it("is still an ApiError, with a null label, when there is no response at all", async () => {
+    server.use(http.post(`${apiUrl}/bot/play`, () => HttpResponse.error()));
+
+    await expect(playOnDiscord("x")).rejects.toBeInstanceOf(ApiError);
+    await expect(playOnDiscord("x")).rejects.toMatchObject({ label: null });
   });
 });
 

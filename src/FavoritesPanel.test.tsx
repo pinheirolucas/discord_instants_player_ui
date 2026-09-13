@@ -9,7 +9,8 @@ import FavoritesPanel from "./FavoritesPanel";
 import SnackbarContext from "./SnackbarContext";
 import { getContent, playOnDiscord, stopPlayingOnDiscord } from "./service";
 
-vi.mock("./service", () => ({
+vi.mock("./service", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./service")>()),
   getContent: vi.fn(),
   playOnDiscord: vi.fn(),
   stopPlayingOnDiscord: vi.fn()

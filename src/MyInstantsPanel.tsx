@@ -8,6 +8,7 @@ import InstantCard from "./components/InstantCard";
 import type { Playback } from "./components/InstantCard";
 import { OfflineBanner } from "./components/OfflineBanner";
 import { StarIcon } from "./icons";
+import { apiErrorMessage } from "./i18n/apiError";
 import type { Region } from "./regions";
 import SnackbarContext from "./SnackbarContext";
 import { getContent, getMyInstants } from "./service";
@@ -95,10 +96,10 @@ export default function MyInstantsPanel({
         setTotalPages(listing.pages || 1);
         setFailed(false);
       })
-      .catch((err: Error) => {
+      .catch((err: unknown) => {
         if (cancelled) return;
         setFailed(true);
-        snackbar.current({ message: err.message });
+        snackbar.current({ message: apiErrorMessage(t, err) });
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -133,7 +134,7 @@ export default function MyInstantsPanel({
     try {
       info = await getContent(instant.url);
     } catch (err) {
-      openSnackbar({ message: (err as Error).message });
+      openSnackbar({ message: apiErrorMessage(t, err) });
       return;
     }
 
@@ -147,9 +148,9 @@ export default function MyInstantsPanel({
   }
 
   async function handlePlayOnDiscord(instant: Instant) {
-    const message = await playDiscord(instant.url);
-    if (message) {
-      openSnackbar({ message });
+    const error = await playDiscord(instant.url);
+    if (error) {
+      openSnackbar({ message: apiErrorMessage(t, error) });
     }
   }
 
