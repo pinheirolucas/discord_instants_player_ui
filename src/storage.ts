@@ -1,3 +1,4 @@
+import type { LanguageId } from "./i18n/detect";
 import { createPersistedState } from "./lib/persisted";
 import type { Region } from "./regions";
 import type { ColorMode, ThemeId } from "./themes";
@@ -22,3 +23,5 @@ export const useSelectedServer = createPersistedState<string | null>("selectedSe
 /** The MyInstants catalogue's country. Read it through useRegion, which
  *  falls back to the default when the stored value is not a known region. */
 export const useRegionState = createPersistedState<Region>("region");
+
+export const useLanguageState = createPersistedState<LanguageId>("language");

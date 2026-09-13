@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html>
   <head>
     <meta charset="utf-8" />
     <!-- Fita. Browsers that read SVG favicons take the vector; the rest fall
@@ -71,6 +71,13 @@
         ];
         var theme = read("theme", "esmalte");
         r.dataset.theme = themes.indexOf(theme) === -1 ? "esmalte" : theme;
+
+        var languages = ["pt-BR", "en-US"];
+        var storedLang = read("language", null);
+        var osPrimary = (navigator.language || "").split("-")[0].toLowerCase();
+        var lang = languages.indexOf(storedLang) !== -1 ? storedLang : (osPrimary === "pt" ? "pt-BR" : "en-US");
+        r.lang = lang;
+        r.dataset.lang = lang;
       })();
     </script>
   </head>

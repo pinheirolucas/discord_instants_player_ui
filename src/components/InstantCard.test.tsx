@@ -1,9 +1,10 @@
-import { describe, it, expect, vi } from "vitest";
+import { afterEach, describe, it, expect, vi } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import InstantCard, { cardState } from "./InstantCard";
 import type { InstantCardProps, Playback } from "./InstantCard";
+import i18n from "../i18n";
 import { slotFor } from "../lib/slot";
 
 const instant = { name: "Primeiro", url: "https://www.myinstants.com/a/" };
@@ -166,5 +167,20 @@ describe("InstantCard state matrix", () => {
       stopDisabled: true,
       trailDisabled: false
     });
+  });
+});
+
+describe("InstantCard under en-US", () => {
+  afterEach(async () => {
+    await i18n.changeLanguage("pt-BR");
+  });
+
+  it("renders its own copy in English", async () => {
+    await i18n.changeLanguage("en-US");
+    const { card } = renderCard({ playback: "discord" });
+
+    expect(within(card).getByRole("button", { name: "Send to Discord" })).toBeInTheDocument();
+    expect(within(card).getByRole("button", { name: "Stop" })).toBeInTheDocument();
+    expect(within(card).getByText("On Discord")).toBeInTheDocument();
   });
 });
