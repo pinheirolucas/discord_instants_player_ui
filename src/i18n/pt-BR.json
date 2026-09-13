@@ -5,5 +5,127 @@
     "stop": "Parar",
     "playingLocal": "Tocando",
     "playingDiscord": "No Discord"
+  },
+  "common": {
+    "switch": "Trocar",
+    "cancel": "Cancelar",
+    "retry": "Tentar de novo",
+    "clearSearch": "Limpar busca",
+    "nothingHere": "Nada por aqui",
+    "instantGone": "Parece que o instant não existe mais"
+  },
+  "app": {
+    "tabFavorites": "Favoritos",
+    "sectionAriaLabel": "Seção",
+    "searchAriaLabel": "Procurar um som",
+    "searchPlaceholder": "Procurar um som…",
+    "add": "Adicionar",
+    "moreOptions": "Mais opções",
+    "import": "Importar",
+    "export": "Exportar",
+    "appearance": "Aparência",
+    "language": "Idioma",
+    "languagePtBR": "Português",
+    "languageEnUS": "English",
+    "connectionError": "Não foi possível falar com {{address}}"
+  },
+  "server": {
+    "talkingTo": "Falando agora com",
+    "found_one": "Encontrados na rede · {{count}}",
+    "found_other": "Encontrados na rede · {{count}}",
+    "none": "Nenhum servidor encontrado",
+    "noneHint": "A busca é bloqueada em muitas redes",
+    "refresh": "Procurar novamente",
+    "switchTitle": "Trocar de servidor",
+    "unresponsive": "{{address}} não está respondendo",
+    "thisComputer": "este computador",
+    "onlyThisComputer": "Este computador"
+  },
+  "save": {
+    "title": "Adicionar instant",
+    "description": "Cole o link de um som do myinstants.com e dê um nome que você reconheça na grade.",
+    "action": "Salvar",
+    "nameLabel": "Nome",
+    "nameError": "Mínimo 3 caracteres",
+    "linkLabel": "Link",
+    "linkError": "Link inválido",
+    "linkPlaceholder": "https://www.myinstants.com/pt/instant/…"
+  },
+  "import": {
+    "rejectedType": "Só arquivos .json são aceitos.",
+    "rejectedContent": "O conteúdo não é um JSON válido.",
+    "count_one": "{{count}} instant no arquivo",
+    "count_other": "{{count}} instants no arquivo",
+    "readingFile": "Lendo o arquivo…",
+    "badFileTitle": "Esse arquivo não serve",
+    "dialogTitle": "Importar instants",
+    "dialogDescription": "Um arquivo .json gerado pelo Exportar desta app.",
+    "whatToImport": "O que você quer importar?",
+    "whatAboutExisting": "E os que você já tem?",
+    "keepMine": "Manter os meus",
+    "replaceAll": "Substituir tudo"
+  },
+  "dropzone": {
+    "idleTitle": "Arraste o arquivo para cá",
+    "idleHint": "ou clique para escolher um do computador",
+    "overTitle": "Solte para carregar",
+    "badTitle": "Esse arquivo não serve",
+    "badHint": "Só arquivos .json são aceitos."
+  },
+  "favorites": {
+    "savedCount_one": "{{count}} som salvo",
+    "savedCount_other": "{{count}} sons salvos",
+    "filteredOfTotal": "{{filtered}} de {{total}}",
+    "remove": "Remover",
+    "duplicate": "Esse instant já está salvo como “{{name}}”",
+    "emptyTitle": "Sem sons ainda",
+    "emptyBody": "Cole o link de um instant, ou vá ao MyInstants e favorite os que você usa toda hora.",
+    "addFirst": "Adicionar um instant",
+    "noResultsBody_one": "Nenhum dos seus {{count}} favorito bate com “{{search}}”. O catálogo do MyInstants é bem maior.",
+    "noResultsBody_other": "Nenhum dos seus {{count}} favoritos bate com “{{search}}”. O catálogo do MyInstants é bem maior.",
+    "searchCatalogButton": "Procurar “{{search}}” no MyInstants"
+  },
+  "myinstants": {
+    "loadingSummary": "carregando…",
+    "resultsSummary_one": "{{count}} resultado",
+    "resultsSummary_other": "{{count}} resultados",
+    "loadFailedTitle": "O catálogo não carregou",
+    "loadFailedBody": "O servidor não conseguiu trazer a lista do myinstants.com.",
+    "noSearchResultsBody": "Nenhum som do MyInstants bate com “{{search}}”.",
+    "emptyCatalogTitle": "Nada no catálogo",
+    "emptyCatalogBody": "O MyInstants não devolveu nenhum som.",
+    "favorite": "Favoritar",
+    "loadMore": "Carregar mais",
+    "loadingMore": "Carregando…"
+  },
+  "region": {
+    "switchTitle": "Trocar a região do catálogo",
+    "menuLabel": "Região do catálogo"
+  },
+  "appearance": {
+    "title": "Aparência",
+    "modeAriaLabel": "Modo",
+    "modeAuto": "Automático",
+    "modeLight": "Claro",
+    "modeDark": "Escuro",
+    "confirm": "Pronto",
+    "groupLabel": "Tema",
+    "desc": {
+      "esmalte": "Azul profundo e mostarda de placa antiga",
+      "frevo": "Fluorescentes de sombrinha de frevo",
+      "cerrado": "Ocre, musgo e terracota",
+      "brasa": "Só tons quentes, do tijolo ao ouro",
+      "fliperama": "Cor no talo sobre quase preto",
+      "discord": "Índigo e as cores de status do Discord",
+      "contraste": "Máxima legibilidade, cor contida",
+      "oled": "Preto absoluto e branco puro"
+    }
+  },
+  "offline": {
+    "hint": "Seus favoritos continuam aqui, mas nada toca até o bot voltar."
+  },
+  "toast": {
+    "viewportLabel": "Notificações ({hotkey})",
+    "close": "Fechar"
   }
 }

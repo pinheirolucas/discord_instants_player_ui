@@ -1,5 +1,6 @@
 import * as RadixRadio from "@radix-ui/react-radio-group";
 import { forwardRef } from "react";
+import { useTranslation } from "react-i18next";
 import { THEMES, isThemeId } from "../themes";
 import type { ResolvedMode, ThemeId } from "../themes";
 import { ThemeSwatch } from "./ThemeSwatch";
@@ -21,11 +22,13 @@ export const ThemePicker = forwardRef<HTMLDivElement, ThemePickerProps>(function
   { value, onChange, mode },
   ref
 ) {
+  const { t } = useTranslation();
+
   return (
     <RadixRadio.Root
       ref={ref}
       className="tpick"
-      aria-label="Tema"
+      aria-label={t("appearance.groupLabel")}
       orientation="horizontal"
       value={value}
       onValueChange={(next) => {
@@ -35,7 +38,12 @@ export const ThemePicker = forwardRef<HTMLDivElement, ThemePickerProps>(function
       }}
     >
       {THEMES.map((theme) => (
-        <RadixRadio.Item key={theme.id} value={theme.id} className="topt" title={theme.desc}>
+        <RadixRadio.Item
+          key={theme.id}
+          value={theme.id}
+          className="topt"
+          title={t(`appearance.desc.${theme.id}`)}
+        >
           <span className="tring">
             <ThemeSwatch theme={theme.id} mode={mode} />
           </span>

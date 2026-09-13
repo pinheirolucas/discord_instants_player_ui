@@ -3,6 +3,10 @@
 // https://github.com/testing-library/jest-dom
 import "@testing-library/jest-dom/vitest";
 
+if (typeof navigator !== "undefined" && navigator.language !== "pt-BR") {
+  Object.defineProperty(navigator, "language", { value: "pt-BR", configurable: true });
+}
+
 import i18n from "./i18n";
 await i18n.changeLanguage("pt-BR");
 

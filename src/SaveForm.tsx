@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import type { FormEvent, KeyboardEvent } from "react";
+import { useTranslation } from "react-i18next";
 import { Button } from "./components/Button";
 import { Dialog } from "./components/Dialog";
 import { Field } from "./components/Field";
@@ -13,6 +14,7 @@ export interface SaveFormProps {
 }
 
 export default function SaveForm({ open, onCancel, onSave }: SaveFormProps) {
+  const { t } = useTranslation();
   const [name, setName] = useState("");
   const [link, setLink] = useState("");
   const [touched, setTouched] = useState({ name: false, link: false });
@@ -27,8 +29,8 @@ export default function SaveForm({ open, onCancel, onSave }: SaveFormProps) {
   }, [open]);
 
   const valid = name.length >= MIN_NAME && Boolean(link);
-  const nameError = touched.name && name.length < MIN_NAME ? "Mínimo 3 caracteres" : "";
-  const linkError = touched.link && !link ? "Link inválido" : "";
+  const nameError = touched.name && name.length < MIN_NAME ? t("save.nameError") : "";
+  const linkError = touched.link && !link ? t("save.linkError") : "";
 
   function submit() {
     if (!valid) {
@@ -54,16 +56,16 @@ export default function SaveForm({ open, onCancel, onSave }: SaveFormProps) {
       onOpenChange={(next) => {
         if (!next) onCancel();
       }}
-      title="Adicionar instant"
-      description="Cole o link de um som do myinstants.com e dê um nome que você reconheça na grade."
+      title={t("save.title")}
+      description={t("save.description")}
       footer={
         <>
           <Button variant="secondary" onClick={onCancel}>
-            Cancelar
+            {t("common.cancel")}
           </Button>
           {/* Dead until both fields pass, so an invalid save is never offered. */}
           <Button onClick={submit} disabled={!valid}>
-            Salvar
+            {t("save.action")}
           </Button>
         </>
       }
@@ -77,23 +79,23 @@ export default function SaveForm({ open, onCancel, onSave }: SaveFormProps) {
         style={{ display: "grid", gap: 12 }}
       >
         <Field
-          label="Nome"
+          label={t("save.nameLabel")}
           value={name}
           error={nameError}
           autoFocus
           onChange={(event) => {
             setName(event.target.value);
-            setTouched((t) => ({ ...t, name: true }));
+            setTouched((current) => ({ ...current, name: true }));
           }}
         />
         <Field
-          label="Link"
+          label={t("save.linkLabel")}
           value={link}
           error={linkError}
-          placeholder="https://www.myinstants.com/pt/instant/…"
+          placeholder={t("save.linkPlaceholder")}
           onChange={(event) => {
             setLink(event.target.value);
-            setTouched((t) => ({ ...t, link: true }));
+            setTouched((current) => ({ ...current, link: true }));
           }}
         />
       </form>
