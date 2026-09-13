@@ -71,5 +71,61 @@
     "overTitle": "Solte para carregar",
     "badTitle": "Esse arquivo não serve",
     "badHint": "Só arquivos .json são aceitos."
+  },
+  "favorites": {
+    "savedCount_one": "{{count}} som salvo",
+    "savedCount_other": "{{count}} sons salvos",
+    "filteredOfTotal": "{{filtered}} de {{total}}",
+    "remove": "Remover",
+    "duplicate": "Esse instant já está salvo como “{{name}}”",
+    "emptyTitle": "Sem sons ainda",
+    "emptyBody": "Cole o link de um instant, ou vá ao MyInstants e favorite os que você usa toda hora.",
+    "addFirst": "Adicionar um instant",
+    "noResultsBody_one": "Nenhum dos seus {{count}} favorito bate com “{{search}}”. O catálogo do MyInstants é bem maior.",
+    "noResultsBody_other": "Nenhum dos seus {{count}} favoritos bate com “{{search}}”. O catálogo do MyInstants é bem maior.",
+    "searchCatalogButton": "Procurar “{{search}}” no MyInstants"
+  },
+  "myinstants": {
+    "loadingSummary": "carregando…",
+    "resultsSummary_one": "{{count}} resultado",
+    "resultsSummary_other": "{{count}} resultados",
+    "loadFailedTitle": "O catálogo não carregou",
+    "loadFailedBody": "O servidor não conseguiu trazer a lista do myinstants.com.",
+    "noSearchResultsBody": "Nenhum som do MyInstants bate com “{{search}}”.",
+    "emptyCatalogTitle": "Nada no catálogo",
+    "emptyCatalogBody": "O MyInstants não devolveu nenhum som.",
+    "favorite": "Favoritar",
+    "loadMore": "Carregar mais",
+    "loadingMore": "Carregando…"
+  },
+  "region": {
+    "switchTitle": "Trocar a região do catálogo",
+    "menuLabel": "Região do catálogo"
+  },
+  "appearance": {
+    "title": "Aparência",
+    "modeAriaLabel": "Modo",
+    "modeAuto": "Automático",
+    "modeLight": "Claro",
+    "modeDark": "Escuro",
+    "confirm": "Pronto",
+    "groupLabel": "Tema",
+    "desc": {
+      "esmalte": "Azul profundo e mostarda de placa antiga",
+      "frevo": "Fluorescentes de sombrinha de frevo",
+      "cerrado": "Ocre, musgo e terracota",
+      "brasa": "Só tons quentes, do tijolo ao ouro",
+      "fliperama": "Cor no talo sobre quase preto",
+      "discord": "Índigo e as cores de status do Discord",
+      "contraste": "Máxima legibilidade, cor contida",
+      "oled": "Preto absoluto e branco puro"
+    }
+  },
+  "offline": {
+    "hint": "Seus favoritos continuam aqui, mas nada toca até o bot voltar."
+  },
+  "toast": {
+    "viewportLabel": "Notificações ({hotkey})",
+    "close": "Fechar"
   }
 }
