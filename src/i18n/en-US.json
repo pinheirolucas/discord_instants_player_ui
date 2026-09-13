@@ -1,0 +1,9 @@
+{
+  "card": {
+    "play": "Play",
+    "playOnDiscord": "Play on Discord",
+    "stop": "Stop",
+    "playingLocal": "Playing",
+    "playingDiscord": "On Discord"
+  }
+}

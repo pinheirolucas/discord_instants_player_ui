@@ -1,0 +1,9 @@
+{
+  "card": {
+    "play": "Reproduzir",
+    "playOnDiscord": "Reproduzir no Discord",
+    "stop": "Parar",
+    "playingLocal": "Reproduzindo",
+    "playingDiscord": "No Discord"
+  }
+}
