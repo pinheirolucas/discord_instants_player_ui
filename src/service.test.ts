@@ -18,7 +18,7 @@ import {
   onConnectionError
 } from "./service";
 
-// Mocking at the request level rather than stubbing axios keeps these tests
+// Mocking at the request level rather than stubbing fetch keeps these tests
 // honest about the two things that actually bite here: the exact query strings
 // service.ts builds, and the response envelope the Go backend really sends.
 const apiUrl = "http://localhost:9001";
@@ -42,7 +42,8 @@ function errorAt200(label: string, message: string) {
 
 // The one genuine non-200 the backend can produce is the http.Error fallback
 // when encoding the body itself fails; a dead or misbehaving proxy in front of
-// it would do the same. This is the only shape axios rejects on.
+// it would do the same. fetch itself does not reject on this — service.ts
+// checks response.ok explicitly to treat it the same as a 200 error envelope.
 function errorAtStatus(status: number, body: JsonBodyType) {
   return HttpResponse.json(body, { status });
 }
@@ -103,7 +104,7 @@ describe("playOnDiscord", () => {
     );
   });
 
-  // The backend sends its errors with HTTP 200, so axios does not reject and the
+  // The backend sends its errors with HTTP 200, so fetch does not reject and the
   // envelope has to be judged on the success path — before `.exitReason` is read
   // off a `data` that is not there.
   it("surfaces the backend message when the error arrives with HTTP 200", async () => {
@@ -159,11 +160,13 @@ describe("ApiError", () => {
 });
 
 describe("stopPlayingOnDiscord", () => {
-  it("posts to /bot/stop and resolves with the raw axios response", async () => {
+  it("posts to /bot/stop and resolves with the raw fetch response", async () => {
     let seen = 0;
+    let method;
     server.use(
-      http.post(`${apiUrl}/bot/stop`, () => {
+      http.post(`${apiUrl}/bot/stop`, ({ request }) => {
         seen += 1;
+        method = request.method;
         // handleBotStop writes nothing at all — no body, no content type.
         return new HttpResponse(null, { status: 200 });
       })
@@ -172,21 +175,21 @@ describe("stopPlayingOnDiscord", () => {
     const response = await stopPlayingOnDiscord();
 
     expect(seen).toBe(1);
+    expect(method).toBe("POST");
     expect(response.status).toBe(200);
-    expect(response.config.method).toBe("post");
   });
 
   // Unlike playOnDiscord this one has no catch, so a failure escapes as the raw
-  // axios error. useDiscordPlayer#stop awaits it without a catch either, so a
-  // rejection here becomes an unhandled rejection rather than a snackbar.
-  it("rejects with the raw axios error, unwrapped", async () => {
+  // fetch Response (fetch itself only rejects on a network failure — a genuine
+  // error status resolves, so it is thrown explicitly). useDiscordPlayer#stop
+  // awaits it without a catch either, so a rejection here becomes an unhandled
+  // rejection rather than a snackbar.
+  it("rejects with the raw response, unwrapped, on a real error status", async () => {
     server.use(
       http.post(`${apiUrl}/bot/stop`, () => errorAtStatus(500, { label: "boom" }))
     );
 
-    await expect(stopPlayingOnDiscord()).rejects.toMatchObject({
-      response: { status: 500 }
-    });
+    await expect(stopPlayingOnDiscord()).rejects.toMatchObject({ status: 500 });
   });
 });
 

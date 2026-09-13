@@ -1,5 +1,3 @@
-import axios from "axios";
-import type { AxiosResponse } from "axios";
 import type { Instant } from "./storage";
 
 export const defaultApiUrl = "http://localhost:9001";
@@ -9,8 +7,9 @@ const genericErrorMessage = "Erro desconhecido, tente novamente mais tarde";
 /**
  * Every backend reply is an envelope. Success carries `data`; most
  * application errors come back as HTTP 200 with `{ label, message }` and no
- * `data` at all — so axios does not reject, and an absent `data` is the
- * error signal.
+ * `data` at all — fetch does not reject on that (or on any other HTTP
+ * status), so an absent `data`, same as a non-ok status, is judged after the
+ * fact rather than caught.
  */
 interface Envelope<T> {
   data?: T;
@@ -44,25 +43,6 @@ interface PlayResult {
 
 type Listener<T extends unknown[]> = (...args: T) => void;
 
-function backendEnvelope(err: unknown): Envelope<unknown> | null {
-  return (err as { response?: { data?: Envelope<unknown> } } | null)?.response?.data ?? null;
-}
-
-function toApiError(err: unknown): ApiError {
-  const envelope = backendEnvelope(err);
-  return new ApiError(envelope?.label ?? null, envelope?.message || genericErrorMessage);
-}
-
-function unwrapData<T>(response: AxiosResponse<Envelope<T>> | undefined): T {
-  const body: Envelope<T> = (response && response.data) || {};
-
-  if (!body.data) {
-    throw new ApiError(body.label ?? null, body.message || genericErrorMessage);
-  }
-
-  return body.data;
-}
-
 let apiUrl = defaultApiUrl;
 
 let healthy = true;
@@ -78,17 +58,13 @@ function markHealth(next: boolean): void {
   healthListeners.forEach((listener) => listener(healthy));
 }
 
-// A failed *request* — no response at all — is what makes the server
-// unhealthy. An error body still means the server answered.
-function markFromError(err: unknown): void {
-  const error = err as { isAxiosError?: boolean; response?: unknown } | null;
-  const requestFailed = Boolean(error && error.isAxiosError && !error.response);
-
-  markHealth(!requestFailed);
-
-  if (requestFailed) {
-    connectionErrorListeners.forEach((listener) => listener());
-  }
+// fetch rejects only when no response ever arrives — a network failure, not
+// an HTTP error status. That is exactly the "request failed" signal that
+// makes the server unhealthy; an error body, or any other status, still
+// means the server answered.
+function markConnectionFailure(): void {
+  markHealth(false);
+  connectionErrorListeners.forEach((listener) => listener());
 }
 
 export function isHealthy(): boolean {
@@ -165,45 +141,67 @@ export function resetApiUrl(): void {
   markHealth(true);
 }
 
-export async function playOnDiscord(url: string): Promise<string> {
-  let response: AxiosResponse<Envelope<PlayResult>>;
+/** Issues `fetch(url, init)`, unwraps the envelope, and folds a non-ok status
+ *  into the same ApiError path as a 200 with no `data` — the try/catch around
+ *  the fetch itself covers only a genuine network failure, so neither case
+ *  gets rewritten into the generic fallback. */
+async function requestEnvelope<T>(url: string, init?: RequestInit): Promise<T> {
+  let response: Response;
 
   try {
-    response = await axios.post(`${apiUrl}/bot/play`, { url });
-    markHealth(true);
-  } catch (err) {
-    markFromError(err);
-    throw toApiError(err);
+    response = await fetch(url, init);
+  } catch {
+    markConnectionFailure();
+    throw new ApiError(null, genericErrorMessage);
   }
 
-  // Outside the try: the envelope's own error must not be rewritten by the
-  // handler meant for transport errors.
-  return unwrapData(response).exitReason;
+  markHealth(true);
+
+  let body: Envelope<T> = {};
+  try {
+    body = await response.json();
+  } catch {
+    // No body at all, or not JSON — treated as an empty envelope below.
+  }
+
+  if (!response.ok || !body.data) {
+    throw new ApiError(body.label ?? null, body.message || genericErrorMessage);
+  }
+
+  return body.data;
 }
 
-export async function stopPlayingOnDiscord(): Promise<AxiosResponse> {
+export async function playOnDiscord(url: string): Promise<string> {
+  const result = await requestEnvelope<PlayResult>(`${apiUrl}/bot/play`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ url })
+  });
+
+  return result.exitReason;
+}
+
+export async function stopPlayingOnDiscord(): Promise<Response> {
+  let response: Response;
+
   try {
-    const response = await axios.post(`${apiUrl}/bot/stop`);
-    markHealth(true);
-    return response;
+    response = await fetch(`${apiUrl}/bot/stop`, { method: "POST" });
   } catch (err) {
-    markFromError(err);
+    markConnectionFailure();
     throw err;
   }
+
+  markHealth(true);
+
+  if (!response.ok) {
+    throw response;
+  }
+
+  return response;
 }
 
 export async function getContent(url: string): Promise<ContentInfo> {
-  let response: AxiosResponse<Envelope<ContentInfo>>;
-
-  try {
-    response = await axios.get(`${apiUrl}/play?url=${url}`);
-    markHealth(true);
-  } catch (err) {
-    markFromError(err);
-    throw toApiError(err);
-  }
-
-  return unwrapData(response);
+  return requestEnvelope<ContentInfo>(`${apiUrl}/play?url=${url}`);
 }
 
 /** `region` is sent whenever it is given. Which requests it affects (today,
@@ -220,16 +218,5 @@ export async function getMyInstants(
     { value: region, query: `&region=${encodeURIComponent(region ?? "")}` }
   ].reduce((acc, cur) => (cur.value ? acc + cur.query : acc), "");
 
-  return axios
-    .get<Envelope<Listing>>(`${apiUrl}/instant/list?${params}`)
-    .catch((err: unknown) => {
-      markFromError(err);
-      throw toApiError(err);
-    })
-    .then((resp) => {
-      // After the .catch, so the envelope's throw is not rewritten into the
-      // generic fallback. The server answered, even with an error body.
-      markHealth(true);
-      return unwrapData(resp);
-    });
+  return requestEnvelope<Listing>(`${apiUrl}/instant/list?${params}`);
 }
