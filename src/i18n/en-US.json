@@ -127,5 +127,18 @@
   "toast": {
     "viewportLabel": "Notifications ({hotkey})",
     "close": "Close"
+  },
+  "api": {
+    "invalid_body": "Invalid request",
+    "invalid_url": "That URL isn't valid",
+    "empty_url": "No URL was sent",
+    "instant_not_found": "That instant couldn't be found",
+    "unsuported_audio_format": "That instant isn't an audio format we can play",
+    "invalid_region": "That region code isn't valid",
+    "http_request": "Couldn't reach myinstants.com",
+    "bad_http_status": "myinstants.com answered with an error",
+    "total_pages_count": "Couldn't read the page count from myinstants.com",
+    "name_link_not_matched": "myinstants.com's results couldn't be read — their page layout may have changed",
+    "unknown_error": "Something went wrong. Try again in a moment"
   }
 }

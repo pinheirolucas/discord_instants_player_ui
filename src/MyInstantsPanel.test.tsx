@@ -10,7 +10,8 @@ import type { Region } from "./regions";
 import type { Listing } from "./service";
 import type { Instant } from "./storage";
 
-vi.mock("./service", () => ({
+vi.mock("./service", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./service")>()),
   getContent: vi.fn(),
   getMyInstants: vi.fn(),
   playOnDiscord: vi.fn(),

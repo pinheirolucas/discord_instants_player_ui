@@ -4,8 +4,7 @@ import { playOnDiscord, stopPlayingOnDiscord } from "./service";
 export type DiscordPlayer = [
   url: string,
   isPlaying: boolean,
-  /** Resolves to an error message to show, or nothing. */
-  play: (url: string) => Promise<string | undefined>,
+  play: (url: string) => Promise<Error | undefined>,
   stop: () => Promise<unknown>
 ];
 
@@ -18,7 +17,7 @@ export default function useDiscordPlayer(): DiscordPlayer {
     return stopPlayingOnDiscord();
   }
 
-  async function play(nextUrl: string): Promise<string | undefined> {
+  async function play(nextUrl: string): Promise<Error | undefined> {
     if (isPlaying) {
       await stop();
     }
@@ -32,10 +31,10 @@ export default function useDiscordPlayer(): DiscordPlayer {
           setUrl("");
           return undefined;
         default:
-          return "";
+          return undefined;
       }
     } catch (err) {
-      return (err as Error).message;
+      return err as Error;
     }
   }
 
