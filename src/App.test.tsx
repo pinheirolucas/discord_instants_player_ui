@@ -258,7 +258,7 @@ describe("connection health", () => {
     });
 
     expect(serverChip("localhost:9001 não está respondendo")).toBeInTheDocument();
-    expect(toasts().getByText("Não foi possível falar com localhost:9001")).toBeInTheDocument();
+    expect(toasts().getByText("Não foi possível conectar a localhost:9001")).toBeInTheDocument();
     expect(toasts().getByRole("button", { name: "Trocar" })).toBeInTheDocument();
   });
 
@@ -307,7 +307,7 @@ describe("snackbar precedence while offline", () => {
       await Promise.resolve();
     });
 
-    expect(toasts().getByText("Não foi possível falar com localhost:9001")).toBeInTheDocument();
+    expect(toasts().getByText("Não foi possível conectar a localhost:9001")).toBeInTheDocument();
     expect(screen.queryByText("Erro desconhecido, tente novamente mais tarde")).not.toBeInTheDocument();
 
     vi.mocked(getMyInstants).mockResolvedValue({ instants: [], pages: 0 });
@@ -329,12 +329,12 @@ describe("repeated failures while already offline", () => {
     await userEvent.click(toasts().getByRole("button", { name: "Fechar" }));
 
     await waitFor(() =>
-      expect(screen.queryByText("Não foi possível falar com localhost:9001")).not.toBeInTheDocument()
+      expect(screen.queryByText("Não foi possível conectar a localhost:9001")).not.toBeInTheDocument()
     );
 
     act(() => connectionErrorListener());
 
-    expect(toasts().getByText("Não foi possível falar com localhost:9001")).toBeInTheDocument();
+    expect(toasts().getByText("Não foi possível conectar a localhost:9001")).toBeInTheDocument();
   });
 });
 
