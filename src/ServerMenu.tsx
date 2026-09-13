@@ -5,7 +5,11 @@ import { ServerChip } from "./components/ServerChip";
 import { CheckIcon, RefreshIcon } from "./icons";
 
 export function formatApiUrl(url: string): string {
-  return String(url || "").replace(/^https?:\/\//, "");
+  try {
+    return new URL(url).host;
+  } catch {
+    return String(url || "").replace(/^https?:\/\//, "");
+  }
 }
 
 function describe(server: Server, t: (key: string) => string): string {
