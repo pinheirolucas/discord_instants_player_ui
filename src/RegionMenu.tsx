@@ -1,12 +1,10 @@
+import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { Menu, MenuItem, MenuLabel } from "./components/Menu";
+import { isLanguageId } from "./i18n/detect";
 import { CheckIcon } from "./icons";
 import { REGIONS, regionLabel } from "./regions";
 import type { Region } from "./regions";
-
-// Alphabetical by the Portuguese name, so the list can be scanned.
-const OPTIONS = REGIONS.map((value) => ({ value, label: regionLabel(value) })).sort((a, b) =>
-  a.label.localeCompare(b.label, "pt-BR")
-);
 
 export interface RegionMenuProps {
   region: Region;
@@ -20,17 +18,28 @@ export interface RegionMenuProps {
  * requests it affects is the backend's call, not this menu's.
  */
 export default function RegionMenu({ region, onSelect }: RegionMenuProps) {
+  const { t, i18n } = useTranslation();
+  const language = isLanguageId(i18n.language) ? i18n.language : "en-US";
+
+  const options = useMemo(
+    () =>
+      REGIONS.map((value) => ({ value, label: regionLabel(value, language) })).sort((a, b) =>
+        a.label.localeCompare(b.label, language)
+      ),
+    [language]
+  );
+
   return (
     <Menu
       className="menu--scroll"
       trigger={
-        <button type="button" className="srv" title="Trocar a região do catálogo">
-          {regionLabel(region)}
+        <button type="button" className="srv" title={t("region.switchTitle")}>
+          {regionLabel(region, language)}
         </button>
       }
     >
-      <MenuLabel>Região do catálogo</MenuLabel>
-      {OPTIONS.map((option) => (
+      <MenuLabel>{t("region.menuLabel")}</MenuLabel>
+      {options.map((option) => (
         <MenuItem
           key={option.value}
           tick={option.value === region ? <CheckIcon /> : null}
