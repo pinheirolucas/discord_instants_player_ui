@@ -1,4 +1,5 @@
 import { useContext, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { Button } from "./components/Button";
 import { EmptyState } from "./components/EmptyState";
 import InstantCard from "./components/InstantCard";
@@ -37,6 +38,7 @@ export default function FavoritesPanel({
   onAddOpenChange,
   onSearchCatalog
 }: FavoritesPanelProps) {
+  const { t } = useTranslation();
   const [audioUrl, isAudioPlaying, playAudio, stopAudio] = useAudioPlayer();
   const [discordUrl, isDiscordPlaying, playDiscord, stopDiscord] = useDiscordPlayer();
   const { openSnackbar, closeSnackbar } = useContext(SnackbarContext);
@@ -50,10 +52,10 @@ export default function FavoritesPanel({
   useEffect(() => {
     onSummary(
       search
-        ? `${filtered.length} de ${instants.length}`
-        : `${instants.length} ${instants.length === 1 ? "som salvo" : "sons salvos"}`
+        ? t("favorites.filteredOfTotal", { filtered: filtered.length, total: instants.length })
+        : t("favorites.savedCount", { count: instants.length })
     );
-  }, [search, filtered.length, instants.length, onSummary]);
+  }, [search, filtered.length, instants.length, onSummary, t]);
 
   function handleRemove(instant: Instant) {
     setInstants((current) => current.filter(({ url }) => url !== instant.url));
@@ -62,7 +64,7 @@ export default function FavoritesPanel({
   function showNotFound(instant: Instant, message: string) {
     openSnackbar({
       message,
-      actionLabel: "Remover",
+      actionLabel: t("favorites.remove"),
       onAction: () => {
         handleRemove(instant);
         closeSnackbar();
@@ -83,7 +85,7 @@ export default function FavoritesPanel({
     }
 
     if (!info.exists) {
-      showNotFound(instant, "Parece que o instant não existe mais");
+      showNotFound(instant, t("common.instantGone"));
       return;
     }
 
@@ -110,7 +112,7 @@ export default function FavoritesPanel({
   function handleSave(name: string, url: string) {
     const found = instants.find((instant) => instant.url === url);
     if (found) {
-      openSnackbar({ message: `Esse instant já está salvo como “${found.name}”` });
+      openSnackbar({ message: t("favorites.duplicate", { name: found.name }) });
       return;
     }
 
@@ -131,21 +133,20 @@ export default function FavoritesPanel({
   if (instants.length === 0) {
     content = (
       <EmptyState
-        title="Sem sons ainda"
-        body="Cole o link de um instant, ou vá ao MyInstants e favorite os que você usa toda hora."
-        action={<Button onClick={() => onAddOpenChange(true)}>Adicionar um instant</Button>}
+        title={t("favorites.emptyTitle")}
+        body={t("favorites.emptyBody")}
+        action={<Button onClick={() => onAddOpenChange(true)}>{t("favorites.addFirst")}</Button>}
       />
     );
   } else if (filtered.length === 0) {
     // Carries the query to the other tab instead of making them retype it.
-    const noun = instants.length === 1 ? "favorito" : "favoritos";
     content = (
       <EmptyState
-        title="Nada por aqui"
-        body={`Nenhum dos seus ${instants.length} ${noun} bate com “${search}”. O catálogo do MyInstants é bem maior.`}
+        title={t("common.nothingHere")}
+        body={t("favorites.noResultsBody", { count: instants.length, search })}
         action={
           <Button variant="secondary" onClick={onSearchCatalog}>
-            {`Procurar “${search}” no MyInstants`}
+            {t("favorites.searchCatalogButton", { search })}
           </Button>
         }
       />
@@ -165,7 +166,7 @@ export default function FavoritesPanel({
               onPlayOnDiscord={handlePlayOnDiscord}
               onStop={handleStop}
               trail={{
-                label: "Remover",
+                label: t("favorites.remove"),
                 icon: <TrashIcon />,
                 onClick: () => handleRemove(instant)
               }}

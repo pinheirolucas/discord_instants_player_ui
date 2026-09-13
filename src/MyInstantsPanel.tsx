@@ -1,5 +1,6 @@
 import * as R from "ramda";
 import { useContext, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Button } from "./components/Button";
 import { CardSkeleton } from "./components/CardSkeleton";
 import { EmptyState } from "./components/EmptyState";
@@ -47,6 +48,7 @@ export default function MyInstantsPanel({
   onSummary,
   onClearSearch
 }: MyInstantsPanelProps) {
+  const { t } = useTranslation();
   const [audioUrl, isAudioPlaying, playAudio, stopAudio] = useAudioPlayer();
   const [discordUrl, isDiscordPlaying, playDiscord, stopDiscord] = useDiscordPlayer();
   const [favorites, setFavorites] = useInstantsState([]);
@@ -111,11 +113,9 @@ export default function MyInstantsPanel({
 
   useEffect(() => {
     onSummary(
-      firstLoad
-        ? "carregando…"
-        : `${instants.length} ${instants.length === 1 ? "resultado" : "resultados"}`
+      firstLoad ? t("myinstants.loadingSummary") : t("myinstants.resultsSummary", { count: instants.length })
     );
-  }, [firstLoad, instants.length, onSummary]);
+  }, [firstLoad, instants.length, onSummary, t]);
 
   const urls = favorites.map((instant) => instant.url);
 
@@ -139,7 +139,7 @@ export default function MyInstantsPanel({
 
     if (!info.exists) {
       // Unlike Favoritos there is nothing to remove here, so no action.
-      openSnackbar({ message: "Parece que o instant não existe mais" });
+      openSnackbar({ message: t("common.instantGone") });
       return;
     }
 
@@ -188,11 +188,11 @@ export default function MyInstantsPanel({
     if (failed) {
       content = (
         <EmptyState
-          title="O catálogo não carregou"
-          body="O servidor não conseguiu trazer a lista do myinstants.com."
+          title={t("myinstants.loadFailedTitle")}
+          body={t("myinstants.loadFailedBody")}
           action={
             <Button variant="secondary" onClick={reload}>
-              Tentar de novo
+              {t("common.retry")}
             </Button>
           }
         />
@@ -200,11 +200,11 @@ export default function MyInstantsPanel({
     } else if (request.search) {
       content = (
         <EmptyState
-          title="Nada por aqui"
-          body={`Nenhum som do MyInstants bate com “${request.search}”.`}
+          title={t("common.nothingHere")}
+          body={t("myinstants.noSearchResultsBody", { search: request.search })}
           action={
             <Button variant="secondary" onClick={onClearSearch}>
-              Limpar busca
+              {t("common.clearSearch")}
             </Button>
           }
         />
@@ -212,11 +212,11 @@ export default function MyInstantsPanel({
     } else {
       content = (
         <EmptyState
-          title="Nada no catálogo"
-          body="O MyInstants não devolveu nenhum som."
+          title={t("myinstants.emptyCatalogTitle")}
+          body={t("myinstants.emptyCatalogBody")}
           action={
             <Button variant="secondary" onClick={reload}>
-              Tentar de novo
+              {t("common.retry")}
             </Button>
           }
         />
@@ -238,7 +238,7 @@ export default function MyInstantsPanel({
               onPlayOnDiscord={handlePlayOnDiscord}
               onStop={handleStop}
               trail={{
-                label: "Favoritar",
+                label: t("myinstants.favorite"),
                 icon: <StarIcon filled={isFavorite} />,
                 pressed: isFavorite,
                 onClick: () => toggleFavorite(instant)
@@ -261,7 +261,7 @@ export default function MyInstantsPanel({
             disabled={loading}
             onClick={() => setRequest((current) => ({ ...current, page: current.page + 1 }))}
           >
-            {loading ? "Carregando…" : "Carregar mais"}
+            {loading ? t("myinstants.loadingMore") : t("myinstants.loadMore")}
           </Button>
         </div>
       )}

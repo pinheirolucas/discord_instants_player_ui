@@ -245,7 +245,7 @@ describe("FavoritesPanel", () => {
     await waitFor(() => expect(snackbar.openSnackbar).toHaveBeenCalled());
 
     const [{ message, actionLabel, onAction }] = snackbar.openSnackbar.mock.calls[0];
-    expect(message).toBe("Parece que o instant não existe mais");
+    expect(message).toBe("Parece que este instant não existe mais");
     expect(actionLabel).toBe("Remover");
 
     act(() => onAction());
@@ -370,7 +370,7 @@ describe("FavoritesPanel when a clip cannot be fetched", () => {
 
     await waitFor(() => expect(snackbar.openSnackbar).toHaveBeenCalled());
     const call = snackbar.openSnackbar.mock.calls[0][0];
-    expect(call.message).toBe("Parece que o instant não existe mais");
+    expect(call.message).toBe("Parece que este instant não existe mais");
     expect(typeof call.onAction).toBe("function");
   });
 

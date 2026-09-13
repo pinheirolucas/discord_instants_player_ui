@@ -313,7 +313,7 @@ describe("MyInstantsPanel", () => {
     await waitFor(() => {
       // Unlike Favoritos there is nothing to remove here.
       expect(snackbar.openSnackbar).toHaveBeenCalledWith({
-        message: "Parece que o instant não existe mais"
+        message: "Parece que este instant não existe mais"
       });
     });
   });
@@ -329,7 +329,7 @@ describe("MyInstantsPanel", () => {
     );
     expect(screen.getByRole("heading", { name: "O catálogo não carregou" })).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "Tentar de novo" }));
+    await user.click(screen.getByRole("button", { name: "Tente novamente" }));
 
     expect(await screen.findByRole("article", { name: "Primeiro" })).toBeInTheDocument();
     expect(getMyInstants).toHaveBeenCalledTimes(2);
