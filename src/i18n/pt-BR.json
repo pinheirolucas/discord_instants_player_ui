@@ -5,5 +5,40 @@
     "stop": "Parar",
     "playingLocal": "Tocando",
     "playingDiscord": "No Discord"
+  },
+  "common": {
+    "switch": "Trocar",
+    "cancel": "Cancelar",
+    "retry": "Tentar de novo",
+    "clearSearch": "Limpar busca",
+    "nothingHere": "Nada por aqui",
+    "instantGone": "Parece que o instant não existe mais"
+  },
+  "app": {
+    "tabFavorites": "Favoritos",
+    "sectionAriaLabel": "Seção",
+    "searchAriaLabel": "Procurar um som",
+    "searchPlaceholder": "Procurar um som…",
+    "add": "Adicionar",
+    "moreOptions": "Mais opções",
+    "import": "Importar",
+    "export": "Exportar",
+    "appearance": "Aparência",
+    "language": "Idioma",
+    "languagePtBR": "Português",
+    "languageEnUS": "English",
+    "connectionError": "Não foi possível falar com {{address}}"
+  },
+  "server": {
+    "talkingTo": "Falando agora com",
+    "found_one": "Encontrados na rede · {{count}}",
+    "found_other": "Encontrados na rede · {{count}}",
+    "none": "Nenhum servidor encontrado",
+    "noneHint": "A busca é bloqueada em muitas redes",
+    "refresh": "Procurar novamente",
+    "switchTitle": "Trocar de servidor",
+    "unresponsive": "{{address}} não está respondendo",
+    "thisComputer": "este computador",
+    "onlyThisComputer": "Este computador"
   }
 }

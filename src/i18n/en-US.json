@@ -5,5 +5,40 @@
     "stop": "Stop",
     "playingLocal": "Playing",
     "playingDiscord": "On Discord"
+  },
+  "common": {
+    "switch": "Switch",
+    "cancel": "Cancel",
+    "retry": "Try again",
+    "clearSearch": "Clear search",
+    "nothingHere": "Nothing here",
+    "instantGone": "This instant doesn't seem to exist anymore"
+  },
+  "app": {
+    "tabFavorites": "Favorites",
+    "sectionAriaLabel": "Section",
+    "searchAriaLabel": "Search a sound",
+    "searchPlaceholder": "Search a sound…",
+    "add": "Add",
+    "moreOptions": "More options",
+    "import": "Import",
+    "export": "Export",
+    "appearance": "Appearance",
+    "language": "Language",
+    "languagePtBR": "Português",
+    "languageEnUS": "English",
+    "connectionError": "Couldn't reach {{address}}"
+  },
+  "server": {
+    "talkingTo": "Now talking to",
+    "found_one": "Found on the network · {{count}}",
+    "found_other": "Found on the network · {{count}}",
+    "none": "No servers found",
+    "noneHint": "Discovery is blocked on many networks",
+    "refresh": "Search again",
+    "switchTitle": "Switch servers",
+    "unresponsive": "{{address}} isn't responding",
+    "thisComputer": "this computer",
+    "onlyThisComputer": "This computer"
   }
 }

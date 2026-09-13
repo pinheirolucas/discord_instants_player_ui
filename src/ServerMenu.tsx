@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import type { Server } from "../electron/discovery";
 import { Menu, MenuItem, MenuLabel, MenuSeparator } from "./components/Menu";
 import { ServerChip } from "./components/ServerChip";
@@ -7,12 +8,12 @@ export function formatApiUrl(url: string): string {
   return String(url || "").replace(/^https?:\/\//, "");
 }
 
-function describe(server: Server): string {
+function describe(server: Server, t: (key: string) => string): string {
   if (!server.hostname) {
-    return server.isLocal ? "Este computador" : "";
+    return server.isLocal ? t("server.onlyThisComputer") : "";
   }
 
-  return server.isLocal ? `${server.hostname} · este computador` : server.hostname;
+  return server.isLocal ? `${server.hostname} · ${t("server.thisComputer")}` : server.hostname;
 }
 
 export interface ServerMenuProps {
@@ -41,6 +42,7 @@ export default function ServerMenu({
   onSelect,
   onRefresh
 }: ServerMenuProps) {
+  const { t } = useTranslation();
   const current = formatApiUrl(currentApiUrl);
 
   return (
@@ -50,16 +52,16 @@ export default function ServerMenu({
       trigger={<ServerChip address={current} healthy={healthy} />}
     >
       <div className="mhead">
-        Falando agora com <b>{current}</b>
+        {t("server.talkingTo")} <b>{current}</b>
       </div>
       <MenuSeparator />
-      <MenuLabel>{`Encontrados na rede · ${servers.length}`}</MenuLabel>
+      <MenuLabel>{t("server.found", { count: servers.length })}</MenuLabel>
 
       {servers.length === 0 && (
         <MenuItem
           disabled
-          primary="Nenhum servidor encontrado"
-          secondary="A busca é bloqueada em muitas redes"
+          primary={t("server.none")}
+          secondary={t("server.noneHint")}
         />
       )}
 
@@ -68,13 +70,13 @@ export default function ServerMenu({
           key={server.id}
           tick={server.apiUrl === currentApiUrl ? <CheckIcon /> : null}
           primary={formatApiUrl(server.apiUrl)}
-          secondary={describe(server) || undefined}
+          secondary={describe(server, t) || undefined}
           onSelect={() => onSelect(server)}
         />
       ))}
 
       <MenuSeparator />
-      <MenuItem tick={<RefreshIcon />} primary="Procurar novamente" onSelect={onRefresh} />
+      <MenuItem tick={<RefreshIcon />} primary={t("server.refresh")} onSelect={onRefresh} />
     </Menu>
   );
 }
