@@ -105,23 +105,25 @@ describe("ServerMenu", () => {
     expect(screen.getByText("A busca é bloqueada em muitas redes")).toBeInTheDocument();
   });
 
-  it("calls onSelect with the clicked server", async () => {
+  it("calls onSelect with the clicked server, and keeps the menu open", async () => {
     const user = userEvent.setup();
     const picked = server({ apiUrl: "http://10.0.0.2:9001", hostname: "raspberrypi" });
-    const { onSelect } = renderMenu({ servers: [picked] });
+    const { onSelect, onOpenChange } = renderMenu({ servers: [picked] });
 
     await user.click(screen.getByText("10.0.0.2:9001"));
 
     expect(onSelect).toHaveBeenCalledWith(picked);
+    expect(onOpenChange).not.toHaveBeenCalled();
   });
 
-  it("calls onRefresh from the trailing item", async () => {
+  it("calls onRefresh from the trailing item, and keeps the menu open", async () => {
     const user = userEvent.setup();
-    const { onRefresh } = renderMenu();
+    const { onRefresh, onOpenChange } = renderMenu();
 
     await user.click(screen.getByText("Procurar novamente"));
 
     expect(onRefresh).toHaveBeenCalledTimes(1);
+    expect(onOpenChange).not.toHaveBeenCalled();
   });
 
   it("passes an unhealthy state through to the chip's accessible name", () => {

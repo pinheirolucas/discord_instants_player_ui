@@ -35,11 +35,28 @@ export interface MenuItemProps {
   tick?: ReactNode;
   primary: ReactNode;
   secondary?: ReactNode;
+  closeOnSelect?: boolean;
 }
 
-export function MenuItem({ onSelect, disabled, tick, primary, secondary }: MenuItemProps) {
+export function MenuItem({
+  onSelect,
+  disabled,
+  tick,
+  primary,
+  secondary,
+  closeOnSelect = true
+}: MenuItemProps) {
   return (
-    <RadixMenu.Item className="mitem" onSelect={onSelect} disabled={disabled}>
+    <RadixMenu.Item
+      className="mitem"
+      disabled={disabled}
+      onSelect={(event) => {
+        if (!closeOnSelect) {
+          event.preventDefault();
+        }
+        onSelect?.();
+      }}
+    >
       {tick !== undefined && <span className="mtick">{tick}</span>}
       <span>
         {primary}

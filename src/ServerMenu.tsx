@@ -76,11 +76,17 @@ export default function ServerMenu({
           primary={formatApiUrl(server.apiUrl)}
           secondary={describe(server, t) || undefined}
           onSelect={() => onSelect(server)}
+          closeOnSelect={false}
         />
       ))}
 
       <MenuSeparator />
-      <MenuItem tick={<RefreshIcon />} primary={t("server.refresh")} onSelect={onRefresh} />
+      <MenuItem
+        tick={<RefreshIcon />}
+        primary={t("server.refresh")}
+        onSelect={onRefresh}
+        closeOnSelect={false}
+      />
     </Menu>
   );
 }
