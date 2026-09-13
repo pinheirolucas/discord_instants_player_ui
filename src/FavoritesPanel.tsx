@@ -6,6 +6,7 @@ import InstantCard from "./components/InstantCard";
 import type { Playback } from "./components/InstantCard";
 import { OfflineBanner } from "./components/OfflineBanner";
 import { TrashIcon } from "./icons";
+import { apiErrorMessage } from "./i18n/apiError";
 import SaveForm from "./SaveForm";
 import SnackbarContext from "./SnackbarContext";
 import { getContent } from "./service";
@@ -80,7 +81,7 @@ export default function FavoritesPanel({
     } catch (err) {
       // Without this catch the rejection is unhandled inside a click
       // handler, and a failed play does and says nothing at all.
-      openSnackbar({ message: (err as Error).message });
+      openSnackbar({ message: apiErrorMessage(t, err) });
       return;
     }
 
@@ -93,9 +94,9 @@ export default function FavoritesPanel({
   }
 
   async function handlePlayOnDiscord(instant: Instant) {
-    const message = await playDiscord(instant.url);
-    if (message) {
-      showNotFound(instant, message);
+    const error = await playDiscord(instant.url);
+    if (error) {
+      showNotFound(instant, apiErrorMessage(t, error));
     }
   }
 

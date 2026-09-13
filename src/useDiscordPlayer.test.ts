@@ -3,13 +3,14 @@ import { act, renderHook } from "@testing-library/react";
 import type { AxiosResponse } from "axios";
 
 import useDiscordPlayer from "./useDiscordPlayer";
-import { playOnDiscord, stopPlayingOnDiscord } from "./service";
+import { ApiError, playOnDiscord, stopPlayingOnDiscord } from "./service";
 
 // service.ts is the network boundary; it gets its own MSW-backed tests. Here it
 // is mocked so the hook's state machine can be driven directly, including the
 // case that matters most: POST /bot/play does not resolve until the backend
 // finishes or is stopped, so the "already playing" window is arbitrarily long.
-vi.mock("./service", () => ({
+vi.mock("./service", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./service")>()),
   playOnDiscord: vi.fn(),
   stopPlayingOnDiscord: vi.fn()
 }));
@@ -49,7 +50,7 @@ describe("useDiscordPlayer", () => {
 
     const { result } = renderHook(() => useDiscordPlayer());
 
-    let playCall: Promise<string | undefined> | undefined;
+    let playCall: Promise<Error | undefined> | undefined;
     act(() => {
       playCall = result.current[2](A);
     });
@@ -94,9 +95,7 @@ describe("useDiscordPlayer", () => {
       message = await result.current[2](A);
     });
 
-    // "" rather than undefined: the panels treat any truthy return as an error
-    // message to show in a snackbar, so the empty string is deliberate.
-    expect(message).toBe("");
+    expect(message).toBeUndefined();
     expect(result.current[0]).toBe(A);
     expect(result.current[1]).toBe(true);
   });
@@ -168,10 +167,9 @@ describe("useDiscordPlayer", () => {
     expect(stopPlayingOnDiscord).not.toHaveBeenCalled();
   });
 
-  it("returns the error message when the backend call rejects", async () => {
-    vi.mocked(playOnDiscord).mockRejectedValue(
-      new Error("Parece que o instant não existe mais")
-    );
+  it("returns the error itself when the backend call rejects, for the caller to translate", async () => {
+    const error = new ApiError("instant_not_found", "O instant enviado não foi encontrado");
+    vi.mocked(playOnDiscord).mockRejectedValue(error);
 
     const { result } = renderHook(() => useDiscordPlayer());
 
@@ -180,7 +178,7 @@ describe("useDiscordPlayer", () => {
       message = await result.current[2](A);
     });
 
-    expect(message).toBe("Parece que o instant não existe mais");
+    expect(message).toBe(error);
   });
 
   // Pre-existing bug, asserted as current behaviour rather than fixed: play()
