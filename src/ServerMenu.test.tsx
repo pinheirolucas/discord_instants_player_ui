@@ -49,6 +49,10 @@ describe("formatApiUrl", () => {
     expect(formatApiUrl("10.0.0.42:9001")).toBe("10.0.0.42:9001");
   });
 
+  it("strips the api path, showing only the address the user can act on", () => {
+    expect(formatApiUrl("http://10.0.0.42:9001/api/v1")).toBe("10.0.0.42:9001");
+  });
+
   it("treats a falsy value as an empty string", () => {
     expect(formatApiUrl("")).toBe("");
   });
