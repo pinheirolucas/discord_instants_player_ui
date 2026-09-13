@@ -1,3 +1,5 @@
+import type { LanguageId } from "./i18n/detect";
+
 // The countries MyInstants can browse. Each was checked to return a populated
 // listing at myinstants.com/en/index/{code}/. The list is curated rather than
 // open-ended because an unknown code is not an error there: it answers 200
@@ -32,24 +34,24 @@ export const REGIONS = [
 
 export type Region = (typeof REGIONS)[number];
 
-/** The UI is in Portuguese, so the catalogue starts on Brazil. */
 export const DEFAULT_REGION: Region = "br";
 
 export function isRegion(value: unknown): value is Region {
   return (REGIONS as readonly unknown[]).includes(value);
 }
 
-let displayNames: Intl.DisplayNames | null | undefined;
+const displayNamesByLanguage = new Map<LanguageId, Intl.DisplayNames | null>();
 
-/** The country's name in Portuguese, falling back to the bare code where the
- *  runtime has no Intl.DisplayNames. */
-export function regionLabel(region: Region): string {
+export function regionLabel(region: Region, language: LanguageId): string {
+  let displayNames = displayNamesByLanguage.get(language);
+
   if (displayNames === undefined) {
     try {
-      displayNames = new Intl.DisplayNames(["pt-BR"], { type: "region" });
+      displayNames = new Intl.DisplayNames([language], { type: "region" });
     } catch {
       displayNames = null;
     }
+    displayNamesByLanguage.set(language, displayNames);
   }
 
   return displayNames?.of(region.toUpperCase()) ?? region.toUpperCase();

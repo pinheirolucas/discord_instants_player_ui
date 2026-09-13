@@ -11,7 +11,8 @@ const noop = () => {};
 let healthListener: (healthy: boolean) => void = noop;
 let connectionErrorListener: () => void = noop;
 
-vi.mock("./service", () => ({
+vi.mock("./service", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./service")>()),
   defaultApiUrl: "http://localhost:9001",
   getApiUrl: vi.fn(() => "http://localhost:9001"),
   setApiUrl: vi.fn(() => true),
@@ -540,6 +541,18 @@ describe("catalogue region", () => {
 
     expect(screen.getByRole("button", { name: "Brasil" })).toBeInTheDocument();
     await waitFor(() => expect(getMyInstants).toHaveBeenCalledWith(1, "", "br"));
+  });
+
+  it("names regions in English once the language switches", async () => {
+    localStorage.setItem("language", JSON.stringify("en-US"));
+    localStorage.setItem("region", JSON.stringify("us"));
+    render(<App />);
+
+    await openMyInstants();
+
+    expect(screen.getByRole("button", { name: "United States" })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "United States" }));
+    expect(screen.getByRole("menuitem", { name: "United Kingdom" })).toBeInTheDocument();
   });
 });
 
