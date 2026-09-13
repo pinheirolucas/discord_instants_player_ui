@@ -1,16 +1,11 @@
 import * as RadixDialog from "@radix-ui/react-dialog";
 import { useRef } from "react";
+import { useTranslation } from "react-i18next";
 import type { ColorMode, ResolvedMode, ThemeId } from "../themes";
 import { Button } from "./Button";
 import { SegmentedChoice } from "./Segmented";
 import { ThemePicker } from "./ThemePicker";
 import "./appearance.css";
-
-const MODES: { value: ColorMode; label: string }[] = [
-  { value: "auto", label: "Automático" },
-  { value: "light", label: "Claro" },
-  { value: "dark", label: "Escuro" }
-];
 
 export interface AppearanceDockProps {
   theme: ThemeId;
@@ -43,7 +38,14 @@ export function AppearanceDock({
   onCancel,
   onConfirm
 }: AppearanceDockProps) {
+  const { t } = useTranslation();
   const pickerRef = useRef<HTMLDivElement>(null);
+
+  const modes: { value: ColorMode; label: string }[] = [
+    { value: "auto", label: t("appearance.modeAuto") },
+    { value: "light", label: t("appearance.modeLight") },
+    { value: "dark", label: t("appearance.modeDark") }
+  ];
 
   return (
     <RadixDialog.Root
@@ -67,15 +69,20 @@ export function AppearanceDock({
       >
         <div className="dhead">
           <RadixDialog.Title asChild>
-            <h2>Aparência</h2>
+            <h2>{t("appearance.title")}</h2>
           </RadixDialog.Title>
-          <SegmentedChoice aria-label="Modo" value={mode} onChange={onModeChange} options={MODES} />
+          <SegmentedChoice
+            aria-label={t("appearance.modeAriaLabel")}
+            value={mode}
+            onChange={onModeChange}
+            options={modes}
+          />
           <span className="spacer" />
           <div className="dact">
             <Button variant="secondary" onClick={onCancel}>
-              Cancelar
+              {t("common.cancel")}
             </Button>
-            <Button onClick={onConfirm}>Pronto</Button>
+            <Button onClick={onConfirm}>{t("appearance.confirm")}</Button>
           </div>
         </div>
         <ThemePicker ref={pickerRef} value={theme} onChange={onThemeChange} mode={resolved} />
