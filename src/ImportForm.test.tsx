@@ -140,7 +140,7 @@ describe("ImportForm", () => {
     renderForm();
     await uploadParsed(user, jsonFile({ theme: "dark" }));
 
-    expect(screen.getByText("0 instants no arquivo")).toBeInTheDocument();
+    expect(screen.getByText("0 instant no arquivo")).toBeInTheDocument();
 
     await user.click(screen.getByRole("switch", { name: "Instants" }));
     await user.click(screen.getByRole("radio", { name: "Substituir tudo" }));

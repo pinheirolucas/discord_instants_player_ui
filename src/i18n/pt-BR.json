@@ -40,5 +40,36 @@
     "unresponsive": "{{address}} não está respondendo",
     "thisComputer": "este computador",
     "onlyThisComputer": "Este computador"
+  },
+  "save": {
+    "title": "Adicionar instant",
+    "description": "Cole o link de um som do myinstants.com e dê um nome que você reconheça na grade.",
+    "action": "Salvar",
+    "nameLabel": "Nome",
+    "nameError": "Mínimo 3 caracteres",
+    "linkLabel": "Link",
+    "linkError": "Link inválido",
+    "linkPlaceholder": "https://www.myinstants.com/pt/instant/…"
+  },
+  "import": {
+    "rejectedType": "Só arquivos .json são aceitos.",
+    "rejectedContent": "O conteúdo não é um JSON válido.",
+    "count_one": "{{count}} instant no arquivo",
+    "count_other": "{{count}} instants no arquivo",
+    "readingFile": "Lendo o arquivo…",
+    "badFileTitle": "Esse arquivo não serve",
+    "dialogTitle": "Importar instants",
+    "dialogDescription": "Um arquivo .json gerado pelo Exportar desta app.",
+    "whatToImport": "O que você quer importar?",
+    "whatAboutExisting": "E os que você já tem?",
+    "keepMine": "Manter os meus",
+    "replaceAll": "Substituir tudo"
+  },
+  "dropzone": {
+    "idleTitle": "Arraste o arquivo para cá",
+    "idleHint": "ou clique para escolher um do computador",
+    "overTitle": "Solte para carregar",
+    "badTitle": "Esse arquivo não serve",
+    "badHint": "Só arquivos .json são aceitos."
   }
 }
