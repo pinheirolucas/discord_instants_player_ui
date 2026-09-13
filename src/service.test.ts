@@ -21,7 +21,7 @@ import {
 // Mocking at the request level rather than stubbing fetch keeps these tests
 // honest about the two things that actually bite here: the exact query strings
 // service.ts builds, and the response envelope the Go backend really sends.
-const apiUrl = "http://localhost:9001";
+const apiUrl = "http://localhost:9001/api/v1";
 
 const server = setupServer();
 
@@ -31,11 +31,6 @@ function success(data: JsonBodyType) {
   return HttpResponse.json({ data });
 }
 
-// pkg/server/server.go#writeErrorMessage builds the body but never calls
-// WriteHeader, so the backend answers almost every *error* with HTTP 200 and a
-// body carrying only {label, message}. That is not a hypothetical: it is what
-// /bot/play and /instant/list do for an unknown instant, a bad URL, and an
-// unsupported audio format.
 function errorAt200(label: string, message: string) {
   return HttpResponse.json({ label, message });
 }
@@ -196,7 +191,7 @@ describe("stopPlayingOnDiscord", () => {
 describe("getContent", () => {
   it("unwraps data.data into the playable info", async () => {
     server.use(
-      http.get(`${apiUrl}/play`, () =>
+      http.get(`${apiUrl}/instants/:url/content`, () =>
         success({ exists: true, content: "data:audio/mp3;base64,AAAA" })
       )
     );
@@ -207,11 +202,11 @@ describe("getContent", () => {
     });
   });
 
-  it("passes the instant url through as the url query parameter", async () => {
+  it("passes the instant url through as a percent-encoded path segment", async () => {
     let received;
     server.use(
-      http.get(`${apiUrl}/play`, ({ request }) => {
-        received = new URL(request.url).searchParams.get("url");
+      http.get(`${apiUrl}/instants/:url/content`, ({ params }) => {
+        received = decodeURIComponent(params.url as string);
         return success({ exists: true, content: "" });
       })
     );
@@ -221,32 +216,30 @@ describe("getContent", () => {
     expect(received).toBe("https://www.myinstants.com/en/instant-abc/");
   });
 
-  // Pre-existing sharp edge, asserted as-is: the url is interpolated into the
-  // query string without encodeURIComponent. myinstants URLs are plain enough
-  // that this works today, but anything containing & or # would be truncated or
-  // split into extra parameters. A favourite imported from a JSON file is
-  // arbitrary user input, so it is reachable.
-  it("does not percent-encode the url it interpolates", async () => {
-    let rawQuery;
+  it("percent-encodes the url so it survives as a single path segment", async () => {
+    let rawPath;
     let received;
     server.use(
-      http.get(`${apiUrl}/play`, ({ request }) => {
-        const parsed = new URL(request.url);
-        rawQuery = parsed.search;
-        received = parsed.searchParams.get("url");
+      http.get(`${apiUrl}/instants/:url/content`, ({ request, params }) => {
+        rawPath = new URL(request.url).pathname;
+        received = decodeURIComponent(params.url as string);
         return success({ exists: false });
       })
     );
 
     await getContent("https://x/a?b=1&c=2");
 
-    expect(rawQuery).toBe("?url=https://x/a?b=1&c=2");
-    expect(received).toBe("https://x/a?b=1");
+    expect(rawPath).toBe(
+      `/api/v1/instants/${encodeURIComponent("https://x/a?b=1&c=2")}/content`
+    );
+    expect(received).toBe("https://x/a?b=1&c=2");
   });
 
   it("surfaces the backend message when the error arrives with HTTP 200", async () => {
     server.use(
-      http.get(`${apiUrl}/play`, () => errorAt200("empty_url", "Nenhuma URL enviada"))
+      http.get(`${apiUrl}/instants/:url/content`, () =>
+        errorAt200("empty_url", "Nenhuma URL enviada")
+      )
     );
 
     await expect(getContent("https://www.myinstants.com/a/")).rejects.toThrow(
@@ -258,7 +251,7 @@ describe("getContent", () => {
   // code 500" — no use to a panel that puts it straight in a snackbar.
   it("rejects with a message-bearing error on a real error status", async () => {
     server.use(
-      http.get(`${apiUrl}/play`, () =>
+      http.get(`${apiUrl}/instants/:url/content`, () =>
         errorAtStatus(500, { label: "unknown_error", message: "Falha ao baixar" })
       )
     );
@@ -270,7 +263,9 @@ describe("getContent", () => {
 
   it("falls back to the generic message when the error body carries none", async () => {
     server.use(
-      http.get(`${apiUrl}/play`, () => errorAtStatus(500, { label: "unknown_error" }))
+      http.get(`${apiUrl}/instants/:url/content`, () =>
+        errorAtStatus(500, { label: "unknown_error" })
+      )
     );
 
     await expect(getContent("https://www.myinstants.com/a/")).rejects.toThrow(
@@ -291,7 +286,7 @@ describe("getMyInstants", () => {
   function captureQuery(respond = () => success(listing)) {
     const captured: { search?: string } = {};
     server.use(
-      http.get(`${apiUrl}/instant/list`, ({ request }) => {
+      http.get(`${apiUrl}/instants`, ({ request }) => {
         captured.search = new URL(request.url).search;
         return respond();
       })
@@ -372,7 +367,7 @@ describe("getMyInstants", () => {
 
   it("throws the backend message on a real error status", async () => {
     server.use(
-      http.get(`${apiUrl}/instant/list`, () =>
+      http.get(`${apiUrl}/instants`, () =>
         errorAtStatus(400, {
           label: "invalid_page",
           message: "A página enviada é inválida"
@@ -387,7 +382,7 @@ describe("getMyInstants", () => {
   // {label, message} body, so it goes through the envelope check.
   it("throws the backend message when the region is refused", async () => {
     server.use(
-      http.get(`${apiUrl}/instant/list`, () =>
+      http.get(`${apiUrl}/instants`, () =>
         errorAt200("invalid_region", "A região enviada é inválida")
       )
     );
@@ -397,7 +392,7 @@ describe("getMyInstants", () => {
 
   it("falls back to the generic message when the error body carries none", async () => {
     server.use(
-      http.get(`${apiUrl}/instant/list`, () => errorAtStatus(500, {}))
+      http.get(`${apiUrl}/instants`, () => errorAtStatus(500, {}))
     );
 
     await expect(getMyInstants(1)).rejects.toThrow(
@@ -410,7 +405,7 @@ describe("getMyInstants", () => {
   // check runs after the catch so its throw reaches the caller untouched.
   it("throws the backend message when the error arrives with HTTP 200", async () => {
     server.use(
-      http.get(`${apiUrl}/instant/list`, () =>
+      http.get(`${apiUrl}/instants`, () =>
         errorAt200("invalid_page", "A página enviada é inválida")
       )
     );
@@ -420,7 +415,7 @@ describe("getMyInstants", () => {
 
   it("falls back to the generic message when a 200 error body carries none", async () => {
     server.use(
-      http.get(`${apiUrl}/instant/list`, () => HttpResponse.json({ label: "nope" }))
+      http.get(`${apiUrl}/instants`, () => HttpResponse.json({ label: "nope" }))
     );
 
     await expect(getMyInstants(1)).rejects.toThrow(
@@ -429,7 +424,7 @@ describe("getMyInstants", () => {
   });
 
   it("still rejects when the body is empty altogether", async () => {
-    server.use(http.get(`${apiUrl}/instant/list`, () => HttpResponse.json({})));
+    server.use(http.get(`${apiUrl}/instants`, () => HttpResponse.json({})));
 
     await expect(getMyInstants(1)).rejects.toThrow(
       "Erro desconhecido, tente novamente mais tarde"
@@ -446,8 +441,8 @@ describe("getMyInstants", () => {
 describe("api base url", () => {
   const discovered = "http://10.0.0.133:9001";
 
-  it("starts at localhost:9001", () => {
-    expect(defaultApiUrl).toBe("http://localhost:9001");
+  it("starts at localhost:9001/api/v1", () => {
+    expect(defaultApiUrl).toBe("http://localhost:9001/api/v1");
     expect(getApiUrl()).toBe(defaultApiUrl);
   });
 
@@ -456,7 +451,7 @@ describe("api base url", () => {
 
     let hit = false;
     server.use(
-      http.get(`${apiUrl}/instant/list`, () => {
+      http.get(`${apiUrl}/instants`, () => {
         hit = true;
         return success({ instants: [], pages: 0 });
       })
@@ -482,11 +477,11 @@ describe("api base url", () => {
         seen.push(new URL(request.url).origin);
         return new HttpResponse(null, { status: 200 });
       }),
-      http.get(`${discovered}/play`, ({ request }) => {
+      http.get(`${discovered}/instants/:url/content`, ({ request }) => {
         seen.push(new URL(request.url).origin);
         return success({ exists: true, content: "" });
       }),
-      http.get(`${discovered}/instant/list`, ({ request }) => {
+      http.get(`${discovered}/instants`, ({ request }) => {
         seen.push(new URL(request.url).origin);
         return success({ instants: [], pages: 0 });
       })
@@ -508,7 +503,7 @@ describe("api base url", () => {
 
     let hit = false;
     server.use(
-      http.get(`${apiUrl}/instant/list`, () => {
+      http.get(`${apiUrl}/instants`, () => {
         hit = true;
         return success({ instants: [], pages: 0 });
       })
@@ -589,7 +584,7 @@ describe("api base url", () => {
 
     let hit = false;
     server.use(
-      http.get(`${discovered}/instant/list`, () => {
+      http.get(`${discovered}/instants`, () => {
         hit = true;
         return success({ instants: [], pages: 0 });
       })
@@ -607,7 +602,7 @@ describe("connection health", () => {
   });
 
   it("goes unhealthy when the backend cannot be reached at all", async () => {
-    server.use(http.get(`${apiUrl}/instant/list`, () => HttpResponse.error()));
+    server.use(http.get(`${apiUrl}/instants`, () => HttpResponse.error()));
 
     await expect(getMyInstants(1)).rejects.toThrow();
     expect(isHealthy()).toBe(false);
@@ -615,7 +610,7 @@ describe("connection health", () => {
 
   it("stays healthy when the backend answers with an error body at 200", async () => {
     server.use(
-      http.get(`${apiUrl}/instant/list`, () =>
+      http.get(`${apiUrl}/instants`, () =>
         errorAt200("bad_http_status", "O site myinstants.com respondeu com um status de erro")
       )
     );
@@ -628,7 +623,7 @@ describe("connection health", () => {
 
   it("stays healthy on a genuine non-200 — the server did answer", async () => {
     server.use(
-      http.get(`${apiUrl}/instant/list`, () =>
+      http.get(`${apiUrl}/instants`, () =>
         errorAtStatus(500, { message: "boom" })
       )
     );
@@ -671,7 +666,7 @@ describe("connection health", () => {
     const seen: boolean[] = [];
     onHealthChange(next => seen.push(next))();
 
-    server.use(http.get(`${apiUrl}/play`, () => HttpResponse.error()));
+    server.use(http.get(`${apiUrl}/instants/:url/content`, () => HttpResponse.error()));
     await expect(getContent("x")).rejects.toThrow();
 
     expect(seen).toEqual([]);
@@ -684,7 +679,7 @@ describe("connection health", () => {
   });
 
   it("assumes a newly selected server is healthy until proven otherwise", async () => {
-    server.use(http.get(`${apiUrl}/play`, () => HttpResponse.error()));
+    server.use(http.get(`${apiUrl}/instants/:url/content`, () => HttpResponse.error()));
     await expect(getContent("x")).rejects.toThrow();
     expect(isHealthy()).toBe(false);
 

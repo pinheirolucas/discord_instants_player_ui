@@ -1,6 +1,6 @@
 import type { Instant } from "./storage";
 
-export const defaultApiUrl = "http://localhost:9001";
+export const defaultApiUrl = "http://localhost:9001/api/v1";
 
 const genericErrorMessage = "Erro desconhecido, tente novamente mais tarde";
 
@@ -201,7 +201,7 @@ export async function stopPlayingOnDiscord(): Promise<Response> {
 }
 
 export async function getContent(url: string): Promise<ContentInfo> {
-  return requestEnvelope<ContentInfo>(`${apiUrl}/play?url=${url}`);
+  return requestEnvelope<ContentInfo>(`${apiUrl}/instants/${encodeURIComponent(url)}/content`);
 }
 
 /** `region` is sent whenever it is given. Which requests it affects (today,
@@ -218,5 +218,5 @@ export async function getMyInstants(
     { value: region, query: `&region=${encodeURIComponent(region ?? "")}` }
   ].reduce((acc, cur) => (cur.value ? acc + cur.query : acc), "");
 
-  return requestEnvelope<Listing>(`${apiUrl}/instant/list?${params}`);
+  return requestEnvelope<Listing>(`${apiUrl}/instants?${params}`);
 }
