@@ -84,6 +84,8 @@ export function hostnameFromService(service?: DiscoveredService | null): string 
   return withoutDomain || null;
 }
 
+const apiVersionPath = "/v1";
+
 export function buildApiUrl(service?: DiscoveredService | null): string | null {
   if (!service || !Number.isInteger(service.port) || (service.port as number) <= 0) {
     return null;
@@ -103,7 +105,7 @@ export function buildApiUrl(service?: DiscoveredService | null): string | null {
 
   const basePath = String(txt.path || "/").replace(/\/+$/, "");
 
-  return `http://${host}:${service.port}${basePath}`;
+  return `http://${host}:${service.port}${basePath}${apiVersionPath}`;
 }
 
 export function buildServer(

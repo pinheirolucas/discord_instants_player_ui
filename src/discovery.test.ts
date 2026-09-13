@@ -22,14 +22,14 @@ function realService(overrides = {}) {
       "10.0.0.133",
       "fe80::cafe"
     ],
-    txt: { path: "/", api: "1" },
+    txt: { path: "/api", api: "1" },
     ...overrides
   };
 }
 
 describe("buildApiUrl", () => {
-  it("builds the base url from the ipv4 address and the port", () => {
-    expect(buildApiUrl(realService())).toBe("http://10.0.0.133:9001");
+  it("builds the api url from the ipv4 address, the port, the advertised path and this client's own api version", () => {
+    expect(buildApiUrl(realService())).toBe("http://10.0.0.133:9001/api/v1");
   });
 
   it("never uses the mangled host field", () => {
@@ -44,31 +44,27 @@ describe("buildApiUrl", () => {
       realService({ name: "", type: "local-9001", fqdn: "" })
     );
 
-    expect(url).toBe("http://10.0.0.133:9001");
+    expect(url).toBe("http://10.0.0.133:9001/api/v1");
   });
 
-  it("drops the trailing slash of the default path", () => {
-    expect(buildApiUrl(realService())).not.toMatch(/\/$/);
-  });
-
-  it("keeps a non-root base path", () => {
+  it("drops the trailing slash of the advertised path", () => {
     const service = realService({ txt: { path: "/api/", api: "1" } });
 
-    expect(buildApiUrl(service)).toBe("http://10.0.0.133:9001/api");
+    expect(buildApiUrl(service)).toBe("http://10.0.0.133:9001/api/v1");
   });
 
-  it("treats a missing path as root", () => {
+  it("treats a missing path as root, then appends this client's own version", () => {
     const service = realService({ txt: { api: "1" } });
 
-    expect(buildApiUrl(service)).toBe("http://10.0.0.133:9001");
+    expect(buildApiUrl(service)).toBe("http://10.0.0.133:9001/v1");
   });
 
   it("refuses a service announcing another api version", () => {
-    expect(buildApiUrl(realService({ txt: { path: "/", api: "2" } }))).toBeNull();
+    expect(buildApiUrl(realService({ txt: { path: "/api", api: "2" } }))).toBeNull();
   });
 
   it("refuses a service with no api record at all", () => {
-    expect(buildApiUrl(realService({ txt: { path: "/" } }))).toBeNull();
+    expect(buildApiUrl(realService({ txt: { path: "/api" } }))).toBeNull();
     expect(buildApiUrl(realService({ txt: undefined }))).toBeNull();
   });
 
@@ -149,7 +145,7 @@ describe("buildServer", () => {
   it("carries the address, port and hostname alongside the url", () => {
     expect(buildServer(realService(), new Set())).toEqual({
       id: "MacBook-Pro-de-Lucas.local-9001._myinstants._tcp.local",
-      apiUrl: "http://10.0.0.133:9001",
+      apiUrl: "http://10.0.0.133:9001/api/v1",
       address: "10.0.0.133",
       port: 9001,
       hostname: "MacBook-Pro-de-Lucas",
