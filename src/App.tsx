@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import type { Server } from "../electron/discovery";
 import { AppearanceDock } from "./components/AppearanceDock";
 import { AppearanceStage } from "./components/AppearanceStage";
@@ -11,11 +12,12 @@ import { Toast, ToastProvider } from "./components/Toast";
 import { TooltipProvider } from "./components/Tooltip";
 import FavoritesPanel from "./FavoritesPanel";
 import { useAppearance } from "./hooks/useAppearance";
+import { useLanguage } from "./hooks/useLanguage";
 import { useNativeChrome } from "./hooks/useNativeChrome";
 import { findShortcutLabel, isFindShortcut, useChromeKind, usePlatform } from "./hooks/usePlatform";
 import { useRegion } from "./hooks/useRegion";
 import { useStamp } from "./hooks/useStamp";
-import { MoreIcon, PlusIcon } from "./icons";
+import { CheckIcon, MoreIcon, PlusIcon } from "./icons";
 import ImportForm from "./ImportForm";
 import MyInstantsPanel from "./MyInstantsPanel";
 import RegionMenu from "./RegionMenu";
@@ -36,11 +38,6 @@ import "./styles/shell.css";
 
 type Tab = "favorites" | "myinstants";
 
-const TABS: { value: Tab; label: string }[] = [
-  { value: "favorites", label: "Favoritos" },
-  { value: "myinstants", label: "MyInstants" }
-];
-
 const SEARCH_DEBOUNCE = 300;
 
 interface ToastState extends SnackbarOptions {
@@ -51,11 +48,15 @@ interface ToastState extends SnackbarOptions {
 }
 
 export default function App() {
+  const { t } = useTranslation();
+
   // Palette and colour mode, both stamped on <html>. Mode is auto by default
   // and follows the OS until the user picks a side. Both are changed in the
   // Aparência shell, which previews live and persists only on Pronto.
   const appearance = useAppearance();
   const { theme, resolved, editing } = appearance;
+
+  const { language, setLanguage } = useLanguage();
 
   const os = usePlatform();
   const chrome = useChromeKind();
@@ -88,6 +89,14 @@ export default function App() {
   const healthyRef = useRef<boolean>(isHealthy());
 
   const [toast, setToast] = useState<ToastState>({ open: false, key: 0, message: "" });
+
+  const tabs = useMemo(
+    () => [
+      { value: "favorites" as const, label: t("app.tabFavorites") },
+      { value: "myinstants" as const, label: "MyInstants" }
+    ],
+    [t]
+  );
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -158,12 +167,12 @@ export default function App() {
     () =>
       onConnectionError(() =>
         showToast({
-          message: `Não foi possível falar com ${formatApiUrl(getApiUrl())}`,
-          actionLabel: "Trocar",
+          message: t("app.connectionError", { address: formatApiUrl(getApiUrl()) }),
+          actionLabel: t("common.switch"),
           onAction: () => setServerMenuOpen(true)
         })
       ),
-    [showToast]
+    [showToast, t]
   );
 
   const openSnackbar = useCallback(
@@ -220,19 +229,19 @@ export default function App() {
             {chrome === "custom" && <TitleBar os={os} />}
             <AppearanceStage open={editing}>
               <header className="hero">
-                <h1>{tab === "favorites" ? "Favoritos" : "MyInstants"}</h1>
+                <h1>{tab === "favorites" ? t("app.tabFavorites") : "MyInstants"}</h1>
                 <span className="count" aria-live="polite">
                   {summary}
                 </span>
                 <span className="spacer" />
-                <Segmented aria-label="Seção" options={TABS} />
+                <Segmented aria-label={t("app.sectionAriaLabel")} options={tabs} />
               </header>
-  
+
               <div className="tools">
                 <SearchField
                   ref={searchRef}
-                  aria-label="Procurar um som"
-                  placeholder="Procurar um som…"
+                  aria-label={t("app.searchAriaLabel")}
+                  placeholder={t("app.searchPlaceholder")}
                   shortcut={findShortcutLabel(os)}
                   value={query}
                   onChange={(event) => handleSearchChange(event.target.value)}
@@ -240,7 +249,7 @@ export default function App() {
                 {tab === "favorites" && (
                   <Button onClick={() => setAddOpen(true)}>
                     <PlusIcon />
-                    Adicionar
+                    {t("app.add")}
                   </Button>
                 )}
                 {tab === "myinstants" && <RegionMenu region={region} onSelect={setRegion} />}
@@ -259,15 +268,26 @@ export default function App() {
                 />
                 <Menu
                   trigger={
-                    <IconButton label="Mais opções">
+                    <IconButton label={t("app.moreOptions")}>
                       <MoreIcon />
                     </IconButton>
                   }
                 >
-                  <MenuItem primary="Importar" onSelect={() => setImportOpen(true)} />
-                  <MenuItem primary="Exportar" onSelect={() => exportToJSON()} />
+                  <MenuItem primary={t("app.import")} onSelect={() => setImportOpen(true)} />
+                  <MenuItem primary={t("app.export")} onSelect={() => exportToJSON()} />
                   <MenuSeparator />
-                  <MenuItem primary="Aparência" onSelect={appearance.begin} />
+                  <MenuItem primary={t("app.appearance")} onSelect={appearance.begin} />
+                  <MenuSeparator />
+                  <MenuItem
+                    tick={language === "pt-BR" ? <CheckIcon /> : null}
+                    primary={t("app.languagePtBR")}
+                    onSelect={() => setLanguage("pt-BR")}
+                  />
+                  <MenuItem
+                    tick={language === "en-US" ? <CheckIcon /> : null}
+                    primary={t("app.languageEnUS")}
+                    onSelect={() => setLanguage("en-US")}
+                  />
                 </Menu>
               </div>
   

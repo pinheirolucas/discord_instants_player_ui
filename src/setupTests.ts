@@ -3,6 +3,13 @@
 // https://github.com/testing-library/jest-dom
 import "@testing-library/jest-dom/vitest";
 
+if (typeof navigator !== "undefined" && navigator.language !== "pt-BR") {
+  Object.defineProperty(navigator, "language", { value: "pt-BR", configurable: true });
+}
+
+import i18n from "./i18n";
+await i18n.changeLanguage("pt-BR");
+
 // jsdom implements no matchMedia at all. useColorMode reads it on every
 // mount to resolve "auto" against the OS, so without this every test that
 // renders <App /> dies on `window.matchMedia is not a function`.

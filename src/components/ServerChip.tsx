@@ -1,5 +1,6 @@
 import { forwardRef } from "react";
 import type { ButtonHTMLAttributes } from "react";
+import { useTranslation } from "react-i18next";
 import "./controls.css";
 
 export interface ServerChipProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -20,13 +21,15 @@ export interface ServerChipProps extends ButtonHTMLAttributes<HTMLButtonElement>
  */
 export const ServerChip = forwardRef<HTMLButtonElement, ServerChipProps>(
   function ServerChip({ address, healthy, ...rest }, ref) {
+    const { t } = useTranslation();
+
     return (
       <button
         ref={ref}
         type="button"
         className="srv"
-        title="Trocar de servidor"
-        aria-label={healthy ? undefined : `${address} não está respondendo`}
+        title={t("server.switchTitle")}
+        aria-label={healthy ? undefined : t("server.unresponsive", { address })}
         {...rest}
       >
         <span className="dot" data-healthy={healthy} aria-hidden="true" />

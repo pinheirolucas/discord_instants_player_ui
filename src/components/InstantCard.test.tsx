@@ -1,9 +1,10 @@
-import { describe, it, expect, vi } from "vitest";
+import { afterEach, describe, it, expect, vi } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import InstantCard, { cardState } from "./InstantCard";
 import type { InstantCardProps, Playback } from "./InstantCard";
+import i18n from "../i18n";
 import { slotFor } from "../lib/slot";
 
 const instant = { name: "Primeiro", url: "https://www.myinstants.com/a/" };
@@ -60,7 +61,7 @@ describe("InstantCard", () => {
     const buttons = within(card).getAllByRole("button");
     expect(buttons).toHaveLength(4);
     expect(buttons[0]).toHaveAccessibleName("Primeiro");
-    expect(buttons[1]).toHaveAccessibleName("Enviar para o Discord");
+    expect(buttons[1]).toHaveAccessibleName("Reproduzir no Discord");
     expect(buttons[2]).toHaveAccessibleName("Parar");
     expect(buttons[3]).toHaveAccessibleName("Remover");
   });
@@ -69,7 +70,7 @@ describe("InstantCard", () => {
     const user = userEvent.setup();
     const { button, onPlayOnDiscord, onStop } = renderCard({ playback: "discord" });
 
-    await user.click(button("Enviar para o Discord"));
+    await user.click(button("Reproduzir no Discord"));
     await user.click(button("Parar"));
 
     expect(onPlayOnDiscord).toHaveBeenCalledWith(instant);
@@ -123,7 +124,7 @@ describe("InstantCard state matrix", () => {
     {
       when: "this card plays locally",
       props: { playback: "local", otherPlaying: false },
-      play: true, discord: false, stop: true, trail: false, live: true, dim: false, chip: "Tocando"
+      play: true, discord: false, stop: true, trail: false, live: true, dim: false, chip: "Reproduzindo"
     },
     {
       when: "this card plays on Discord",
@@ -144,7 +145,7 @@ describe("InstantCard state matrix", () => {
       enabled ? expect(el).toBeEnabled() : expect(el).toBeDisabled();
 
     expectEnabled(button("Primeiro"), play);
-    expectEnabled(button("Enviar para o Discord"), discord);
+    expectEnabled(button("Reproduzir no Discord"), discord);
     expectEnabled(button("Parar"), stop);
     expectEnabled(button("Remover"), trail);
     expect(card).toHaveAttribute("data-live", String(live));
@@ -153,7 +154,7 @@ describe("InstantCard state matrix", () => {
     if (chip) {
       expect(within(card).getByText(chip)).toBeInTheDocument();
     } else {
-      expect(within(card).queryByText(/Tocando|No Discord/)).toBeNull();
+      expect(within(card).queryByText(/Reproduzindo|No Discord/)).toBeNull();
     }
   });
 
@@ -166,5 +167,20 @@ describe("InstantCard state matrix", () => {
       stopDisabled: true,
       trailDisabled: false
     });
+  });
+});
+
+describe("InstantCard under en-US", () => {
+  afterEach(async () => {
+    await i18n.changeLanguage("pt-BR");
+  });
+
+  it("renders its own copy in English", async () => {
+    await i18n.changeLanguage("en-US");
+    const { card } = renderCard({ playback: "discord" });
+
+    expect(within(card).getByRole("button", { name: "Play on Discord" })).toBeInTheDocument();
+    expect(within(card).getByRole("button", { name: "Stop" })).toBeInTheDocument();
+    expect(within(card).getByText("On Discord")).toBeInTheDocument();
   });
 });

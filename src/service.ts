@@ -18,6 +18,16 @@ interface Envelope<T> {
   message?: string;
 }
 
+export class ApiError extends Error {
+  constructor(
+    public readonly label: string | null,
+    message: string
+  ) {
+    super(message);
+    this.name = "ApiError";
+  }
+}
+
 export interface Listing {
   instants?: Instant[];
   pages?: number;
@@ -34,16 +44,20 @@ interface PlayResult {
 
 type Listener<T extends unknown[]> = (...args: T) => void;
 
-function backendMessage(err: unknown): string | null {
-  const data = (err as { response?: { data?: Envelope<unknown> } } | null)?.response?.data;
-  return (data && data.message) || null;
+function backendEnvelope(err: unknown): Envelope<unknown> | null {
+  return (err as { response?: { data?: Envelope<unknown> } } | null)?.response?.data ?? null;
+}
+
+function toApiError(err: unknown): ApiError {
+  const envelope = backendEnvelope(err);
+  return new ApiError(envelope?.label ?? null, envelope?.message || genericErrorMessage);
 }
 
 function unwrapData<T>(response: AxiosResponse<Envelope<T>> | undefined): T {
   const body: Envelope<T> = (response && response.data) || {};
 
   if (!body.data) {
-    throw new Error(body.message || genericErrorMessage);
+    throw new ApiError(body.label ?? null, body.message || genericErrorMessage);
   }
 
   return body.data;
@@ -159,7 +173,7 @@ export async function playOnDiscord(url: string): Promise<string> {
     markHealth(true);
   } catch (err) {
     markFromError(err);
-    throw new Error(backendMessage(err) || genericErrorMessage);
+    throw toApiError(err);
   }
 
   // Outside the try: the envelope's own error must not be rewritten by the
@@ -186,7 +200,7 @@ export async function getContent(url: string): Promise<ContentInfo> {
     markHealth(true);
   } catch (err) {
     markFromError(err);
-    throw new Error(backendMessage(err) || genericErrorMessage);
+    throw toApiError(err);
   }
 
   return unwrapData(response);
@@ -210,7 +224,7 @@ export async function getMyInstants(
     .get<Envelope<Listing>>(`${apiUrl}/instant/list?${params}`)
     .catch((err: unknown) => {
       markFromError(err);
-      throw new Error(backendMessage(err) || genericErrorMessage);
+      throw toApiError(err);
     })
     .then((resp) => {
       // After the .catch, so the envelope's throw is not rewritten into the

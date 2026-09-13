@@ -9,7 +9,8 @@ import FavoritesPanel from "./FavoritesPanel";
 import SnackbarContext from "./SnackbarContext";
 import { getContent, playOnDiscord, stopPlayingOnDiscord } from "./service";
 
-vi.mock("./service", () => ({
+vi.mock("./service", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./service")>()),
   getContent: vi.fn(),
   playOnDiscord: vi.fn(),
   stopPlayingOnDiscord: vi.fn()
@@ -245,7 +246,7 @@ describe("FavoritesPanel", () => {
     await waitFor(() => expect(snackbar.openSnackbar).toHaveBeenCalled());
 
     const [{ message, actionLabel, onAction }] = snackbar.openSnackbar.mock.calls[0];
-    expect(message).toBe("Parece que o instant não existe mais");
+    expect(message).toBe("Parece que este instant não existe mais");
     expect(actionLabel).toBe("Remover");
 
     act(() => onAction());
@@ -261,7 +262,7 @@ describe("FavoritesPanel", () => {
 
     const { snackbar } = renderPanel();
 
-    await user.click(action("Primeiro", "Enviar para o Discord"));
+    await user.click(action("Primeiro", "Reproduzir no Discord"));
 
     await waitFor(() => {
       expect(snackbar.openSnackbar).toHaveBeenCalledWith(
@@ -277,7 +278,7 @@ describe("FavoritesPanel", () => {
 
     renderPanel();
 
-    await user.click(action("Primeiro", "Enviar para o Discord"));
+    await user.click(action("Primeiro", "Reproduzir no Discord"));
 
     await waitFor(() => expect(play("Primeiro")).toBeDisabled());
     expect(within(card("Primeiro")).getByText("No Discord")).toBeInTheDocument();
@@ -304,11 +305,11 @@ describe("FavoritesPanel", () => {
     await user.click(play("Primeiro"));
 
     await waitFor(() => expect(card("Primeiro")).toHaveAttribute("data-live", "true"));
-    expect(within(card("Primeiro")).getByText("Tocando")).toBeInTheDocument();
+    expect(within(card("Primeiro")).getByText("Reproduzindo")).toBeInTheDocument();
     expect(play("Primeiro")).toBeEnabled();
     expect(play("Segundo")).toBeDisabled();
-    expect(action("Primeiro", "Enviar para o Discord")).toBeDisabled();
-    expect(action("Segundo", "Enviar para o Discord")).toBeDisabled();
+    expect(action("Primeiro", "Reproduzir no Discord")).toBeDisabled();
+    expect(action("Segundo", "Reproduzir no Discord")).toBeDisabled();
   });
 
   it("stops Discord playback through the backend", async () => {
@@ -317,7 +318,7 @@ describe("FavoritesPanel", () => {
 
     renderPanel();
 
-    await user.click(action("Primeiro", "Enviar para o Discord"));
+    await user.click(action("Primeiro", "Reproduzir no Discord"));
     await waitFor(() => expect(action("Primeiro", "Parar")).toBeEnabled());
 
     await user.click(action("Primeiro", "Parar"));
@@ -335,7 +336,7 @@ describe("FavoritesPanel", () => {
 
     expect(screen.getByRole("status")).toHaveTextContent("localhost:9001 não está respondendo");
     expect(play("Primeiro")).toBeEnabled();
-    expect(action("Primeiro", "Enviar para o Discord")).toBeEnabled();
+    expect(action("Primeiro", "Reproduzir no Discord")).toBeEnabled();
 
     await user.click(screen.getByRole("button", { name: "Trocar" }));
 
@@ -370,7 +371,7 @@ describe("FavoritesPanel when a clip cannot be fetched", () => {
 
     await waitFor(() => expect(snackbar.openSnackbar).toHaveBeenCalled());
     const call = snackbar.openSnackbar.mock.calls[0][0];
-    expect(call.message).toBe("Parece que o instant não existe mais");
+    expect(call.message).toBe("Parece que este instant não existe mais");
     expect(typeof call.onAction).toBe("function");
   });
 
@@ -380,7 +381,7 @@ describe("FavoritesPanel when a clip cannot be fetched", () => {
 
     const { snackbar } = renderPanel();
 
-    await user.click(action("Primeiro", "Enviar para o Discord"));
+    await user.click(action("Primeiro", "Reproduzir no Discord"));
 
     await waitFor(() => expect(snackbar.openSnackbar).toHaveBeenCalled());
     expect(snackbar.openSnackbar.mock.calls[0][0].message).toBe(

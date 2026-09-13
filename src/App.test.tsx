@@ -11,7 +11,8 @@ const noop = () => {};
 let healthListener: (healthy: boolean) => void = noop;
 let connectionErrorListener: () => void = noop;
 
-vi.mock("./service", () => ({
+vi.mock("./service", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./service")>()),
   defaultApiUrl: "http://localhost:9001",
   getApiUrl: vi.fn(() => "http://localhost:9001"),
   setApiUrl: vi.fn(() => true),
@@ -258,7 +259,7 @@ describe("connection health", () => {
     });
 
     expect(serverChip("localhost:9001 não está respondendo")).toBeInTheDocument();
-    expect(toasts().getByText("Não foi possível falar com localhost:9001")).toBeInTheDocument();
+    expect(toasts().getByText("Não foi possível conectar a localhost:9001")).toBeInTheDocument();
     expect(toasts().getByRole("button", { name: "Trocar" })).toBeInTheDocument();
   });
 
@@ -307,7 +308,7 @@ describe("snackbar precedence while offline", () => {
       await Promise.resolve();
     });
 
-    expect(toasts().getByText("Não foi possível falar com localhost:9001")).toBeInTheDocument();
+    expect(toasts().getByText("Não foi possível conectar a localhost:9001")).toBeInTheDocument();
     expect(screen.queryByText("Erro desconhecido, tente novamente mais tarde")).not.toBeInTheDocument();
 
     vi.mocked(getMyInstants).mockResolvedValue({ instants: [], pages: 0 });
@@ -329,12 +330,12 @@ describe("repeated failures while already offline", () => {
     await userEvent.click(toasts().getByRole("button", { name: "Fechar" }));
 
     await waitFor(() =>
-      expect(screen.queryByText("Não foi possível falar com localhost:9001")).not.toBeInTheDocument()
+      expect(screen.queryByText("Não foi possível conectar a localhost:9001")).not.toBeInTheDocument()
     );
 
     act(() => connectionErrorListener());
 
-    expect(toasts().getByText("Não foi possível falar com localhost:9001")).toBeInTheDocument();
+    expect(toasts().getByText("Não foi possível conectar a localhost:9001")).toBeInTheDocument();
   });
 });
 
@@ -540,6 +541,18 @@ describe("catalogue region", () => {
 
     expect(screen.getByRole("button", { name: "Brasil" })).toBeInTheDocument();
     await waitFor(() => expect(getMyInstants).toHaveBeenCalledWith(1, "", "br"));
+  });
+
+  it("names regions in English once the language switches", async () => {
+    localStorage.setItem("language", JSON.stringify("en-US"));
+    localStorage.setItem("region", JSON.stringify("us"));
+    render(<App />);
+
+    await openMyInstants();
+
+    expect(screen.getByRole("button", { name: "United States" })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "United States" }));
+    expect(screen.getByRole("menuitem", { name: "United Kingdom" })).toBeInTheDocument();
   });
 });
 

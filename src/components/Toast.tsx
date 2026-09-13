@@ -1,5 +1,6 @@
 import * as RadixToast from "@radix-ui/react-toast";
 import type { ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import { CloseIcon } from "../icons";
 import "./overlays.css";
 
@@ -15,10 +16,12 @@ export interface ToastProps {
 }
 
 export function ToastProvider({ children }: { children: ReactNode }) {
+  const { t } = useTranslation();
+
   return (
     <RadixToast.Provider swipeDirection="down" duration={6000}>
       {children}
-      <RadixToast.Viewport className="toast-viewport" label="Notificações ({hotkey})" />
+      <RadixToast.Viewport className="toast-viewport" label={t("toast.viewportLabel")} />
     </RadixToast.Provider>
   );
 }
@@ -31,6 +34,8 @@ export function Toast({
   onAction,
   duration = 6000
 }: ToastProps) {
+  const { t } = useTranslation();
+
   return (
     <RadixToast.Root
       className="toast"
@@ -47,7 +52,7 @@ export function Toast({
           </button>
         </RadixToast.Action>
       )}
-      <RadixToast.Close className="tx" aria-label="Fechar">
+      <RadixToast.Close className="tx" aria-label={t("toast.close")}>
         <CloseIcon size={14} />
       </RadixToast.Close>
     </RadixToast.Root>

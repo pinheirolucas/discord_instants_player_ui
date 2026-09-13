@@ -25,9 +25,13 @@ describe("regions", () => {
     }
   });
 
-  it("names each region in Portuguese", () => {
-    expect(regionLabel("br")).toBe("Brasil");
-    expect(regionLabel("us")).toBe("Estados Unidos");
-    expect(regionLabel("gb")).toBe("Reino Unido");
+  it("names each region in the given language", () => {
+    expect(regionLabel("br", "pt-BR")).toBe("Brasil");
+    expect(regionLabel("us", "pt-BR")).toBe("Estados Unidos");
+    expect(regionLabel("gb", "pt-BR")).toBe("Reino Unido");
+
+    expect(regionLabel("br", "en-US")).toBe("Brazil");
+    expect(regionLabel("us", "en-US")).toBe("United States");
+    expect(regionLabel("gb", "en-US")).toBe("United Kingdom");
   });
 });
