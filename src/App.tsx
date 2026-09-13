@@ -215,7 +215,6 @@ export default function App() {
     if (discovery && typeof discovery.refresh === "function") {
       discovery.refresh();
     }
-    setServerMenuOpen(false);
   }
 
   const serverAddress = formatApiUrl(activeUrl);
@@ -260,10 +259,7 @@ export default function App() {
                   healthy={healthy}
                   open={serverMenuOpen}
                   onOpenChange={setServerMenuOpen}
-                  onSelect={(server) => {
-                    setSelectedServer(server.apiUrl);
-                    setServerMenuOpen(false);
-                  }}
+                  onSelect={(server) => setSelectedServer(server.apiUrl)}
                   onRefresh={refreshDiscovery}
                 />
                 <Menu

@@ -185,7 +185,7 @@ describe("server picker", () => {
     expect(within(menu).getByText(/Encontrados na rede · 2/)).toBeInTheDocument();
   });
 
-  it("switches to a picked server in one click and remembers it", async () => {
+  it("switches to a picked server in one click, remembers it, and keeps the menu open", async () => {
     const bridge = installBridge();
     render(<App />);
     act(() => bridge.push([macbook, raspberry]));
@@ -195,6 +195,7 @@ describe("server picker", () => {
 
     expect(setApiUrl).toHaveBeenLastCalledWith("http://10.0.0.42:9001");
     expect(JSON.parse(localStorage.getItem("selectedServer") ?? "null")).toBe("http://10.0.0.42:9001");
+    expect(screen.getByText("Procurar novamente")).toBeInTheDocument();
   });
 
   it("keeps an explicit pick over the auto-adopted first server", () => {
@@ -227,7 +228,7 @@ describe("server picker", () => {
     expect(screen.getByText("Nenhum servidor encontrado")).toBeInTheDocument();
   });
 
-  it("asks the main process to browse again", async () => {
+  it("asks the main process to browse again, keeping the menu open", async () => {
     const bridge = installBridge();
     render(<App />);
     act(() => bridge.push([macbook]));
@@ -236,6 +237,7 @@ describe("server picker", () => {
     await userEvent.click(screen.getByText("Procurar novamente"));
 
     expect(bridge.refresh).toHaveBeenCalledTimes(1);
+    expect(screen.getByText("Procurar novamente")).toBeInTheDocument();
   });
 });
 
