@@ -1,12 +1,10 @@
-import * as R from "ramda";
-
 /** Dumps every localStorage key, JSON-decoded, to a downloaded file — the
  *  only backup this app has. ImportForm reads it back. */
 export function exportToJSON(): void {
-  const storagePairs = R.toPairs(localStorage as unknown as Record<string, string>);
+  const storagePairs = Object.entries(localStorage as unknown as Record<string, string>);
   console.log(storagePairs);
 
-  const rawData = R.fromPairs(
+  const rawData = Object.fromEntries(
     storagePairs.map(([key, value]): [string, unknown] => [key, JSON.parse(value)])
   );
   console.log(rawData);

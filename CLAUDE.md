@@ -253,4 +253,3 @@ weight 650, which the static 400/500/600/700 cut silently rounds to 700).
 - jsdom lacks APIs Radix uses — `matchMedia`, `ResizeObserver`, `scrollIntoView`, pointer capture — and
   `src/setupTests.ts` stubs each. Pointer capture is stubbed on `Element`, not `HTMLElement`, because the
   pointerdown target can be an `<svg>` inside a button.
-- `ramda` is used for small functional helpers (`src/state.ts`, `ImportForm.tsx`, `MyInstantsPanel.tsx`) — prefer it over ad-hoc loops for consistency with existing code.
