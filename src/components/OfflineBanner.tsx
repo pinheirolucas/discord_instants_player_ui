@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import "./states.css";
 
 export interface OfflineBannerProps {
@@ -6,14 +7,16 @@ export interface OfflineBannerProps {
 }
 
 export function OfflineBanner({ address, onSwitch }: OfflineBannerProps) {
+  const { t } = useTranslation();
+
   return (
     <div className="banner" role="status">
       <span>
-        <b>{address} não está respondendo</b>
-        <span>Seus favoritos continuam aqui, mas nada toca até o bot voltar.</span>
+        <b>{t("server.unresponsive", { address })}</b>
+        <span>{t("offline.hint")}</span>
       </span>
       <button type="button" className="bb" onClick={onSwitch}>
-        Trocar
+        {t("common.switch")}
       </button>
     </div>
   );
