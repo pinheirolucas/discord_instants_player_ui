@@ -49,7 +49,7 @@ async function upload(user: UserEvent, file: File) {
 // so Importar is never offered against content that has not arrived.
 async function uploadParsed(user: UserEvent, file = jsonFile({ instants: incoming })) {
   await upload(user, file);
-  await screen.findByText("O que você quer importar?");
+  await screen.findByText("O que você deseja importar?");
 }
 
 // user-event replicates the file picker's own `accept` filtering, and
@@ -69,7 +69,7 @@ describe("ImportForm", () => {
 
     expect(screen.getByText("Arraste o arquivo para cá")).toBeInTheDocument();
     expect(screen.getByText("ou clique para escolher um do computador")).toBeInTheDocument();
-    expect(screen.queryByText("O que você quer importar?")).toBeNull();
+    expect(screen.queryByText("O que você deseja importar?")).toBeNull();
     expect(screen.getByRole("button", { name: "Importar" })).toBeDisabled();
   });
 
@@ -81,7 +81,7 @@ describe("ImportForm", () => {
 
     expect(await screen.findByText("config.json")).toBeInTheDocument();
     expect(await screen.findByText("2 instants no arquivo")).toBeInTheDocument();
-    expect(screen.getByText("O que você quer importar?")).toBeInTheDocument();
+    expect(screen.getByText("O que você deseja importar?")).toBeInTheDocument();
   });
 
   it("counts a single instant in the singular", async () => {
@@ -140,7 +140,7 @@ describe("ImportForm", () => {
     renderForm();
     await uploadParsed(user, jsonFile({ theme: "dark" }));
 
-    expect(screen.getByText("0 instants no arquivo")).toBeInTheDocument();
+    expect(screen.getByText("0 instant no arquivo")).toBeInTheDocument();
 
     await user.click(screen.getByRole("switch", { name: "Instants" }));
     await user.click(screen.getByRole("radio", { name: "Substituir tudo" }));
@@ -167,8 +167,8 @@ describe("ImportForm", () => {
     await upload(user, new File(["hello"], "notes.txt", { type: "text/plain" }));
 
     expect(await screen.findByText("Esse arquivo não serve")).toBeInTheDocument();
-    expect(screen.getByText("Só arquivos .json são aceitos.")).toBeInTheDocument();
-    expect(screen.queryByText("O que você quer importar?")).toBeNull();
+    expect(screen.getByText("Apenas arquivos .json são aceitos.")).toBeInTheDocument();
+    expect(screen.queryByText("O que você deseja importar?")).toBeNull();
   });
 
   it("reports a .json file whose contents are not valid JSON", async () => {
@@ -178,7 +178,7 @@ describe("ImportForm", () => {
     await upload(user, new File(["{ not json"], "config.json", { type: "application/json" }));
 
     expect(await screen.findByText("O conteúdo não é um JSON válido.")).toBeInTheDocument();
-    expect(screen.queryByText("O que você quer importar?")).toBeNull();
+    expect(screen.queryByText("O que você deseja importar?")).toBeNull();
   });
 
   // Pinned because the source carries a comment explaining it: react-dropzone
@@ -189,7 +189,7 @@ describe("ImportForm", () => {
     renderForm();
 
     await upload(user, new File(["hello"], "notes.txt", { type: "text/plain" }));
-    const message = await screen.findByText("Só arquivos .json são aceitos.");
+    const message = await screen.findByText("Apenas arquivos .json são aceitos.");
 
     await waitFor(() => expect(message).toBeInTheDocument());
     expect(screen.queryByText("Arraste o arquivo para cá")).toBeNull();
@@ -200,12 +200,12 @@ describe("ImportForm", () => {
     renderForm();
 
     await upload(user, new File(["hello"], "notes.txt", { type: "text/plain" }));
-    await screen.findByText("Só arquivos .json são aceitos.");
+    await screen.findByText("Apenas arquivos .json são aceitos.");
 
     await upload(user, jsonFile({ instants: incoming }, "good.json"));
 
     expect(await screen.findByText("good.json")).toBeInTheDocument();
-    expect(screen.queryByText("Só arquivos .json são aceitos.")).toBeNull();
+    expect(screen.queryByText("Apenas arquivos .json são aceitos.")).toBeNull();
   });
 
   it("offers exactly the two strategies, with neither preselected", async () => {

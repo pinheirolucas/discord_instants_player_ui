@@ -1,6 +1,7 @@
 import * as R from "ramda";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useDropzone } from "react-dropzone";
+import { useTranslation } from "react-i18next";
 import { Button } from "./components/Button";
 import { Dialog } from "./components/Dialog";
 import { DropZone } from "./components/DropZone";
@@ -17,13 +18,6 @@ interface Backup {
   instants?: Instant[];
 }
 
-const REJECTED_TYPE = "Só arquivos .json são aceitos.";
-const REJECTED_CONTENT = "O conteúdo não é um JSON válido.";
-
-function countLabel(n: number): string {
-  return `${n} ${n === 1 ? "instant" : "instants"} no arquivo`;
-}
-
 export interface ImportFormProps {
   open: boolean;
   onClose: () => void;
@@ -35,6 +29,7 @@ export interface ImportFormProps {
  * still holds "light"/"dark", needs no migration: that key is never applied.
  */
 export default function ImportForm({ open, onClose }: ImportFormProps) {
+  const { t } = useTranslation();
   const readerRef = useRef<FileReader | null>(null);
   if (!readerRef.current) {
     readerRef.current = new FileReader();
@@ -68,7 +63,7 @@ export default function ImportForm({ open, onClose }: ImportFormProps) {
         const parsed = JSON.parse(String(event.target?.result ?? ""));
         setContent(parsed && typeof parsed === "object" ? parsed : {});
       } catch {
-        setError(REJECTED_CONTENT);
+        setError(t("import.rejectedContent"));
       }
     }
 
@@ -79,7 +74,7 @@ export default function ImportForm({ open, onClose }: ImportFormProps) {
       reader.removeEventListener("load", handleLoad);
       clear();
     };
-  }, [open, clear]);
+  }, [open, clear, t]);
 
   // Acceptance and rejection are handled in one effect on purpose.
   // react-dropzone hands back a fresh `acceptedFiles` identity even when a
@@ -90,7 +85,7 @@ export default function ImportForm({ open, onClose }: ImportFormProps) {
     clear();
 
     if (fileRejections.length) {
-      setError(REJECTED_TYPE);
+      setError(t("import.rejectedType"));
       return;
     }
 
@@ -99,7 +94,7 @@ export default function ImportForm({ open, onClose }: ImportFormProps) {
       setFileName(file.name);
       readerRef.current!.readAsText(file, "utf-8");
     }
-  }, [acceptedFiles, fileRejections, clear]);
+  }, [acceptedFiles, fileRejections, clear, t]);
 
   const incoming = content?.instants ?? [];
   // The options appear only once the file is actually parsed, so there is
@@ -130,12 +125,12 @@ export default function ImportForm({ open, onClose }: ImportFormProps) {
 
   if (error) {
     dropState = "bad";
-    title = "Esse arquivo não serve";
+    title = t("import.badFileTitle");
     hint = error;
   } else if (fileName) {
     dropState = "ok";
     title = fileName;
-    hint = content ? countLabel(incoming.length) : "Lendo o arquivo…";
+    hint = content ? t("import.count", { count: incoming.length }) : t("import.readingFile");
   } else if (isDragActive) {
     dropState = "over";
   }
@@ -146,15 +141,15 @@ export default function ImportForm({ open, onClose }: ImportFormProps) {
       onOpenChange={(next) => {
         if (!next) onClose();
       }}
-      title="Importar instants"
-      description="Um arquivo .json gerado pelo Exportar desta app."
+      title={t("import.dialogTitle")}
+      description={t("import.dialogDescription")}
       footer={
         <>
           <Button variant="secondary" onClick={onClose}>
-            Cancelar
+            {t("common.cancel")}
           </Button>
           <Button onClick={handleImport} disabled={!canImport}>
-            Importar
+            {t("app.import")}
           </Button>
         </>
       }
@@ -166,18 +161,18 @@ export default function ImportForm({ open, onClose }: ImportFormProps) {
 
       {parsed && (
         <div className="opts">
-          <p className="q">O que você quer importar?</p>
+          <p className="q">{t("import.whatToImport")}</p>
           <Switch label="Instants" checked={importInstants} onCheckedChange={setImportInstants} />
           {importInstants && (
             <>
-              <p className="q">E os que você já tem?</p>
+              <p className="q">{t("import.whatAboutExisting")}</p>
               <RadioGroup<Strategy>
-                aria-label="E os que você já tem?"
+                aria-label={t("import.whatAboutExisting")}
                 value={strategy}
                 onChange={setStrategy}
                 options={[
-                  { value: "merge", label: "Manter os meus" },
-                  { value: "replace", label: "Substituir tudo" }
+                  { value: "merge", label: t("import.keepMine") },
+                  { value: "replace", label: t("import.replaceAll") }
                 ]}
               />
             </>

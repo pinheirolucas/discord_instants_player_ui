@@ -1,4 +1,5 @@
 import type { HTMLAttributes } from "react";
+import { useTranslation } from "react-i18next";
 import "./states.css";
 
 export type DropState = "idle" | "over" | "ok" | "bad";
@@ -9,18 +10,15 @@ export interface DropZoneProps extends HTMLAttributes<HTMLDivElement> {
   hint?: string;
 }
 
-const COPY: Record<DropState, { title: string; hint?: string }> = {
-  idle: {
-    title: "Arraste o arquivo para cá",
-    hint: "ou clique para escolher um do computador"
-  },
-  over: { title: "Solte para carregar" },
-  ok: { title: "" },
-  bad: { title: "Esse arquivo não serve", hint: "Só arquivos .json são aceitos." }
-};
-
 export function DropZone({ state, title, hint, ...rest }: DropZoneProps) {
-  const fallback = COPY[state];
+  const { t } = useTranslation();
+  const copy: Record<DropState, { title: string; hint?: string }> = {
+    idle: { title: t("dropzone.idleTitle"), hint: t("dropzone.idleHint") },
+    over: { title: t("dropzone.overTitle") },
+    ok: { title: "" },
+    bad: { title: t("dropzone.badTitle"), hint: t("dropzone.badHint") }
+  };
+  const fallback = copy[state];
 
   return (
     <div className="drop" data-state={state} {...rest}>
