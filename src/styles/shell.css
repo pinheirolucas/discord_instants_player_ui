@@ -56,11 +56,14 @@
   max-width: 380px;
 }
 
+/* Top padding matches the hover lift/shadow and the focus ring's
+ * outline-offset, so the first row never gets clipped by this element's
+ * own overflow: auto. */
 .scroll {
   flex: 1;
   min-height: 0;
   overflow: auto;
-  padding: 0 40px 34px;
+  padding: 8px 40px 34px;
 }
 
 /* Four columns at the design's 1280px window, and it reflows below that
