@@ -3,7 +3,6 @@ import { useState } from "react";
 import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { UserEvent } from "@testing-library/user-event";
-import type { AxiosResponse } from "axios";
 
 import FavoritesPanel from "./FavoritesPanel";
 import SnackbarContext from "./SnackbarContext";
@@ -93,7 +92,7 @@ function useFakeAudio() {
     vi.stubGlobal("Audio", FakeAudio);
     vi.mocked(getContent).mockReset();
     vi.mocked(playOnDiscord).mockReset();
-    vi.mocked(stopPlayingOnDiscord).mockReset().mockResolvedValue({} as AxiosResponse);
+    vi.mocked(stopPlayingOnDiscord).mockReset().mockResolvedValue({} as Response);
   });
 
   afterEach(() => {

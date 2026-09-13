@@ -1,4 +1,3 @@
-import * as R from "ramda";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import { useTranslation } from "react-i18next";
@@ -112,7 +111,7 @@ export default function ImportForm({ open, onClose }: ImportFormProps) {
     } else {
       // Keep what is stored; add only urls not already there, so a stored
       // name wins over an incoming one for the same clip.
-      const saved = R.pluck("url", instants);
+      const saved = instants.map(({ url }) => url);
       setInstants([...instants, ...incoming.filter(({ url }) => !saved.includes(url))]);
     }
 

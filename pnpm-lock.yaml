@@ -32,18 +32,12 @@ importers:
       '@radix-ui/react-tooltip':
         specifier: ^1.2.16
         version: 1.2.16(@types/react-dom@19.2.7(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
-      axios:
-        specifier: ^1.20.0
-        version: 1.20.0(debug@4.4.3(supports-color@10.2.2))(supports-color@10.2.2)
       bonjour-service:
         specifier: 1.4.4
         version: 1.4.4
       i18next:
         specifier: ^26.4.2
         version: 26.4.2(typescript@5.9.3)
-      ramda:
-        specifier: ^0.32.0
-        version: 0.32.0
       react:
         specifier: ^19.2.8
         version: 19.2.8
@@ -84,9 +78,6 @@ importers:
       '@types/node':
         specifier: ^24.7.0
         version: 24.13.3
-      '@types/ramda':
-        specifier: ^0.32.0
-        version: 0.32.0
       '@types/react':
         specifier: ^19.2.0
         version: 19.2.18
@@ -1835,9 +1826,6 @@ packages:
   '@types/node@24.13.3':
     resolution: {integrity: sha512-Dh8vAsV36ig5wa9OX4pXvMc9D3Veibfw2wix0CUwYODLD8nkj9UsLjASr49nPg+2eKzxhBV+v7L8pXvT4e639Q==}
 
-  '@types/ramda@0.32.0':
-    resolution: {integrity: sha512-eTRIFYUxjVvZimlPNpXzXc3j4tnSYc7lBsD7X3zwtRvJML3qXclM4+m8vvmAZAHhBASKPmZAp6qu2C/DwJpBGQ==}
-
   '@types/react-dom@19.2.7':
     resolution: {integrity: sha512-I8bPpDLcHBv1qiIiXDCy71Rt8eQDKJP0sMSWJphDdAcdqiJ1sGpZamavoEIRZmYzjia9LuEb2HlYdDpmoENpvQ==}
     peerDependencies:
@@ -3182,9 +3170,6 @@ packages:
     resolution: {integrity: sha512-WuyALRjWPDGtt/wzJiadO5AXY+8hZ80hVpe6MyivgraREW751X3SbhRvG3eLKOYN+8VEvqLcf3wdnt44Z4S4SA==}
     engines: {node: '>=10'}
 
-  ramda@0.32.0:
-    resolution: {integrity: sha512-GQWAHhxhxWBWA8oIBr1XahFVjQ9Fic6MK9ikijfd4TZHfE2+urfk+irVlR5VOn48uwMgM+loRRBJd6Yjsbc0zQ==}
-
   react-docgen-typescript@2.4.0:
     resolution: {integrity: sha512-ZtAp5XTO5HRzQctjPU0ybY0RRCQO19X/8fxn3w7y2VVTUbGHDKULPTL4ky3vB05euSgG5NpALhEhDPvQ56wvXg==}
     peerDependencies:
@@ -3616,9 +3601,6 @@ packages:
   ts-interface-checker@0.1.13:
     resolution: {integrity: sha512-Y/arvbn+rrz3JCKl9C4kVNfTfSm2/mEp5FSz5EsZSANGPSlQrpRI5M4PKF+mJnE52jOO90PnPSc3Ur3bTQw0gA==}
 
-  ts-toolbelt@9.6.0:
-    resolution: {integrity: sha512-nsZd8ZeNUzukXPlJmTBwUAuABDe/9qtVDelJeT/qW0ow3ZS3BsQJtNkan1802aM9Uf68/Y8ljw86Hu0h5IUW3w==}
-
   tsconfig-paths@4.2.0:
     resolution: {integrity: sha512-NoZ4roiN7LnbKn9QqE1amc9DJfzvZXxF4xDavcOWt1BPkdx+m+0gJuPM+S0vCe7zTJMYUP0R8pO2XMr+Y8oLIg==}
     engines: {node: '>=6'}
@@ -3652,9 +3634,6 @@ packages:
   type-fest@5.9.0:
     resolution: {integrity: sha512-yANm3Jr3GiJ1qgJlxGAVxTOIcEOk1rhQHamlXtnrCK7EHP4HeM9OGxtMg/W7HFdrVzw/ZWJKGVIJusVH85sLtw==}
     engines: {node: '>=20'}
-
-  types-ramda@0.32.0:
-    resolution: {integrity: sha512-iZtriSUdsDqOlip/wUaDNcoiskbVf5RdcqLNpQdUcOM1JKFClochCvPZCDjn/cc9HzoBzi4DEB4iPr1PbrhN1w==}
 
   typescript@5.9.3:
     resolution: {integrity: sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw==}
@@ -5412,10 +5391,6 @@ snapshots:
     dependencies:
       undici-types: 7.18.2
 
-  '@types/ramda@0.32.0':
-    dependencies:
-      types-ramda: 0.32.0
-
   '@types/react-dom@19.2.7(@types/react@19.2.18)':
     dependencies:
       '@types/react': 19.2.18
@@ -6831,8 +6806,6 @@ snapshots:
 
   quick-lru@5.1.1: {}
 
-  ramda@0.32.0: {}
-
   react-docgen-typescript@2.4.0(typescript@5.9.3):
     dependencies:
       typescript: 5.9.3
@@ -7310,8 +7283,6 @@ snapshots:
 
   ts-interface-checker@0.1.13: {}
 
-  ts-toolbelt@9.6.0: {}
-
   tsconfig-paths@4.2.0:
     dependencies:
       json5: 2.2.3
@@ -7354,10 +7325,6 @@ snapshots:
   type-fest@5.9.0:
     dependencies:
       tagged-tag: 1.0.0
-
-  types-ramda@0.32.0:
-    dependencies:
-      ts-toolbelt: 9.6.0
 
   typescript@5.9.3: {}
 

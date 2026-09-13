@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { act, renderHook } from "@testing-library/react";
-import type { AxiosResponse } from "axios";
 
 import useDiscordPlayer from "./useDiscordPlayer";
 import { ApiError, playOnDiscord, stopPlayingOnDiscord } from "./service";
@@ -34,7 +33,7 @@ describe("useDiscordPlayer", () => {
   beforeEach(() => {
     vi.mocked(playOnDiscord).mockReset();
     vi.mocked(stopPlayingOnDiscord).mockReset();
-    vi.mocked(stopPlayingOnDiscord).mockResolvedValue({} as AxiosResponse);
+    vi.mocked(stopPlayingOnDiscord).mockResolvedValue({} as Response);
   });
 
   it("starts idle", () => {

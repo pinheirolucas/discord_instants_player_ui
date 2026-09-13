@@ -1,4 +1,3 @@
-import * as R from "ramda";
 import { useContext, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "./components/Button";
@@ -88,11 +87,16 @@ export default function MyInstantsPanel({
         // dereference whatever arrives.
         const listing = data || {};
         const incoming = listing.instants || [];
-        const byUrl = (instant: Instant) => instant.url;
 
-        setInstants((current) =>
-          R.uniqBy(byUrl, request.page === 1 ? incoming : [...current, ...incoming])
-        );
+        setInstants((current) => {
+          const combined = request.page === 1 ? incoming : [...current, ...incoming];
+          const seen = new Set<string>();
+          return combined.filter((instant) => {
+            if (seen.has(instant.url)) return false;
+            seen.add(instant.url);
+            return true;
+          });
+        });
         setTotalPages(listing.pages || 1);
         setFailed(false);
       })

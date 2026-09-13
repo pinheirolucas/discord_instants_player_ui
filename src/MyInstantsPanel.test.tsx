@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { AxiosResponse } from "axios";
 
 import MyInstantsPanel from "./MyInstantsPanel";
 import SnackbarContext from "./SnackbarContext";
@@ -110,7 +109,7 @@ function useFakes(listing: Listing | null = page1) {
     vi.mocked(getMyInstants).mockReset();
     if (listing) vi.mocked(getMyInstants).mockResolvedValue(listing);
     vi.mocked(playOnDiscord).mockReset();
-    vi.mocked(stopPlayingOnDiscord).mockReset().mockResolvedValue({} as AxiosResponse);
+    vi.mocked(stopPlayingOnDiscord).mockReset().mockResolvedValue({} as Response);
   });
 
   afterEach(() => {
