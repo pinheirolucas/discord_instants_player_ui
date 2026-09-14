@@ -1,6 +1,6 @@
 {
   "name": "discord_instants_player_ui",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "author": "pinheirolucas",
   "main": "build/electron.js",
   "homepage": "./",
