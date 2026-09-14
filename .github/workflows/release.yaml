@@ -5,7 +5,8 @@ on:
     tags: ["v*.*.*"]
 
 # Needed for electron-builder's GitHub publisher to create/attach to a
-# release with the default GITHUB_TOKEN.
+# release, and for the publish job below to edit and un-draft it, all with
+# the default GITHUB_TOKEN.
 permissions:
   contents: write
 
@@ -79,10 +80,43 @@ jobs:
       # Builds the app, then calls electron-builder --publish=always. All
       # three OSes publish to the same tag concurrently — electron-builder's
       # own documented pattern for multi-OS CI: whichever job's publish call
-      # reaches GitHub first creates the (draft, by default) release, the
-      # other two find it and attach their assets. Unsigned, so this is
-      # never more than a draft to review before hitting Publish.
+      # reaches GitHub first creates the release (draft, by default; see the
+      # publish job below), the other two find it and attach their assets.
       - name: Build and publish
         run: pnpm release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  publish:
+    needs: release
+    runs-on: ubuntu-latest
+
+    steps:
+      # electron-builder leaves the release with no body — this is GitHub's
+      # own "Generate release notes" (grouped PR titles since the last tag),
+      # the same text the web UI's button would produce.
+      - name: Generate release notes
+        id: notes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api "repos/${{ github.repository }}/releases/generate-notes" \
+            -f tag_name="${{ github.ref_name }}" \
+            --jq .body > notes.md
+          {
+            echo "body<<NOTES_EOF"
+            cat notes.md
+            echo "NOTES_EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      # All three platforms' assets are attached by this point (this job
+      # needs: release, the whole matrix) — only now does the release go
+      # live and become visible to every running copy's update check.
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release edit "${{ github.ref_name }}" \
+            --repo "${{ github.repository }}" \
+            --notes "${{ steps.notes.outputs.body }}" \
+            --draft=false
