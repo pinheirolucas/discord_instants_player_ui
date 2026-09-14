@@ -23,7 +23,7 @@ export const restartToUpdateChannel = "updates:restart";
 export const checkForUpdatesChannel = "updates:check";
 
 export const releasePageUrl =
-  "https://github.com/pinheirolucas/discord_instants_player_ui/releases/latest";
+  "https://github.com/pinheirolucas/peace-breaker-bot-desktop/releases/latest";
 
 /** The subset of electron-updater's UpdateFileInfo this app actually reads. */
 export interface UpdateFile {
