@@ -14,11 +14,11 @@
 # Dependency directories (remove the comment below to include it)
 # vendor/
 
-discord-instants-player
+peace-breaker-bot
 frontend/build
 frontend/node_modules
 *.mp3
-.discord_instants_player*
+.peace-breaker-bot*
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # dependencies
