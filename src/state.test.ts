@@ -58,7 +58,7 @@ describe("exportToJSON", () => {
     expect(download.calls).toHaveLength(1);
     const [{ href, download: filename }] = download.calls;
 
-    expect(filename).toBe("discord-instants-player-config.json");
+    expect(filename).toBe("peace-breaker-bot-config.json");
     expect(JSON.parse(decode(href))).toEqual({ instants, theme: "dark" });
   });
 

@@ -15,6 +15,6 @@ export function exportToJSON(): void {
 
   const anchor = document.createElement("a");
   anchor.setAttribute("href", file);
-  anchor.setAttribute("download", "discord-instants-player-config.json");
+  anchor.setAttribute("download", "peace-breaker-bot-config.json");
   anchor.click();
 }
