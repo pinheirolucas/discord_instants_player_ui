@@ -175,6 +175,46 @@ export default function App() {
     [showToast, t]
   );
 
+  // Update checks happen in the main process (electron/updates.ts); this
+  // only ever reacts to whichever event fits the platform. Windows applies
+  // updates on its own and just needs a restart; macOS fetches the dmg
+  // itself and needs a person to open it; Linux gets a plain heads-up, since
+  // Electron's updater never covers it at all. A no-op outside Electron —
+  // none of window.instantsUpdates exists in a plain browser tab.
+  useEffect(() => {
+    const updates = window.instantsUpdates;
+
+    if (!updates || typeof updates.onAvailable !== "function") {
+      return undefined;
+    }
+
+    const unsubscribers = [
+      updates.onAvailable((version) =>
+        showToast({
+          message: t("update.available", { version }),
+          actionLabel: t("update.viewOnGitHub"),
+          onAction: () => updates.openReleasePage()
+        })
+      ),
+      updates.onDownloaded(({ path }) =>
+        showToast({
+          message: t("update.ready"),
+          actionLabel: t("update.open"),
+          onAction: () => updates.openUpdate(path)
+        })
+      ),
+      updates.onRestartReady(() =>
+        showToast({
+          message: t("update.restartReady"),
+          actionLabel: t("update.restart"),
+          onAction: () => updates.restart()
+        })
+      )
+    ];
+
+    return () => unsubscribers.forEach((unsubscribe) => unsubscribe());
+  }, [showToast, t]);
+
   const openSnackbar = useCallback(
     (options: SnackbarOptions) => {
       // While unreachable, the connection toast is the accurate one — and a

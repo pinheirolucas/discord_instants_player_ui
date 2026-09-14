@@ -16,6 +16,14 @@ declare global {
       onServers: (listener: (servers: unknown[]) => void) => () => void;
       refresh: () => void;
     };
+    instantsUpdates?: {
+      onAvailable: (listener: (version: string) => void) => () => void;
+      onDownloaded: (listener: (info: { version: string; path: string }) => void) => () => void;
+      onRestartReady: (listener: () => void) => () => void;
+      openReleasePage: () => void;
+      openUpdate: (path: string) => void;
+      restart: () => void;
+    };
   }
 }
 

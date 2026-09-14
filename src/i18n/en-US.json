@@ -124,6 +124,14 @@
   "offline": {
     "hint": "Your favorites are still here, but nothing plays until the bot's back."
   },
+  "update": {
+    "available": "Version {{version}} is available",
+    "viewOnGitHub": "View on GitHub",
+    "ready": "Update downloaded — ready to install",
+    "open": "Open",
+    "restartReady": "Update ready — restart to finish",
+    "restart": "Restart"
+  },
   "toast": {
     "viewportLabel": "Notifications ({hotkey})",
     "close": "Close"
