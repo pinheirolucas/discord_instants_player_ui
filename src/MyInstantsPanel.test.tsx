@@ -144,7 +144,11 @@ describe("MyInstantsPanel", () => {
     const { onSummary } = renderPanel();
     await screen.findByRole("article", { name: "Primeiro" });
 
-    expect(onSummary).toHaveBeenLastCalledWith("2 resultados");
+    // onSummary fires from its own effect, a tick after the cards commit —
+    // asserting right after findByRole resolves is a race, flaky exactly
+    // the way every other mock assertion in this file already avoids by
+    // waiting for the call itself instead of a DOM proxy for it.
+    await waitFor(() => expect(onSummary).toHaveBeenLastCalledWith("2 resultados"));
   });
 
   it("refetches when the search term changes, replacing the list", async () => {
