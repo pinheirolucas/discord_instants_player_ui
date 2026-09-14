@@ -5,9 +5,6 @@ on:
     tags: ["v*.*.*"]
   workflow_dispatch:
 
-# Needed for electron-builder's GitHub publisher to create/attach to a
-# release, and for the publish job below to edit and un-draft it, all with
-# the default GITHUB_TOKEN.
 permissions:
   contents: write
 
@@ -19,8 +16,6 @@ jobs:
       - name: Set up repo
         uses: actions/checkout@v7
 
-      # See ci.yaml for why this reads .tool-versions instead of hardcoding
-      # the pnpm version.
       - name: Read pnpm version from .tool-versions
         id: pnpm-version
         run: echo "version=$(awk '$1 == "pnpm" { print $2 }' .tool-versions)" >> "$GITHUB_OUTPUT"
@@ -56,9 +51,6 @@ jobs:
       - name: Set up repo
         uses: actions/checkout@v7
 
-      # Windows' default shell is PowerShell, which doesn't understand this
-      # awk one-liner — spelled out here, unlike ci.yaml, because that job
-      # only ever runs on ubuntu-latest.
       - name: Read pnpm version from .tool-versions
         id: pnpm-version
         shell: bash
@@ -78,24 +70,55 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      # Builds the app, then calls electron-builder --publish=always. All
-      # three OSes publish to the same tag concurrently — electron-builder's
-      # own documented pattern for multi-OS CI: whichever job's publish call
-      # reaches GitHub first creates the release (draft, by default; see the
-      # publish job below), the other two find it and attach their assets.
-      - name: Build and publish
-        run: pnpm release
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Cache Electron downloads
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/electron
+            ~/.cache/electron-builder
+            ~/Library/Caches/electron
+            ~/Library/Caches/electron-builder
+            ~/AppData/Local/electron/Cache
+            ~/AppData/Local/electron-builder/Cache
+          key: ${{ runner.os }}-electron-${{ hashFiles('pnpm-lock.yaml') }}
+
+      - name: Build renderer and Electron main process
+        run: pnpm react-build && pnpm electron-compile
+
+      - name: Package app
+        uses: nick-fields/retry@v3
+        with:
+          max_attempts: 3
+          timeout_minutes: 20
+          retry_wait_seconds: 30
+          shell: bash
+          command: pnpm exec electron-builder --publish=never
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.os }}
+          if-no-files-found: error
+          path: |
+            dist/*.dmg
+            dist/*.zip
+            dist/*.exe
+            dist/*.AppImage
+            dist/*.blockmap
+            dist/*.yml
 
   publish:
     needs: release
     runs-on: ubuntu-latest
 
     steps:
-      # electron-builder leaves the release with no body — this is GitHub's
-      # own "Generate release notes" (grouped PR titles since the last tag),
-      # the same text the web UI's button would produce.
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: release-*
+          path: dist
+          merge-multiple: true
+
       - name: Generate release notes
         id: notes
         env:
@@ -104,20 +127,27 @@ jobs:
           gh api "repos/${{ github.repository }}/releases/generate-notes" \
             -f tag_name="${{ github.ref_name }}" \
             --jq .body > notes.md
-          {
-            echo "body<<NOTES_EOF"
-            cat notes.md
-            echo "NOTES_EOF"
-          } >> "$GITHUB_OUTPUT"
 
-      # All three platforms' assets are attached by this point (this job
-      # needs: release, the whole matrix) — only now does the release go
-      # live and become visible to every running copy's update check.
-      - name: Publish release
+      - name: Create or update release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release edit "${{ github.ref_name }}" \
-            --repo "${{ github.repository }}" \
-            --notes "${{ steps.notes.outputs.body }}" \
-            --draft=false
+          TAG="${{ github.ref_name }}"
+          REPO="${{ github.repository }}"
+          if gh release view "$TAG" --repo "$REPO" >/dev/null 2>&1; then
+            echo "Release $TAG already exists — a prior run must have created it. Uploading any missing assets only."
+            gh release upload "$TAG" dist/* --repo "$REPO" --clobber
+          else
+            gh release create "$TAG" dist/* \
+              --repo "$REPO" \
+              --title "$TAG" \
+              --notes-file notes.md
+          fi
+
+      - name: Record release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release view "${{ github.ref_name }}" --repo "${{ github.repository }}" \
+            --json databaseId,url --jq '"release_id=\(.databaseId) url=\(.url)"' \
+            >> "$GITHUB_STEP_SUMMARY"
