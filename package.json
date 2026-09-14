@@ -1,6 +1,6 @@
 {
   "name": "discord_instants_player_ui",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "author": "pinheirolucas",
   "main": "build/electron.js",
   "homepage": "./",
@@ -28,7 +28,9 @@
     },
     "linux": {
       "icon": "resources/icons",
-      "target": ["AppImage"]
+      "target": [
+        "AppImage"
+      ]
     }
   },
   "private": true,
