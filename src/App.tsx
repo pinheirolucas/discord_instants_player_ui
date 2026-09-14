@@ -328,9 +328,6 @@ export default function App() {
                   <MenuItem primary={t("app.export")} onSelect={() => exportToJSON()} />
                   <MenuSeparator />
                   <MenuItem primary={t("app.appearance")} onSelect={appearance.begin} />
-                  {os !== "mac" && (
-                    <MenuItem primary={t("app.checkForUpdates")} onSelect={checkForUpdates} />
-                  )}
                   <MenuSeparator />
                   <MenuItem
                     tick={language === "pt-BR" ? <CheckIcon /> : null}
@@ -342,6 +339,12 @@ export default function App() {
                     primary={t("app.languageEnUS")}
                     onSelect={() => setLanguage("en-US")}
                   />
+                  {os !== "mac" && (
+                    <>
+                      <MenuSeparator />
+                      <MenuItem primary={t("app.checkForUpdates")} onSelect={checkForUpdates} />
+                    </>
+                  )}
                 </Menu>
               </div>
   
