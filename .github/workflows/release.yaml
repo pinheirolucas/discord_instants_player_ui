@@ -132,7 +132,6 @@ jobs:
         uses: nick-fields/retry@v4
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GH_DEBUG: api
         with:
           max_attempts: 3
           timeout_minutes: 10
