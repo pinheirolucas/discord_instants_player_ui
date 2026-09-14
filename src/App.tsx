@@ -210,9 +210,9 @@ export default function App() {
           onAction: () => updates.restart()
         })
       ),
-      // Only ever fire in answer to the native "Check for Updates" menu
-      // item (macOS-only) — the hourly background check stays silent
-      // either way, same as before that menu item existed.
+      // Only ever fire in answer to a manual check — macOS's native app menu
+      // or the overflow menu below on Windows/Linux — the hourly background
+      // check stays silent either way, same as before either existed.
       updates.onNotAvailable(() => showToast({ message: t("update.upToDate") })),
       updates.onCheckFailed(() => showToast({ message: t("update.checkFailed") }))
     ];
@@ -259,6 +259,16 @@ export default function App() {
     const discovery = window.instantsDiscovery;
     if (discovery && typeof discovery.refresh === "function") {
       discovery.refresh();
+    }
+  }
+
+  // macOS gets a native item in its app menu instead — see
+  // electron/main.ts's buildAppMenu — so this only needs to be offered here
+  // on the platforms that have no menu bar of their own.
+  function checkForUpdates() {
+    const updates = window.instantsUpdates;
+    if (updates && typeof updates.checkNow === "function") {
+      updates.checkNow();
     }
   }
 
@@ -318,6 +328,9 @@ export default function App() {
                   <MenuItem primary={t("app.export")} onSelect={() => exportToJSON()} />
                   <MenuSeparator />
                   <MenuItem primary={t("app.appearance")} onSelect={appearance.begin} />
+                  {os !== "mac" && (
+                    <MenuItem primary={t("app.checkForUpdates")} onSelect={checkForUpdates} />
+                  )}
                   <MenuSeparator />
                   <MenuItem
                     tick={language === "pt-BR" ? <CheckIcon /> : null}

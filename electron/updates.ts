@@ -17,6 +17,10 @@ export const updateCheckFailedChannel = "updates:check-failed";
 export const openReleasePageChannel = "updates:open-release-page";
 export const openUpdateChannel = "updates:open";
 export const restartToUpdateChannel = "updates:restart";
+// Windows/Linux only: the app's own overflow menu, in place of the native
+// menu item macOS gets in its app menu (those platforms have no window
+// menu bar at all in this app's custom chrome).
+export const checkForUpdatesChannel = "updates:check";
 
 export const releasePageUrl =
   "https://github.com/pinheirolucas/discord_instants_player_ui/releases/latest";

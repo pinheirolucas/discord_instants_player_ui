@@ -4,6 +4,7 @@ import type { Server } from "./discovery";
 import { chromeChannel, chromeKind } from "./chrome";
 import type { ChromeColors } from "./chrome";
 import {
+  checkForUpdatesChannel,
   openReleasePageChannel,
   openUpdateChannel,
   restartToUpdateChannel,
@@ -109,8 +110,9 @@ contextBridge.exposeInMainWorld("instantsUpdates", {
     ipcRenderer.on(updateRestartReadyChannel, handler);
     return () => ipcRenderer.removeListener(updateRestartReadyChannel, handler);
   },
-  // Both macOS-only: sent only in answer to the native app menu's "Check for
-  // Updates" item, never by the hourly background check.
+  // Both sent only in answer to a manual check — the native macOS app menu
+  // or the app's own overflow menu on Windows/Linux — never by the hourly
+  // background one.
   onNotAvailable: (listener: () => void) => {
     if (typeof listener !== "function") {
       return () => {};
@@ -133,7 +135,10 @@ contextBridge.exposeInMainWorld("instantsUpdates", {
   },
   openReleasePage: () => ipcRenderer.send(openReleasePageChannel),
   openUpdate: (filePath: string) => ipcRenderer.send(openUpdateChannel, filePath),
-  restart: () => ipcRenderer.send(restartToUpdateChannel)
+  restart: () => ipcRenderer.send(restartToUpdateChannel),
+  // Windows/Linux: triggered from the app's own overflow menu, in place of
+  // the native item macOS gets in its app menu.
+  checkNow: () => ipcRenderer.send(checkForUpdatesChannel)
 });
 
 contextBridge.exposeInMainWorld("instantsPlatform", {

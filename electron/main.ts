@@ -24,6 +24,7 @@ import {
   windowChromeFor
 } from "./chrome";
 import {
+  checkForUpdatesChannel,
   checkForUpdatesLabel,
   openReleasePageChannel,
   openUpdateChannel,
@@ -338,6 +339,17 @@ ipcMain.on(restartToUpdateChannel, (event) => {
   }
 
   autoUpdater.quitAndInstall();
+});
+
+// The renderer's own overflow menu, on Windows and Linux — the same manual
+// check the native macOS app menu triggers, since neither of those
+// platforms has a window menu bar in this app's custom chrome.
+ipcMain.on(checkForUpdatesChannel, (event) => {
+  if (!mainWindow || mainWindow.isDestroyed() || event.sender !== mainWindow.webContents) {
+    return;
+  }
+
+  checkForUpdatesManually();
 });
 
 // The renderer reports its resolved --bg/--fg whenever the palette or mode

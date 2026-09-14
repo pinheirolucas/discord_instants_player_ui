@@ -24,6 +24,7 @@
     "import": "Import",
     "export": "Export",
     "appearance": "Appearance",
+    "checkForUpdates": "Check for Updates",
     "language": "Language",
     "languagePtBR": "Português",
     "languageEnUS": "English",
