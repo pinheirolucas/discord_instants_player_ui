@@ -16,6 +16,21 @@ declare global {
       onServers: (listener: (servers: unknown[]) => void) => () => void;
       refresh: () => void;
     };
+    instantsUpdates?: {
+      onAvailable: (listener: (version: string) => void) => () => void;
+      onDownloaded: (listener: (info: { version: string; path: string }) => void) => () => void;
+      onRestartReady: (listener: () => void) => () => void;
+      // Both sent only in answer to a manual check — the native macOS app
+      // menu or the app's own overflow menu on Windows/Linux — never by the
+      // hourly background one.
+      onNotAvailable: (listener: () => void) => () => void;
+      onCheckFailed: (listener: () => void) => () => void;
+      openReleasePage: () => void;
+      openUpdate: (path: string) => void;
+      restart: () => void;
+      // Windows/Linux: the overflow menu's "Check for Updates" item.
+      checkNow: () => void;
+    };
   }
 }
 

@@ -24,6 +24,7 @@
     "import": "Importar",
     "export": "Exportar",
     "appearance": "Aparência",
+    "checkForUpdates": "Verificar atualizações",
     "language": "Idioma",
     "languagePtBR": "Português",
     "languageEnUS": "English",
@@ -123,6 +124,16 @@
   },
   "offline": {
     "hint": "Seus favoritos continuam aqui, mas nada toca até o bot voltar."
+  },
+  "update": {
+    "available": "A versão {{version}} está disponível",
+    "viewOnGitHub": "Ver no GitHub",
+    "ready": "Atualização baixada — pronta para instalar",
+    "open": "Abrir",
+    "restartReady": "Atualização pronta — reinicie para concluir",
+    "restart": "Reiniciar",
+    "upToDate": "Você já está na versão mais recente",
+    "checkFailed": "Não foi possível verificar atualizações"
   },
   "toast": {
     "viewportLabel": "Notificações ({hotkey})",

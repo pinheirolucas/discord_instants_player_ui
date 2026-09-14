@@ -1,8 +1,11 @@
-import { app, BrowserWindow, ipcMain, nativeTheme } from "electron";
+import { app, BrowserWindow, ipcMain, Menu, nativeTheme, net, shell } from "electron";
+import type { MenuItemConstructorOptions } from "electron";
+import { createWriteStream } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { Bonjour } from "bonjour-service";
-import { updateElectronApp, UpdateSourceType } from "update-electron-app";
+import { autoUpdater } from "electron-updater";
+import type { UpdateInfo } from "electron-updater";
 import {
   buildServer,
   discoveryProtocol,
@@ -20,6 +23,20 @@ import {
   titleBarHeight,
   windowChromeFor
 } from "./chrome";
+import {
+  checkForUpdatesChannel,
+  checkForUpdatesLabel,
+  openReleasePageChannel,
+  openUpdateChannel,
+  pickDmgUrl,
+  releasePageUrl,
+  restartToUpdateChannel,
+  updateAvailableChannel,
+  updateCheckFailedChannel,
+  updateDownloadedChannel,
+  updateNotAvailableChannel,
+  updateRestartReadyChannel
+} from "./updates";
 
 // Dev is "not packaged". This used to be the electron-is-dev package, which
 // went ESM-only in v3 and so cannot be required from a CommonJS bundle.
@@ -31,13 +48,151 @@ let browser: ReturnType<Bonjour["find"]> | null = null;
 let discoveryTimer: NodeJS.Timeout | null = null;
 let discovered = new Map<string, Server>();
 
-updateElectronApp({
-  updateSource: {
-    type: UpdateSourceType.ElectronPublicUpdateService,
-    repo: "pinheirolucas/discord_instants_player_ui"
-  },
-  updateInterval: "1 hour"
-});
+// The version whose dmg has already been fetched (or is being fetched), so a
+// later hourly check doesn't re-download it while it's sitting there unopened.
+let macUpdateVersion: string | null = null;
+
+// Set right before a menu-triggered check, cleared by whichever terminal
+// event answers it. The hourly background check never sets this, so it
+// stays exactly as silent on "no update"/"check failed" as it always was —
+// only a check a person actually asked for gets an answer either way.
+let manualCheckPending = false;
+
+function sendToWindow(channel: string, payload?: unknown): void {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send(channel, payload);
+  }
+}
+
+/**
+ * Squirrel.Mac needs a real Developer ID signature before it will apply an
+ * update, which this build doesn't have — so autoDownload stays off on
+ * macOS and this fetches the dmg itself instead of the zip
+ * autoUpdater.downloadUpdate() would target. The last step, opening it, is
+ * left to the person: that's the part signing would actually gate.
+ */
+function downloadMacUpdate(info: UpdateInfo): void {
+  if (macUpdateVersion === info.version) {
+    return;
+  }
+
+  const url = pickDmgUrl(info.files);
+  if (!url) {
+    return; // a zip-only publish — nothing here for a person to open
+  }
+
+  macUpdateVersion = info.version;
+
+  const destination = path.join(app.getPath("downloads"), path.basename(url));
+  const request = net.request(url);
+
+  request.on("response", (response) => {
+    const file = createWriteStream(destination);
+
+    file.on("error", () => {
+      macUpdateVersion = null;
+    });
+
+    response.on("data", (chunk) => file.write(chunk));
+    response.on("end", () => {
+      file.end();
+      sendToWindow(updateDownloadedChannel, { version: info.version, path: destination });
+    });
+  });
+
+  request.on("error", () => {
+    macUpdateVersion = null; // retried on the next hourly check
+  });
+
+  request.end();
+}
+
+// Always safe to call, dev included: without these listeners an unhandled
+// "error" event from checkForUpdates() would take the whole process down,
+// and the menu's manual check (see buildAppMenu) needs them even when the
+// hourly background poll below is never started.
+function registerUpdateListeners(): void {
+  autoUpdater.autoDownload = process.platform === "win32";
+
+  // A repo with no releases yet, or no network, both surface here.
+  autoUpdater.on("error", () => {
+    if (manualCheckPending) {
+      manualCheckPending = false;
+      sendToWindow(updateCheckFailedChannel);
+    }
+  });
+
+  autoUpdater.on("update-not-available", () => {
+    if (manualCheckPending) {
+      manualCheckPending = false;
+      sendToWindow(updateNotAvailableChannel);
+    }
+  });
+
+  autoUpdater.on("update-available", (info) => {
+    manualCheckPending = false;
+
+    if (process.platform === "darwin") {
+      downloadMacUpdate(info);
+    } else if (process.platform === "linux") {
+      sendToWindow(updateAvailableChannel, info.version);
+    }
+  });
+
+  // Windows only — autoDownload is only true there, so this never fires on
+  // macOS or Linux.
+  autoUpdater.on("update-downloaded", () => sendToWindow(updateRestartReadyChannel));
+}
+
+function checkForUpdatesManually(): void {
+  manualCheckPending = true;
+  void autoUpdater.checkForUpdates().catch(() => {});
+}
+
+function startUpdateChecks(): void {
+  void autoUpdater.checkForUpdates().catch(() => {});
+  // Mirrors update-electron-app's old interval.
+  setInterval(() => void autoUpdater.checkForUpdates().catch(() => {}), 60 * 60 * 1000);
+}
+
+/**
+ * macOS only: in production, Windows and Linux windows have no menu bar at
+ * all — mainWindow.setMenu(null) removes it in favour of the custom title
+ * row, and that per-window override would hide any app-level menu set here
+ * regardless. macOS's menu bar lives outside the window, so it's the one
+ * place a native "Check for Updates" item is reachable without adding a
+ * menu bar those platforms otherwise deliberately don't have.
+ *
+ * Built from Electron's own role shorthands rather than a hand-rolled
+ * template, so Edit/View/Window keep every default (Cut/Copy/Paste,
+ * reload, zoom, minimize…) exactly as they were before this menu existed —
+ * only the app submenu is customized, to add the one new item.
+ */
+function buildAppMenu(): Menu {
+  const template: MenuItemConstructorOptions[] = [
+    {
+      role: "appMenu",
+      submenu: [
+        { role: "about" },
+        { type: "separator" },
+        { label: checkForUpdatesLabel(app.getLocale()), click: () => checkForUpdatesManually() },
+        { type: "separator" },
+        { role: "services" },
+        { type: "separator" },
+        { role: "hide" },
+        { role: "hideOthers" },
+        { role: "unhide" },
+        { type: "separator" },
+        { role: "quit" }
+      ]
+    },
+    { role: "editMenu" },
+    { role: "viewMenu" },
+    { role: "windowMenu" }
+  ];
+
+  return Menu.buildFromTemplate(template);
+}
 
 function localAddresses(): Set<string> {
   const found = new Set<string>();
@@ -164,6 +319,39 @@ function createWindow(): void {
 
 ipcMain.on(discoveryRefreshChannel, () => refreshDiscovery());
 
+ipcMain.on(openReleasePageChannel, () => shell.openExternal(releasePageUrl));
+
+ipcMain.on(openUpdateChannel, (event, filePath: unknown) => {
+  if (!mainWindow || mainWindow.isDestroyed() || event.sender !== mainWindow.webContents) {
+    return;
+  }
+
+  // The renderer is untrusted, but it can only ever echo back the path this
+  // process handed it in updateDownloadedChannel in the first place.
+  if (typeof filePath === "string" && filePath.startsWith(app.getPath("downloads"))) {
+    shell.openPath(filePath);
+  }
+});
+
+ipcMain.on(restartToUpdateChannel, (event) => {
+  if (!mainWindow || mainWindow.isDestroyed() || event.sender !== mainWindow.webContents) {
+    return;
+  }
+
+  autoUpdater.quitAndInstall();
+});
+
+// The renderer's own overflow menu, on Windows and Linux — the same manual
+// check the native macOS app menu triggers, since neither of those
+// platforms has a window menu bar in this app's custom chrome.
+ipcMain.on(checkForUpdatesChannel, (event) => {
+  if (!mainWindow || mainWindow.isDestroyed() || event.sender !== mainWindow.webContents) {
+    return;
+  }
+
+  checkForUpdatesManually();
+});
+
 // The renderer reports its resolved --bg/--fg whenever the palette or mode
 // changes. Windows' caption buttons are drawn by the OS and do not follow
 // CSS; without this they stay on last launch's palette, and the first switch
@@ -184,7 +372,18 @@ ipcMain.on(chromeChannel, (event, colors: unknown) => {
   }
 });
 
-app.on("ready", createWindow);
+app.on("ready", () => {
+  createWindow();
+  registerUpdateListeners();
+
+  if (process.platform === "darwin") {
+    Menu.setApplicationMenu(buildAppMenu());
+  }
+
+  if (!isDev) {
+    startUpdateChecks();
+  }
+});
 
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") {
