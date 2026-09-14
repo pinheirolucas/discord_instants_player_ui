@@ -584,7 +584,7 @@ describe("native window chrome", () => {
 
     const { container } = render(<App />);
 
-    expect(container.querySelector(".tb")).toHaveTextContent("Discord Instants Player");
+    expect(container.querySelector(".tb")).toHaveTextContent("Peace Breaker Bot");
   });
 
   it("leaves the bar to the window manager on Linux", () => {

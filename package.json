@@ -1,11 +1,12 @@
 {
-  "name": "discord_instants_player_ui",
-  "version": "0.0.7",
+  "name": "peace-breaker-bot-desktop",
+  "version": "0.0.1",
   "author": "pinheirolucas",
   "main": "build/electron.js",
   "homepage": "./",
-  "repository": "github:pinheirolucas/discord_instants_player_ui",
+  "repository": "github:pinheirolucas/peace-breaker-bot-desktop",
   "build": {
+    "productName": "Peace Breaker Bot",
     "publish": {
       "provider": "github"
     },

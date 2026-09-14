@@ -18,7 +18,7 @@ export function TitleBar({ os }: { os: PlatformId }) {
       {os === "win" && (
         <span className="wtitle">
           <AppMarkIcon />
-          Discord Instants Player
+          Peace Breaker Bot
         </span>
       )}
     </div>
