@@ -1,0 +1,62 @@
+name: Cut Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: "Version part to bump"
+        type: choice
+        options: [patch, minor, major]
+        default: patch
+        required: true
+      dry_run:
+        description: "Preview the next version only — no commit, tag, push, or build"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Set up repo
+        uses: actions/checkout@v7
+
+      - name: Preview only
+        if: ${{ inputs.dry_run }}
+        run: |
+          current=$(node -p "require('./package.json').version")
+          IFS='.' read -r major minor patch <<< "$current"
+          case "${{ inputs.bump }}" in
+            major) next="$((major + 1)).0.0" ;;
+            minor) next="$major.$((minor + 1)).0" ;;
+            patch) next="$major.$minor.$((patch + 1))" ;;
+          esac
+          echo "Would tag **v$next** (currently v$current) — dry run, nothing pushed." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Configure git identity
+        if: ${{ !inputs.dry_run }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Bump version and tag
+        if: ${{ !inputs.dry_run }}
+        id: bump
+        run: |
+          npm version "${{ inputs.bump }}"
+          echo "tag=$(git describe --tags --abbrev=0)" >> "$GITHUB_OUTPUT"
+
+      - name: Push commit and tag
+        if: ${{ !inputs.dry_run }}
+        run: git push --follow-tags
+
+      - name: Trigger the release build
+        if: ${{ !inputs.dry_run }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh workflow run release.yaml --ref "${{ steps.bump.outputs.tag }}"

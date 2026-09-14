@@ -3,6 +3,7 @@ name: Release
 on:
   push:
     tags: ["v*.*.*"]
+  workflow_dispatch:
 
 # Needed for electron-builder's GitHub publisher to create/attach to a
 # release, and for the publish job below to edit and un-draft it, all with
