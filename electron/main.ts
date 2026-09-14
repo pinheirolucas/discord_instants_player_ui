@@ -1,4 +1,5 @@
-import { app, BrowserWindow, ipcMain, nativeTheme, net, shell } from "electron";
+import { app, BrowserWindow, ipcMain, Menu, nativeTheme, net, shell } from "electron";
+import type { MenuItemConstructorOptions } from "electron";
 import { createWriteStream } from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -23,13 +24,16 @@ import {
   windowChromeFor
 } from "./chrome";
 import {
+  checkForUpdatesLabel,
   openReleasePageChannel,
   openUpdateChannel,
   pickDmgUrl,
   releasePageUrl,
   restartToUpdateChannel,
   updateAvailableChannel,
+  updateCheckFailedChannel,
   updateDownloadedChannel,
+  updateNotAvailableChannel,
   updateRestartReadyChannel
 } from "./updates";
 
@@ -46,6 +50,12 @@ let discovered = new Map<string, Server>();
 // The version whose dmg has already been fetched (or is being fetched), so a
 // later hourly check doesn't re-download it while it's sitting there unopened.
 let macUpdateVersion: string | null = null;
+
+// Set right before a menu-triggered check, cleared by whichever terminal
+// event answers it. The hourly background check never sets this, so it
+// stays exactly as silent on "no update"/"check failed" as it always was —
+// only a check a person actually asked for gets an answer either way.
+let manualCheckPending = false;
 
 function sendToWindow(channel: string, payload?: unknown): void {
   if (mainWindow && !mainWindow.isDestroyed()) {
@@ -96,15 +106,31 @@ function downloadMacUpdate(info: UpdateInfo): void {
   request.end();
 }
 
-function startUpdateChecks(): void {
+// Always safe to call, dev included: without these listeners an unhandled
+// "error" event from checkForUpdates() would take the whole process down,
+// and the menu's manual check (see buildAppMenu) needs them even when the
+// hourly background poll below is never started.
+function registerUpdateListeners(): void {
   autoUpdater.autoDownload = process.platform === "win32";
 
-  // A repo with no releases yet, or no network, both surface here — without
-  // this listener electron-updater throws an unhandled "error" event and
-  // takes the app down with it.
-  autoUpdater.on("error", () => {});
+  // A repo with no releases yet, or no network, both surface here.
+  autoUpdater.on("error", () => {
+    if (manualCheckPending) {
+      manualCheckPending = false;
+      sendToWindow(updateCheckFailedChannel);
+    }
+  });
+
+  autoUpdater.on("update-not-available", () => {
+    if (manualCheckPending) {
+      manualCheckPending = false;
+      sendToWindow(updateNotAvailableChannel);
+    }
+  });
 
   autoUpdater.on("update-available", (info) => {
+    manualCheckPending = false;
+
     if (process.platform === "darwin") {
       downloadMacUpdate(info);
     } else if (process.platform === "linux") {
@@ -115,10 +141,56 @@ function startUpdateChecks(): void {
   // Windows only — autoDownload is only true there, so this never fires on
   // macOS or Linux.
   autoUpdater.on("update-downloaded", () => sendToWindow(updateRestartReadyChannel));
+}
 
+function checkForUpdatesManually(): void {
+  manualCheckPending = true;
+  void autoUpdater.checkForUpdates().catch(() => {});
+}
+
+function startUpdateChecks(): void {
   void autoUpdater.checkForUpdates().catch(() => {});
   // Mirrors update-electron-app's old interval.
   setInterval(() => void autoUpdater.checkForUpdates().catch(() => {}), 60 * 60 * 1000);
+}
+
+/**
+ * macOS only: in production, Windows and Linux windows have no menu bar at
+ * all — mainWindow.setMenu(null) removes it in favour of the custom title
+ * row, and that per-window override would hide any app-level menu set here
+ * regardless. macOS's menu bar lives outside the window, so it's the one
+ * place a native "Check for Updates" item is reachable without adding a
+ * menu bar those platforms otherwise deliberately don't have.
+ *
+ * Built from Electron's own role shorthands rather than a hand-rolled
+ * template, so Edit/View/Window keep every default (Cut/Copy/Paste,
+ * reload, zoom, minimize…) exactly as they were before this menu existed —
+ * only the app submenu is customized, to add the one new item.
+ */
+function buildAppMenu(): Menu {
+  const template: MenuItemConstructorOptions[] = [
+    {
+      role: "appMenu",
+      submenu: [
+        { role: "about" },
+        { type: "separator" },
+        { label: checkForUpdatesLabel(app.getLocale()), click: () => checkForUpdatesManually() },
+        { type: "separator" },
+        { role: "services" },
+        { type: "separator" },
+        { role: "hide" },
+        { role: "hideOthers" },
+        { role: "unhide" },
+        { type: "separator" },
+        { role: "quit" }
+      ]
+    },
+    { role: "editMenu" },
+    { role: "viewMenu" },
+    { role: "windowMenu" }
+  ];
+
+  return Menu.buildFromTemplate(template);
 }
 
 function localAddresses(): Set<string> {
@@ -290,6 +362,11 @@ ipcMain.on(chromeChannel, (event, colors: unknown) => {
 
 app.on("ready", () => {
   createWindow();
+  registerUpdateListeners();
+
+  if (process.platform === "darwin") {
+    Menu.setApplicationMenu(buildAppMenu());
+  }
 
   if (!isDev) {
     startUpdateChecks();

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { pickDmgUrl } from "../electron/updates";
+import { checkForUpdatesLabel, pickDmgUrl } from "../electron/updates";
 
 describe("pickDmgUrl", () => {
   it("picks the .dmg entry among the files electron-builder lists", () => {
@@ -28,5 +28,18 @@ describe("pickDmgUrl", () => {
     expect(pickDmgUrl(null)).toBeNull();
     expect(pickDmgUrl(undefined)).toBeNull();
     expect(pickDmgUrl([])).toBeNull();
+  });
+});
+
+describe("checkForUpdatesLabel", () => {
+  it("labels in Portuguese for a pt* OS locale", () => {
+    expect(checkForUpdatesLabel("pt-BR")).toBe("Verificar atualizações…");
+    expect(checkForUpdatesLabel("pt-PT")).toBe("Verificar atualizações…");
+    expect(checkForUpdatesLabel("pt")).toBe("Verificar atualizações…");
+  });
+
+  it("falls back to English for everything else", () => {
+    expect(checkForUpdatesLabel("en-US")).toBe("Check for Updates…");
+    expect(checkForUpdatesLabel("es-ES")).toBe("Check for Updates…");
   });
 });

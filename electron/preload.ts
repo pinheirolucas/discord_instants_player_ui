@@ -8,7 +8,9 @@ import {
   openUpdateChannel,
   restartToUpdateChannel,
   updateAvailableChannel,
+  updateCheckFailedChannel,
   updateDownloadedChannel,
+  updateNotAvailableChannel,
   updateRestartReadyChannel
 } from "./updates";
 
@@ -106,6 +108,28 @@ contextBridge.exposeInMainWorld("instantsUpdates", {
 
     ipcRenderer.on(updateRestartReadyChannel, handler);
     return () => ipcRenderer.removeListener(updateRestartReadyChannel, handler);
+  },
+  // Both macOS-only: sent only in answer to the native app menu's "Check for
+  // Updates" item, never by the hourly background check.
+  onNotAvailable: (listener: () => void) => {
+    if (typeof listener !== "function") {
+      return () => {};
+    }
+
+    const handler = () => listener();
+
+    ipcRenderer.on(updateNotAvailableChannel, handler);
+    return () => ipcRenderer.removeListener(updateNotAvailableChannel, handler);
+  },
+  onCheckFailed: (listener: () => void) => {
+    if (typeof listener !== "function") {
+      return () => {};
+    }
+
+    const handler = () => listener();
+
+    ipcRenderer.on(updateCheckFailedChannel, handler);
+    return () => ipcRenderer.removeListener(updateCheckFailedChannel, handler);
   },
   openReleasePage: () => ipcRenderer.send(openReleasePageChannel),
   openUpdate: (filePath: string) => ipcRenderer.send(openUpdateChannel, filePath),

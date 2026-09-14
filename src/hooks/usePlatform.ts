@@ -20,6 +20,10 @@ declare global {
       onAvailable: (listener: (version: string) => void) => () => void;
       onDownloaded: (listener: (info: { version: string; path: string }) => void) => () => void;
       onRestartReady: (listener: () => void) => () => void;
+      // Both macOS-only: answers to the native app menu's "Check for
+      // Updates" item, never sent by the hourly background check.
+      onNotAvailable: (listener: () => void) => () => void;
+      onCheckFailed: (listener: () => void) => () => void;
       openReleasePage: () => void;
       openUpdate: (path: string) => void;
       restart: () => void;

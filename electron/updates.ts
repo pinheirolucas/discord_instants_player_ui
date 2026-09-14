@@ -8,6 +8,10 @@
 export const updateAvailableChannel = "updates:available"; // Linux: check only, no download
 export const updateDownloadedChannel = "updates:downloaded"; // macOS: dmg fetched, ready to open
 export const updateRestartReadyChannel = "updates:restart-ready"; // Windows: applied, ready to restart
+// Only ever sent for a manual check — the hourly background one stays
+// silent either way, the same as before this existed.
+export const updateNotAvailableChannel = "updates:not-available";
+export const updateCheckFailedChannel = "updates:check-failed";
 
 // renderer -> main
 export const openReleasePageChannel = "updates:open-release-page";
@@ -39,4 +43,16 @@ export function pickDmgUrl(files: readonly UpdateFile[] | null | undefined): str
   );
 
   return dmg ? dmg.url : null;
+}
+
+/**
+ * Labels the native "Check for Updates" item in macOS's app menu. The main
+ * process has no access to the persisted language setting the renderer's
+ * own i18n catalogs read (that's renderer-only state) — this reads the OS
+ * locale directly instead, bucketed the same pt-vs-everything-else way as
+ * src/i18n/detect.ts's defaultLocale.
+ */
+export function checkForUpdatesLabel(osLocale: string): string {
+  const primary = osLocale.split("-")[0]?.toLowerCase();
+  return primary === "pt" ? "Verificar atualizações…" : "Check for Updates…";
 }

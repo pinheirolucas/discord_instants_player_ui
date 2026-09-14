@@ -130,7 +130,9 @@
     "ready": "Atualização baixada — pronta para instalar",
     "open": "Abrir",
     "restartReady": "Atualização pronta — reinicie para concluir",
-    "restart": "Reiniciar"
+    "restart": "Reiniciar",
+    "upToDate": "Você já está na versão mais recente",
+    "checkFailed": "Não foi possível verificar atualizações"
   },
   "toast": {
     "viewportLabel": "Notificações ({hotkey})",

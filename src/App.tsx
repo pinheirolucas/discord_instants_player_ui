@@ -209,7 +209,12 @@ export default function App() {
           actionLabel: t("update.restart"),
           onAction: () => updates.restart()
         })
-      )
+      ),
+      // Only ever fire in answer to the native "Check for Updates" menu
+      // item (macOS-only) — the hourly background check stays silent
+      // either way, same as before that menu item existed.
+      updates.onNotAvailable(() => showToast({ message: t("update.upToDate") })),
+      updates.onCheckFailed(() => showToast({ message: t("update.checkFailed") }))
     ];
 
     return () => unsubscribers.forEach((unsubscribe) => unsubscribe());
