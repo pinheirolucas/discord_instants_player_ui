@@ -87,6 +87,7 @@ jobs:
 
       - name: Import and trust the macOS signing certificate
         if: matrix.os == 'macos-latest'
+        timeout-minutes: 5
         env:
           CSC_LINK: ${{ secrets.CSC_LINK }}
           CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
@@ -107,7 +108,7 @@ jobs:
 
           IDENTITY_NAME="$(node -pe "require('./package.json').build.mac.identity")"
           security find-certificate -c "$IDENTITY_NAME" -p "$KEYCHAIN_PATH" > "$PUBLIC_CERT_PATH"
-          security add-trusted-cert -d -r trustRoot -p codeSign -k "$KEYCHAIN_PATH" "$PUBLIC_CERT_PATH"
+          sudo security add-trusted-cert -d -r trustRoot -p codeSign -k "$KEYCHAIN_PATH" "$PUBLIC_CERT_PATH"
 
           security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
 
