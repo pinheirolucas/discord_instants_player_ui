@@ -1,10 +1,22 @@
 const { execFileSync } = require("node:child_process")
-const path = require("node:path")
+
+function hasUsableIdentity(name) {
+  try {
+    const output = execFileSync("security", ["find-identity", "-v", "-p", "codesigning"], { encoding: "utf8" })
+    return output.includes(`"${name}"`)
+  } catch {
+    return false
+  }
+}
 
 module.exports = async function afterPack(context) {
   if (context.electronPlatformName !== "darwin") return
-  if (context.packager.platformSpecificBuildOptions.identity) return
 
-  const appPath = path.join(context.appOutDir, `${context.packager.appInfo.productFilename}.app`)
-  execFileSync("codesign", ["--force", "--deep", "--sign", "-", appPath], { stdio: "inherit" })
+  const identity = context.packager.platformSpecificBuildOptions.identity
+  if (!identity || !hasUsableIdentity(identity)) {
+    throw new Error(
+      `No usable macOS code-signing identity found (expected "${identity}"). ` +
+        `Run "security find-identity -v -p codesigning" to see what's present and trusted.`
+    )
+  }
 }
