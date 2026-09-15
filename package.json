@@ -1,6 +1,6 @@
 {
   "name": "peace-breaker-bot-desktop",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "author": "pinheirolucas",
   "main": "build/electron.js",
   "homepage": "./",
