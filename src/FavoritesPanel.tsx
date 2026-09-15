@@ -18,7 +18,7 @@ import useDiscordPlayer from "./useDiscordPlayer";
 export interface FavoritesPanelProps {
   search: string;
   healthy: boolean;
-  serverAddress: string;
+  serverAddress: string | null;
   onSwitchServer: () => void;
   /** The hero's count line: "12 sons salvos", or "3 de 12" while searching. */
   onSummary: (summary: string) => void;

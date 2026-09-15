@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll, afterEach } from "vitest";
+import { describe, it, expect, beforeAll, beforeEach, afterAll, afterEach } from "vitest";
 import { setupServer } from "msw/node";
 import { http, HttpResponse } from "msw";
 import type { JsonBodyType } from "msw";
@@ -12,7 +12,6 @@ import {
   getApiUrl,
   setApiUrl,
   resetApiUrl,
-  defaultApiUrl,
   isHealthy,
   onHealthChange,
   onConnectionError
@@ -24,6 +23,13 @@ import {
 const apiUrl = "http://localhost:9001/api/v1";
 
 const server = setupServer();
+
+// There is no default server: every describe block below other than the
+// "no active server" ones needs an explicit address adopted first, exactly
+// as App.tsx would from a pick or a discovery result.
+beforeEach(() => {
+  setApiUrl(apiUrl);
+});
 
 // Every response goes through the backend's `response` struct:
 // {label, message, data}, with empty fields omitted.
@@ -441,26 +447,57 @@ describe("getMyInstants", () => {
 describe("api base url", () => {
   const discovered = "http://10.0.0.133:9001";
 
-  it("starts at localhost:9001/api/v1", () => {
-    expect(defaultApiUrl).toBe("http://localhost:9001/api/v1");
-    expect(getApiUrl()).toBe(defaultApiUrl);
-  });
+  // There is no default: only setApiUrl (an explicit pick or a discovered
+  // server) ever gives the app something to talk to.
+  describe("with no active server", () => {
+    beforeEach(() => {
+      resetApiUrl();
+    });
 
-  it("keeps talking to localhost when no bridge exposes a discovered address", async () => {
-    expect(window.instantsDiscovery).toBeUndefined();
+    it("starts with no server at all", () => {
+      expect(getApiUrl()).toBeNull();
+    });
 
-    let hit = false;
-    server.use(
-      http.get(`${apiUrl}/instants`, () => {
-        hit = true;
-        return success({ instants: [], pages: 0 });
-      })
-    );
+    it("refuses every request rather than falling back to localhost", async () => {
+      expect(window.instantsDiscovery).toBeUndefined();
 
-    await getMyInstants(1);
+      let hit = false;
+      server.use(
+        http.get(`${apiUrl}/instants`, () => {
+          hit = true;
+          return success({ instants: [], pages: 0 });
+        })
+      );
 
-    expect(hit).toBe(true);
-    expect(getApiUrl()).toBe(defaultApiUrl);
+      await expect(getMyInstants(1)).rejects.toThrow(
+        "Erro desconhecido, tente novamente mais tarde"
+      );
+
+      expect(hit).toBe(false);
+    });
+
+    it("counts as a connection failure, so the offline UI still reacts", async () => {
+      let errors = 0;
+      const unsubscribe = onConnectionError(() => {
+        errors += 1;
+      });
+
+      await expect(playOnDiscord("x")).rejects.toBeInstanceOf(ApiError);
+
+      expect(isHealthy()).toBe(false);
+      expect(errors).toBe(1);
+      unsubscribe();
+    });
+
+    it("drops back to no server when explicitly reset", () => {
+      setApiUrl(discovered);
+      expect(getApiUrl()).toBe(discovered);
+
+      resetApiUrl();
+
+      expect(getApiUrl()).toBeNull();
+      expect(isHealthy()).toBe(false);
+    });
   });
 
   it("sends every subsequent request to an adopted address", async () => {
@@ -493,25 +530,6 @@ describe("api base url", () => {
     await getMyInstants(1);
 
     expect(seen).toEqual([discovered, discovered, discovered, discovered]);
-  });
-
-  it("restores the default when the address is reset", async () => {
-    setApiUrl(discovered);
-    resetApiUrl();
-
-    expect(getApiUrl()).toBe(defaultApiUrl);
-
-    let hit = false;
-    server.use(
-      http.get(`${apiUrl}/instants`, () => {
-        hit = true;
-        return success({ instants: [], pages: 0 });
-      })
-    );
-
-    await getMyInstants(1);
-
-    expect(hit).toBe(true);
   });
 
   it("strips a trailing slash so paths are not doubled", async () => {
@@ -573,7 +591,7 @@ describe("api base url", () => {
     ["an object", {}]
   ])("ignores %s instead of adopting it", (_label, value) => {
     expect(setApiUrl(value)).toBe(false);
-    expect(getApiUrl()).toBe(defaultApiUrl);
+    expect(getApiUrl()).toBe(apiUrl);
   });
 
   it("does not lose a good address to a malformed one that arrives later", async () => {

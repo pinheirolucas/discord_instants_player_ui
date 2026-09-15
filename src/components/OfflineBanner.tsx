@@ -2,7 +2,7 @@ import { useTranslation } from "react-i18next";
 import "./states.css";
 
 export interface OfflineBannerProps {
-  address: string;
+  address: string | null;
   onSwitch: () => void;
 }
 
@@ -12,7 +12,7 @@ export function OfflineBanner({ address, onSwitch }: OfflineBannerProps) {
   return (
     <div className="banner" role="status">
       <span>
-        <b>{t("server.unresponsive", { address })}</b>
+        <b>{address ? t("server.unresponsive", { address }) : t("server.none")}</b>
         <span>{t("offline.hint")}</span>
       </span>
       <button type="button" className="bb" onClick={onSwitch}>

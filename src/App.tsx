@@ -23,11 +23,11 @@ import MyInstantsPanel from "./MyInstantsPanel";
 import RegionMenu from "./RegionMenu";
 import ServerMenu, { formatApiUrl } from "./ServerMenu";
 import {
-  defaultApiUrl,
   getApiUrl,
   isHealthy,
   onConnectionError,
   onHealthChange,
+  resetApiUrl,
   setApiUrl
 } from "./service";
 import SnackbarContext from "./SnackbarContext";
@@ -84,7 +84,7 @@ export default function App() {
   const [servers, setServers] = useState<Server[]>([]);
   const [serverMenuOpen, setServerMenuOpen] = useState(false);
   const [selectedServer, setSelectedServer] = useSelectedServer(null);
-  const [activeUrl, setActiveUrl] = useState<string>(defaultApiUrl);
+  const [activeUrl, setActiveUrl] = useState<string | null>(getApiUrl());
   const [healthy, setHealthy] = useState<boolean>(isHealthy);
   const healthyRef = useRef<boolean>(isHealthy());
 
@@ -149,10 +149,16 @@ export default function App() {
 
   // Precedence: an explicit pick (re-validated, so a stale or malformed one
   // falls through), then the first discovered server — the list arrives
-  // sorted, so that is stable across launches — then the default.
+  // sorted, so that is stable across launches. With neither, there is no
+  // fallback address: the app talks to nothing rather than assuming a
+  // backend on localhost.
   useEffect(() => {
     if (!(selectedServer && setApiUrl(selectedServer))) {
-      setApiUrl(servers.length > 0 ? servers[0].apiUrl : defaultApiUrl);
+      if (servers.length > 0) {
+        setApiUrl(servers[0].apiUrl);
+      } else {
+        resetApiUrl();
+      }
     }
     setActiveUrl(getApiUrl());
   }, [servers, selectedServer]);
@@ -162,16 +168,21 @@ export default function App() {
   }, []);
 
   // Every failure, not only the transition, so a second failed click is
-  // never silent.
+  // never silent. With no active server at all there is no address to name,
+  // so that gets its own message rather than "Couldn't connect to ".
   useEffect(
     () =>
-      onConnectionError(() =>
+      onConnectionError(() => {
+        const url = getApiUrl();
+
         showToast({
-          message: t("app.connectionError", { address: formatApiUrl(getApiUrl()) }),
+          message: url
+            ? t("app.connectionError", { address: formatApiUrl(url) })
+            : t("server.none"),
           actionLabel: t("common.switch"),
           onAction: () => setServerMenuOpen(true)
-        })
-      ),
+        });
+      }),
     [showToast, t]
   );
 
@@ -272,7 +283,7 @@ export default function App() {
     }
   }
 
-  const serverAddress = formatApiUrl(activeUrl);
+  const serverAddress = activeUrl ? formatApiUrl(activeUrl) : null;
   const openServerMenu = () => setServerMenuOpen(true);
 
   return (

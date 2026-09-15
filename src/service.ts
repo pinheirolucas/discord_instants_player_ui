@@ -1,7 +1,5 @@
 import type { Instant } from "./storage";
 
-export const defaultApiUrl = "http://localhost:9001/api/v1";
-
 const genericErrorMessage = "Erro desconhecido, tente novamente mais tarde";
 
 /**
@@ -43,9 +41,12 @@ interface PlayResult {
 
 type Listener<T extends unknown[]> = (...args: T) => void;
 
-let apiUrl = defaultApiUrl;
+// No default: only an explicit user pick or a discovered server ever sets
+// this. Absent both, the app talks to nothing rather than quietly assuming
+// a backend on localhost.
+let apiUrl: string | null = null;
 
-let healthy = true;
+let healthy = false;
 const healthListeners = new Set<Listener<[boolean]>>();
 const connectionErrorListeners = new Set<Listener<[]>>();
 
@@ -118,7 +119,7 @@ function normalizeApiUrl(value: unknown): string | null {
   return `${parsed.origin}${parsed.pathname}`.replace(/\/+$/, "");
 }
 
-export function getApiUrl(): string {
+export function getApiUrl(): string | null {
   return apiUrl;
 }
 
@@ -136,9 +137,24 @@ export function setApiUrl(value: unknown): boolean {
   return true;
 }
 
+/** Drops back to no server at all — not a default address — so a stale
+ *  pick or an empty discovery list never quietly reactivates localhost. */
 export function resetApiUrl(): void {
-  apiUrl = defaultApiUrl;
-  markHealth(true);
+  apiUrl = null;
+  markHealth(false);
+}
+
+/** Every request goes through this first: with no server at all, there is
+ *  nothing to fetch, so that is folded into the same "connection failure"
+ *  signal a real unreachable server produces, rather than attempting a
+ *  request against a nonsensical URL. */
+function requireApiUrl(): string {
+  if (apiUrl === null) {
+    markConnectionFailure();
+    throw new ApiError(null, genericErrorMessage);
+  }
+
+  return apiUrl;
 }
 
 /** Issues `fetch(url, init)`, unwraps the envelope, and folds a non-ok status
@@ -172,7 +188,8 @@ async function requestEnvelope<T>(url: string, init?: RequestInit): Promise<T> {
 }
 
 export async function playOnDiscord(url: string): Promise<string> {
-  const result = await requestEnvelope<PlayResult>(`${apiUrl}/bot/play`, {
+  const base = requireApiUrl();
+  const result = await requestEnvelope<PlayResult>(`${base}/bot/play`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ url })
@@ -182,10 +199,11 @@ export async function playOnDiscord(url: string): Promise<string> {
 }
 
 export async function stopPlayingOnDiscord(): Promise<Response> {
+  const base = requireApiUrl();
   let response: Response;
 
   try {
-    response = await fetch(`${apiUrl}/bot/stop`, { method: "POST" });
+    response = await fetch(`${base}/bot/stop`, { method: "POST" });
   } catch (err) {
     markConnectionFailure();
     throw err;
@@ -201,7 +219,8 @@ export async function stopPlayingOnDiscord(): Promise<Response> {
 }
 
 export async function getContent(url: string): Promise<ContentInfo> {
-  return requestEnvelope<ContentInfo>(`${apiUrl}/instants/${encodeURIComponent(url)}/content`);
+  const base = requireApiUrl();
+  return requestEnvelope<ContentInfo>(`${base}/instants/${encodeURIComponent(url)}/content`);
 }
 
 /** `region` is sent whenever it is given. Which requests it affects (today,
@@ -212,11 +231,12 @@ export async function getMyInstants(
   search?: string,
   region?: string
 ): Promise<Listing> {
+  const base = requireApiUrl();
   const params = [
     { value: page || 1, query: `page=${page}` },
     { value: search, query: `&search=${search}` },
     { value: region, query: `&region=${encodeURIComponent(region ?? "")}` }
   ].reduce((acc, cur) => (cur.value ? acc + cur.query : acc), "");
 
-  return requestEnvelope<Listing>(`${apiUrl}/instants?${params}`);
+  return requestEnvelope<Listing>(`${base}/instants?${params}`);
 }

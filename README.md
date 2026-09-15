@@ -9,12 +9,12 @@ Desktop app (Electron + React, built with Vite) for browsing, favoriting, and pl
 - Play a clip locally, or send it to the Discord bot to play in a voice channel — mutually exclusive per panel.
 - Light/dark theme toggle.
 - Import/export all app data (favorites, theme) as a JSON file.
-- Runs both as an Electron desktop app and as a plain web page pointed at the backend.
+- Runs as an Electron desktop app, which discovers the backend on the network automatically.
 
 ## Requirements
 
 - Node.js and [pnpm](https://pnpm.io/) (both pinned in `.tool-versions`, which asdf and mise both read)
-- The [`peace-breaker-bot`](https://github.com/pinheirolucas/peace-breaker-bot) backend running and reachable at `http://localhost:9001` (see [Backend connection](#backend-connection))
+- The [`peace-breaker-bot`](https://github.com/pinheirolucas/peace-breaker-bot) backend running and reachable on the network (see [Backend connection](#backend-connection))
 
 ## Installation
 
@@ -42,7 +42,7 @@ then open http://localhost:3000.
 
 ### Backend connection
 
-The backend URL is hardcoded in [`src/service.js`](./src/service.js) as `http://localhost:9001`. If your backend runs elsewhere, edit `apiUrl` in that file before building.
+There is no default backend address. The Electron app finds it automatically via mDNS discovery, or you pick it from the server menu in the tools row if more than one is on the network. A plain web browser tab has no discovery and no way to enter an address by hand, so it currently has no way to connect to anything — use the Electron app.
 
 ## Building
 
