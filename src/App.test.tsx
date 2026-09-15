@@ -3,7 +3,7 @@ import { act, fireEvent, render, screen, waitFor, within } from "@testing-librar
 import userEvent from "@testing-library/user-event";
 
 import App from "./App";
-import { getMyInstants, setApiUrl } from "./service";
+import { getMyInstants, resetApiUrl, setApiUrl } from "./service";
 
 // The listeners App registers with the mocked service. Reset to no-ops
 // rather than null, so a test can call them without a null check each time.
@@ -11,12 +11,21 @@ const noop = () => {};
 let healthListener: (healthy: boolean) => void = noop;
 let connectionErrorListener: () => void = noop;
 
+// getApiUrl tracks what setApiUrl/resetApiUrl were last called with, so the
+// resolution effect's own behaviour (adopt vs. reset to nothing) is what
+// drives what the UI shows, not a value hardcoded independently of it.
+let mockApiUrl: string | null = null;
+
 vi.mock("./service", async (importOriginal) => ({
   ...(await importOriginal<typeof import("./service")>()),
-  defaultApiUrl: "http://localhost:9001",
-  getApiUrl: vi.fn(() => "http://localhost:9001"),
-  setApiUrl: vi.fn(() => true),
-  resetApiUrl: vi.fn(),
+  getApiUrl: vi.fn(() => mockApiUrl),
+  setApiUrl: vi.fn((value: unknown) => {
+    mockApiUrl = value as string;
+    return true;
+  }),
+  resetApiUrl: vi.fn(() => {
+    mockApiUrl = null;
+  }),
   isHealthy: vi.fn(() => true),
   onHealthChange: vi.fn(listener => {
     healthListener = listener;
@@ -70,13 +79,16 @@ function installBridge({ unsubscribe = vi.fn() }: { unsubscribe?: (() => void) |
 }
 
 // The server chip is named by the address it shows, plus "não está
-// respondendo" as screen-reader text while the server is silent.
-function serverChip(name: string | RegExp = /^localhost:9001/) {
+// respondendo" as screen-reader text while the server is silent, or by
+// "Nenhum servidor encontrado" while nothing is picked or discovered.
+function serverChip(name: string | RegExp) {
   return screen.getByRole("button", { name });
 }
 
+// Opens via the chip's title rather than its accessible name, which is the
+// current address (or "no server") and so varies test to test.
 async function openServerMenu() {
-  await userEvent.click(serverChip());
+  await userEvent.click(screen.getByTitle("Trocar de servidor"));
 }
 
 function toasts() {
@@ -93,8 +105,13 @@ function reset() {
   delete document.documentElement.dataset.theme;
   healthListener = noop;
   connectionErrorListener = noop;
-  vi.mocked(setApiUrl).mockClear();
-  vi.mocked(setApiUrl).mockReturnValue(true);
+  mockApiUrl = null;
+  vi.mocked(setApiUrl).mockReset();
+  vi.mocked(setApiUrl).mockImplementation((value: unknown) => {
+    mockApiUrl = value as string;
+    return true;
+  });
+  vi.mocked(resetApiUrl).mockClear();
   vi.mocked(getMyInstants).mockClear();
 }
 
@@ -105,11 +122,12 @@ afterEach(() => {
 describe("App discovery wiring", () => {
   beforeEach(reset);
 
-  it("falls back to the default with no bridge at all", () => {
+  it("resets to no server at all with no bridge and nothing picked", () => {
     expect(window.instantsDiscovery).toBeUndefined();
 
     expect(() => render(<App />)).not.toThrow();
-    expect(setApiUrl).toHaveBeenCalledWith("http://localhost:9001");
+    expect(resetApiUrl).toHaveBeenCalled();
+    expect(setApiUrl).not.toHaveBeenCalled();
   });
 
   it("adopts the first discovered server when the user has picked none", () => {
@@ -131,14 +149,14 @@ describe("App discovery wiring", () => {
     expect(setApiUrl).toHaveBeenLastCalledWith("http://10.0.0.133:9001");
   });
 
-  it("returns to the default when every server goes away", () => {
+  it("returns to no server when every discovered server goes away", () => {
     const bridge = installBridge();
     render(<App />);
 
     act(() => bridge.push([macbook]));
     act(() => bridge.push([]));
 
-    expect(setApiUrl).toHaveBeenLastCalledWith("http://localhost:9001");
+    expect(resetApiUrl).toHaveBeenCalled();
   });
 
   it("ignores a bridge that exposes no onServers", () => {
@@ -146,7 +164,7 @@ describe("App discovery wiring", () => {
     window.instantsDiscovery = {} as unknown as Window["instantsDiscovery"];
 
     expect(() => render(<App />)).not.toThrow();
-    expect(setApiUrl).toHaveBeenCalledWith("http://localhost:9001");
+    expect(resetApiUrl).toHaveBeenCalled();
   });
 
   it("unsubscribes when the app unmounts", () => {
@@ -179,8 +197,9 @@ describe("server picker", () => {
     await openServerMenu();
 
     const menu = screen.getByRole("menu");
-    expect(within(menu).getByText("10.0.0.133:9001")).toBeInTheDocument();
-    expect(within(menu).getByText("MacBook-Pro-de-Lucas · este computador")).toBeInTheDocument();
+    expect(within(menu).getByText(/Conectado a/)).toBeInTheDocument();
+    const macbookItem = within(menu).getByRole("menuitem", { name: /10\.0\.0\.133:9001/ });
+    expect(macbookItem).toHaveTextContent("MacBook-Pro-de-Lucas · este computador");
     expect(within(menu).getByText("raspberrypi")).toBeInTheDocument();
     expect(within(menu).getByText(/Encontrados na rede · 2/)).toBeInTheDocument();
   });
@@ -225,7 +244,10 @@ describe("server picker", () => {
 
     await openServerMenu();
 
-    expect(screen.getByText("Nenhum servidor encontrado")).toBeInTheDocument();
+    const menu = screen.getByRole("menu");
+    expect(
+      within(menu).getByRole("menuitem", { name: /Nenhum servidor encontrado/ })
+    ).toBeInTheDocument();
   });
 
   it("asks the main process to browse again, keeping the menu open", async () => {
@@ -244,14 +266,37 @@ describe("server picker", () => {
 describe("connection health", () => {
   beforeEach(reset);
 
-  it("names the server on the chip while it answers", () => {
+  it("names no server on the chip until one is picked or discovered", () => {
     installBridge();
     render(<App />);
 
-    expect(serverChip("localhost:9001")).toBeInTheDocument();
+    expect(serverChip("Nenhum servidor encontrado")).toBeInTheDocument();
+  });
+
+  it("names the server on the chip while it answers", () => {
+    const bridge = installBridge();
+    render(<App />);
+    act(() => bridge.push([macbook]));
+
+    expect(serverChip("10.0.0.133:9001")).toBeInTheDocument();
   });
 
   it("says so on the chip, and toasts, when the server stops answering", () => {
+    const bridge = installBridge();
+    render(<App />);
+    act(() => bridge.push([macbook]));
+
+    act(() => {
+      healthListener(false);
+      connectionErrorListener();
+    });
+
+    expect(serverChip("10.0.0.133:9001 não está respondendo")).toBeInTheDocument();
+    expect(toasts().getByText("Não foi possível conectar a 10.0.0.133:9001")).toBeInTheDocument();
+    expect(toasts().getByRole("button", { name: "Trocar" })).toBeInTheDocument();
+  });
+
+  it("names the missing server in the toast when there is nothing to connect to", () => {
     installBridge();
     render(<App />);
 
@@ -260,9 +305,7 @@ describe("connection health", () => {
       connectionErrorListener();
     });
 
-    expect(serverChip("localhost:9001 não está respondendo")).toBeInTheDocument();
-    expect(toasts().getByText("Não foi possível conectar a localhost:9001")).toBeInTheDocument();
-    expect(toasts().getByRole("button", { name: "Trocar" })).toBeInTheDocument();
+    expect(toasts().getByText("Nenhum servidor encontrado")).toBeInTheDocument();
   });
 
   it("opens the picker from the toast action", async () => {
@@ -280,13 +323,14 @@ describe("connection health", () => {
   });
 
   it("clears the flag when the server answers again", () => {
-    installBridge();
+    const bridge = installBridge();
     render(<App />);
+    act(() => bridge.push([macbook]));
 
     act(() => healthListener(false));
     act(() => healthListener(true));
 
-    expect(serverChip("localhost:9001")).toBeInTheDocument();
+    expect(serverChip("10.0.0.133:9001")).toBeInTheDocument();
   });
 });
 
@@ -298,8 +342,9 @@ describe("snackbar precedence while offline", () => {
       new Error("Erro desconhecido, tente novamente mais tarde")
     );
 
-    installBridge();
+    const bridge = installBridge();
     render(<App />);
+    act(() => bridge.push([macbook]));
 
     act(() => {
       healthListener(false);
@@ -310,7 +355,7 @@ describe("snackbar precedence while offline", () => {
       await Promise.resolve();
     });
 
-    expect(toasts().getByText("Não foi possível conectar a localhost:9001")).toBeInTheDocument();
+    expect(toasts().getByText("Não foi possível conectar a 10.0.0.133:9001")).toBeInTheDocument();
     expect(screen.queryByText("Erro desconhecido, tente novamente mais tarde")).not.toBeInTheDocument();
 
     vi.mocked(getMyInstants).mockResolvedValue({ instants: [], pages: 0 });
@@ -321,8 +366,9 @@ describe("repeated failures while already offline", () => {
   beforeEach(reset);
 
   it("re-shows the toast on a later failure, so a click is never silent", async () => {
-    installBridge();
+    const bridge = installBridge();
     render(<App />);
+    act(() => bridge.push([macbook]));
 
     act(() => {
       healthListener(false);
@@ -332,12 +378,12 @@ describe("repeated failures while already offline", () => {
     await userEvent.click(toasts().getByRole("button", { name: "Fechar" }));
 
     await waitFor(() =>
-      expect(screen.queryByText("Não foi possível conectar a localhost:9001")).not.toBeInTheDocument()
+      expect(screen.queryByText("Não foi possível conectar a 10.0.0.133:9001")).not.toBeInTheDocument()
     );
 
     act(() => connectionErrorListener());
 
-    expect(toasts().getByText("Não foi possível conectar a localhost:9001")).toBeInTheDocument();
+    expect(toasts().getByText("Não foi possível conectar a 10.0.0.133:9001")).toBeInTheDocument();
   });
 });
 

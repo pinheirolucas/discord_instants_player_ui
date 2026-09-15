@@ -33,7 +33,7 @@ export interface MyInstantsPanelProps {
   search: string;
   region: Region;
   healthy: boolean;
-  serverAddress: string;
+  serverAddress: string | null;
   onSwitchServer: () => void;
   onSummary: (summary: string) => void;
   onClearSearch: () => void;

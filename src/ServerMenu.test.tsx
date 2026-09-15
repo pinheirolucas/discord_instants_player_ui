@@ -66,6 +66,20 @@ describe("ServerMenu", () => {
     expect(within(screen.getByRole("menu")).getByText("10.0.0.42:9001")).toBeInTheDocument();
   });
 
+  it("names no server in the menu header when nothing is active", () => {
+    renderMenu({ currentApiUrl: null, healthy: false, servers: [server()] });
+
+    const menu = screen.getByRole("menu");
+    expect(within(menu).queryByText("Conectado a")).not.toBeInTheDocument();
+    expect(within(menu).getByText("Nenhum servidor encontrado")).toBeInTheDocument();
+  });
+
+  it("names no server on the chip, with no 'not responding' suffix to attach to it", () => {
+    renderMenu({ currentApiUrl: null, healthy: false, open: false });
+
+    expect(screen.getByRole("button", { name: "Nenhum servidor encontrado" })).toBeInTheDocument();
+  });
+
   it("ticks the server that matches the current address", () => {
     const macbook = server({ id: "a", apiUrl: "http://10.0.0.1:9001", hostname: "MacBook", isLocal: true });
     const raspberry = server({ id: "b", apiUrl: "http://10.0.0.2:9001", hostname: "raspberrypi" });

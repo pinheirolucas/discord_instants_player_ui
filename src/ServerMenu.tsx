@@ -22,7 +22,7 @@ function describe(server: Server, t: (key: string) => string): string {
 
 export interface ServerMenuProps {
   servers: Server[];
-  currentApiUrl: string;
+  currentApiUrl: string | null;
   healthy: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -33,9 +33,9 @@ export interface ServerMenuProps {
 /**
  * The picker. The current address sits in the menu's own header rather than
  * as a list row, because the current target need not be in the list at all:
- * the app starts on localhost:9001, which is never discovered, and a server
- * that dies leaves the list while still being the one in use. One click
- * switches — no confirm step, since switching is cheap and reversible.
+ * there is no default server at all until one is picked or discovered, and
+ * a server that dies leaves the list while still being the one in use. One
+ * click switches — no confirm step, since switching is cheap and reversible.
  */
 export default function ServerMenu({
   servers,
@@ -47,7 +47,7 @@ export default function ServerMenu({
   onRefresh
 }: ServerMenuProps) {
   const { t } = useTranslation();
-  const current = formatApiUrl(currentApiUrl);
+  const current = currentApiUrl ? formatApiUrl(currentApiUrl) : null;
 
   return (
     <Menu
@@ -56,7 +56,13 @@ export default function ServerMenu({
       trigger={<ServerChip address={current} healthy={healthy} />}
     >
       <div className="mhead">
-        {t("server.connectedTo")} <b>{current}</b>
+        {current ? (
+          <>
+            {t("server.connectedTo")} <b>{current}</b>
+          </>
+        ) : (
+          t("server.none")
+        )}
       </div>
       <MenuSeparator />
       <MenuLabel>{t("server.found", { count: servers.length })}</MenuLabel>
