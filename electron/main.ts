@@ -186,6 +186,7 @@ function buildAppMenu(): Menu {
         { role: "quit" }
       ]
     },
+    { role: "fileMenu" },
     { role: "editMenu" },
     { role: "viewMenu" },
     { role: "windowMenu" }
