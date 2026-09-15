@@ -7,6 +7,7 @@
   "repository": "github:pinheirolucas/peace-breaker-bot-desktop",
   "build": {
     "productName": "Peace Breaker Bot",
+    "artifactName": "Peace.Breaker.Bot-${version}-${arch}.${ext}",
     "publish": {
       "provider": "github"
     },
@@ -31,7 +32,8 @@
       }
     },
     "win": {
-      "icon": "resources/icon.ico"
+      "icon": "resources/icon.ico",
+      "artifactName": "Peace.Breaker.Bot.Setup.${version}.${ext}"
     },
     "linux": {
       "icon": "resources/icons",
