@@ -66,12 +66,14 @@ describe("ServerMenu", () => {
     expect(within(screen.getByRole("menu")).getByText("10.0.0.42:9001")).toBeInTheDocument();
   });
 
-  it("names no server in the menu header when nothing is active", () => {
-    renderMenu({ currentApiUrl: null, healthy: false, servers: [server()] });
+  it("drops the header entirely when nothing is active, rather than repeat the empty list's own message", () => {
+    renderMenu({ currentApiUrl: null, healthy: false, servers: [] });
 
     const menu = screen.getByRole("menu");
     expect(within(menu).queryByText("Conectado a")).not.toBeInTheDocument();
-    expect(within(menu).getByText("Nenhum servidor encontrado")).toBeInTheDocument();
+    // Said once, by the empty-list item below — not doubled by a header
+    // that would only ever say the same thing at the same time.
+    expect(within(menu).getAllByText("Nenhum servidor encontrado")).toHaveLength(1);
   });
 
   it("names no server on the chip, with no 'not responding' suffix to attach to it", () => {

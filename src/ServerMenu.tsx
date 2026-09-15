@@ -55,16 +55,18 @@ export default function ServerMenu({
       onOpenChange={onOpenChange}
       trigger={<ServerChip address={current} healthy={healthy} />}
     >
-      <div className="mhead">
-        {current ? (
-          <>
+      {/* With no active server there is nothing discovered either — the two
+       *  never disagree in this app — so the empty list state below already
+       *  says "no server" once; a header repeating it here would just be the
+       *  same three words stacked twice in a row. */}
+      {current && (
+        <>
+          <div className="mhead">
             {t("server.connectedTo")} <b>{current}</b>
-          </>
-        ) : (
-          t("server.none")
-        )}
-      </div>
-      <MenuSeparator />
+          </div>
+          <MenuSeparator />
+        </>
+      )}
       <MenuLabel>{t("server.found", { count: servers.length })}</MenuLabel>
 
       {servers.length === 0 && (
