@@ -22,7 +22,13 @@
       "main": "build/electron.js"
     },
     "mac": {
-      "icon": "resources/icon.icns"
+      "icon": "resources/icon.icns",
+      "extendInfo": {
+        "NSLocalNetworkUsageDescription": "Peace Breaker Bot looks for the bot server on your local network via Bonjour.",
+        "NSBonjourServices": [
+          "_myinstants._tcp."
+        ]
+      }
     },
     "win": {
       "icon": "resources/icon.ico"
