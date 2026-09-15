@@ -24,7 +24,7 @@
     },
     "afterPack": "scripts/afterPack.cjs",
     "mac": {
-      "identity": null,
+      "identity": "Peace Breaker Bot Code Signing",
       "icon": "resources/icon.icns",
       "extendInfo": {
         "NSLocalNetworkUsageDescription": "Peace Breaker Bot looks for the bot server on your local network via Bonjour.",

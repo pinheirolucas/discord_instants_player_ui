@@ -87,6 +87,9 @@ jobs:
 
       - name: Package app
         uses: nick-fields/retry@v4
+        env:
+          CSC_LINK: ${{ matrix.os == 'macos-latest' && secrets.CSC_LINK || '' }}
+          CSC_KEY_PASSWORD: ${{ matrix.os == 'macos-latest' && secrets.CSC_KEY_PASSWORD || '' }}
         with:
           max_attempts: 3
           timeout_minutes: 20
